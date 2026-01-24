@@ -1,0 +1,173 @@
+.Update-button{
+    color: cadetblue;
+    background-color: #f5f5f5;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.dark .Update-button {
+    background-color: #1f2937;
+    color: #ffffff;
+}
+
+.Delete-button{
+    color: rgb(235, 101, 77);
+    background-color: #f5f5f5;
+}
+
+.dark .Delete-button {
+    background-color: #1f2937;
+    color: rgb(239, 68, 68);
+}
+
+.Delete-button:hover{
+    color: rgb(235, 101, 77);
+    background-color: #dbd8d8;
+}
+
+.dark .Delete-button:hover {
+    background-color: #374151;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  max-width: 500px;
+  width: 100%;
+  border: 1px solid #e5e7eb;
+}
+
+.dark .modal-content {
+  background-color: #000000;
+  color: #ffffff;
+  border: 1px solid #374151;
+}
+
+/* Switch Toggle Styles for Light and Dark Mode */
+
+/* Switch root/track styling */
+button[role="switch"] {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 2.75rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  flex-shrink: 0;
+}
+
+/* Light mode - unchecked (off/Hidden) state */
+button[role="switch"][data-state="unchecked"] {
+  background-color: #dc2626; /* red-600 */
+}
+
+button[role="switch"][data-state="unchecked"]:hover {
+  background-color: #b91c1c; /* red-700 */
+}
+
+/* Light mode - checked (on/Visible) state */
+button[role="switch"][data-state="checked"] {
+  background-color: #16a34a; /* green-600 */
+}
+
+button[role="switch"][data-state="checked"]:hover {
+  background-color: #15803d; /* green-700 */
+}
+
+/* Dark mode - unchecked (off/Hidden) state */
+.dark button[role="switch"][data-state="unchecked"] {
+  background-color: #ef4444; /* red-500 */
+}
+
+.dark button[role="switch"][data-state="unchecked"]:hover {
+  background-color: #dc2626; /* red-600 */
+}
+
+/* Dark mode - checked (on/Visible) state */
+.dark button[role="switch"][data-state="checked"] {
+  background-color: #22c55e; /* green-500 */
+}
+
+.dark button[role="switch"][data-state="checked"]:hover {
+  background-color: #16a34a; /* green-600 */
+}
+
+/* Switch thumb (the sliding circle) */
+button[role="switch"] span {
+  pointer-events: none;
+  display: block;
+  width: 1.125rem;
+  height: 1.125rem;
+  background-color: white;
+  border-radius: 9999px;
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+  transform: translateX(0.125rem);
+}
+
+/* Thumb position when checked */
+button[role="switch"][data-state="checked"] span {
+  transform: translateX(1.5rem);
+}
+
+/* Focus styles for accessibility */
+button[role="switch"]:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.dark button[role="switch"]:focus-visible {
+  outline-color: #60a5fa;
+}
+
+/* Disabled state */
+button[role="switch"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Label styling - hide the text, make it accessible only */
+label[for*="visibility-toggle"] {
+  font-size: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  position: absolute;
+}
+
+/* Container for switch - inline with buttons */
+.flex.items-center.space-x-2 {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0;
+  margin-top: 0;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+/* Ensure switch container is inline in the action column */
+td .flex.items-center.space-x-2 {
+  display: inline-flex !important;
+  margin-left: 0.5rem;
+}

@@ -1,0 +1,227 @@
+/* HeroCategoryMenu.css */
+
+.jumia-menu {
+  width: 240px; /* Slightly wider */
+  height: auto;
+  min-height: 100vh;
+  background: rgba(27, 27, 27, 0.95); /* Less transparent */
+  backdrop-filter: blur(6px);
+  border-radius: 0;
+  padding: 12px 0;
+  color: #facc15;
+  z-index: 1000;
+  position: relative; /* Important for positioning mega panel */
+  overflow: visible; /* Allow mega panel to show outside */
+}
+
+.jumia-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.jumia-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s ease, color 0.2s ease;
+  position: relative; /* For mega panel positioning */
+}
+
+.jumia-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #facc15;
+}
+
+.jumia-menu-item svg {
+  opacity: 0.8;
+}
+
+.jumia-menu-item:hover svg {
+  opacity: 1;
+}
+
+/* ICON + TEXT ALIGN */
+.jumia-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+/* MEGA PANEL */
+.jumia-mega {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  min-height: 100%;
+  width: 300px; /* Wider for better readability */
+  background: rgba(30, 30, 30, 0.98); /* Darker background */
+  backdrop-filter: blur(12px);
+  border-left: 1px solid rgba(251, 191, 36, 0.2); /* Yellow accent */
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 20px;
+  animation: megaIn 0.2s ease;
+  z-index: 1001;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+  max-height: 80vh;
+}
+
+.jumia-mega-item {
+  font-size: 14px;
+  color: #e5e7eb !important; /* Force white color */
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.jumia-mega-item:hover {
+  color: #facc15 !important;
+  background: rgba(251, 191, 36, 0.1);
+  transform: translateX(4px);
+}
+
+/* MOBILE */
+.jumia-mobile-toggle {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .jumia-menu {
+    position: fixed;
+    left: -100%;
+    top: 0;
+    width: 280px;
+    height: 100vh;
+    transition: left 0.3s ease;
+    background: rgba(30, 30, 30, 0.98);
+  }
+
+  .jumia-menu.open {
+    left: 0;
+  }
+
+  .jumia-mobile-toggle {
+    display: block;
+    position: fixed;
+    left: 10px;
+    top: 90px;
+    z-index: 20;
+    background: #333;
+    color: #facc15;
+    border: 1px solid #facc15;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  /* Mega panel for mobile - show inline */
+  .jumia-mega {
+    position: static;
+    width: 100%;
+    margin-top: 10px;
+    background: rgba(40, 40, 40, 0.9);
+    display: block;
+    padding: 10px 20px;
+  }
+
+  .jumia-mega-item {
+    padding: 10px;
+    margin: 4px 0;
+  }
+}
+
+/* BACKDROP */
+.jumia-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 999;
+}
+
+@keyframes megaIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+/* PREORDER BADGE */
+.jumia-badge {
+  background: #facc15;
+  color: #000;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Adjust item-left to handle badge spacing */
+.jumia-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+/* Ensure proper alignment with badge */
+.jumia-item-left span:first-of-type {
+  flex-shrink: 0;
+}
+
+/* Special hover effect for preorder items */
+.jumia-menu-item:has(.jumia-badge):hover {
+  background: rgba(250, 204, 21, 0.1);
+}
+
+/* Clickable preorder items */
+.jumia-menu-item:has(.jumia-badge) {
+  cursor: pointer;
+}
+/* Make the clickable area clear */
+.jumia-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  cursor: pointer;
+  padding: 4px 0; /* Add some padding for better click target */
+}
+
+/* Visual feedback for clickable category */
+.jumia-item-left:hover {
+  opacity: 0.9;
+}
+
+/* Make mega panel items clearly clickable */
+.jumia-mega-item {
+  font-size: 14px;
+  color: #e5e7eb !important;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.jumia-mega-item:hover {
+  color: #facc15 !important;
+  background: rgba(251, 191, 36, 0.1);
+  transform: translateX(4px);
+}

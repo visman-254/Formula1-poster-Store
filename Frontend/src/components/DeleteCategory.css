@@ -1,0 +1,51 @@
+.deletebutton{
+    color: rgb(255, 255, 255);
+    background-color: #b86c6c;
+}
+.deletebutton:hover{
+    color: rgb(224, 194, 188);
+    background-color: #5b9e9e;
+}
+
+@media (max-width: 768px) {
+  /* Hide table headers but not for screen readers */
+  .delete-category-table thead {
+    border: none;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+  }
+
+  .delete-category-table tr {
+    display: block;
+    border-bottom: 2px solid #ddd;
+    margin-bottom: 10px;
+  }
+
+  .delete-category-table td {
+    display: block;
+    text-align: right;
+    border-bottom: 1px dotted #ccc;
+    padding-left: 50%; /* to make space for the label */
+    position: relative;
+  }
+
+  .delete-category-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 6px;
+    width: 45%;
+    padding-right: 10px;
+    white-space: nowrap;
+    text-align: left;
+    font-weight: bold;
+  }
+
+  .delete-category-table td:last-child {
+    border-bottom: 0;
+  }
+}

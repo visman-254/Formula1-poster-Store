@@ -1,0 +1,213 @@
+:root {
+  --checkout-bg: #f5f5f5;
+  --checkout-text-color: #333;
+  --checkout-border-color: #ddd;
+  --checkout-form-bg: #fff;
+  --checkout-form-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  --checkout-input-border: #ddd8d8;
+  --checkout-input-focus-border: #789679;
+}
+
+html.dark {
+  --checkout-bg: #1a1a1a;
+  --checkout-text-color: #ffffff;
+  --checkout-border-color: #444;
+  --checkout-form-bg: #2a2a2a;
+  --checkout-form-shadow: 0 2px 6px rgba(255,255,255,0.1);
+  --checkout-input-border: #555;
+  --checkout-input-focus-border: #789679;
+}
+
+.checkout-container {
+  background-color: var(--checkout-bg);
+  padding: 20px;
+  border-radius: 10px;
+  max-width: 600px;
+  margin: 50px auto;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  color: var(--checkout-text-color);
+}
+
+.checkout-container img {
+  max-width: 100px;
+  margin-right: 10px;
+}
+
+.checkout-container h2 {
+  margin-bottom: 20px;
+  color: var(--checkout-text-color);
+}
+
+.checkout-container ul {
+  list-style: none;
+  padding: 0;
+}
+
+.checkout-container li {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--checkout-border-color);
+}
+
+/* Remove button */
+.remove-button {
+  margin-left: 80px;
+  background: rgb(110, 11, 11);
+  cursor: pointer;
+  color: white;
+}
+
+.dark .remove-button {
+  background: rgb(58, 26, 26);
+}
+
+/* Action buttons container */
+.span {
+  display: flex;
+  flex-direction: row;   /* side by side on desktop */
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: center;
+}
+
+/* Make both buttons equal */
+/* Shared styles for both buttons */
+.span button {
+  width: 100%;          /* full width on mobile */
+  max-width: none;      /* remove size limits */
+  padding: 12px 15px;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  cursor: pointer;
+  text-align: center;
+  display: block;
+}
+
+/* Edit button */
+.edit-button {
+  background-color: #0a0a0a;
+}
+
+/* Purchase button */
+.checkout-button {
+  background-color: #565856;
+}
+
+
+.dark .pay{
+  background: #0a0a0a !important;
+}
+.checkout-button:hover {
+  background: #1a1f1a;
+}
+
+.checkout-form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 20px;
+  padding: 15px;
+  background: var(--checkout-form-bg);
+  border-radius: 8px;
+  box-shadow: var(--checkout-form-shadow);
+}
+
+.checkout-form label {
+  margin-top: 10px;
+  font-weight: 600;
+  color: var(--checkout-text-color);
+}
+
+.checkout-form input {
+  padding: 10px;
+  margin-top: 5px;
+  border: 1px solid var(--checkout-input-border);
+  border-radius: 5px;
+  font-size: 14px;
+  transition: border 0.3s ease-in-out;
+  background-color: var(--checkout-bg);
+  color: var(--checkout-text-color);
+}
+
+.checkout-form input:focus {
+  border-color: var(--checkout-input-focus-border);
+  outline: none;
+}
+
+.checkout-form button[type="submit"] {
+  margin-top: 20px;
+  padding: 12px 15px;
+  background: #4CAF50;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s ease-in-out;
+  width: 100%;
+}
+
+.dark .checkout-form button[type="submit"] {
+  background: #034606;
+}
+
+.checkout-form button[type="submit"]:hover {
+  background: #388E3C;
+}
+
+.span {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.edit-button,
+.checkout-button {
+  flex: 1;
+  padding: 12px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.history{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10rem;
+  flex: 4;
+}
+.dark .history{
+  color: rgb(0, 0, 0);
+  background-color: rgb(255, 255, 255);
+}
+
+
+/* Desktop only → make them side by side with equal width */
+@media (min-width: 769px) {
+  .span {
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+  }
+  .span button {
+    flex: 1;
+    max-width: 170px;  /* equal desktop widths */
+  }
+}
+
+/* Mobile → stacked full width */
+@media (max-width: 768px) {
+  .span {
+    flex-direction: column;
+    gap: 30px;
+    width: 100%;
+    margin-top: 30px;
+  }
+  .span button {
+    width: 100%;
+  }
+  .remove-button{
+    margin-left: 50px;
+    margin-top: 30px;
+  }
+}

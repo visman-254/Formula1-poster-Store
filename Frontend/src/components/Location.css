@@ -1,0 +1,29 @@
+/* Completely remove iframe border, outline, glow, and focus rings */
+#location iframe {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+#location iframe:focus,
+#location iframe:active {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Firefox focus fix */
+#location iframe::-moz-focus-inner {
+  border: 0 !important;
+}
+#location .map-wrapper {
+  background: none !important;
+  padding: 0 !important;
+}
+
+#location iframe {
+  display: block !important;
+  width: 100% !important;
+  height: 450px !important;
+}
+

@@ -1,0 +1,55 @@
+/* Users.css */
+
+/* Desktop styles - using Tailwind classes mainly */
+
+/* Mobile specific fixes */
+@media (max-width: 767px) {
+  .users-table {
+    display: none; /* Hide the table on mobile since we're using custom layout */
+  }
+  
+  /* Ensure the select dropdown is visible and properly styled */
+  .select-trigger {
+    min-height: 40px;
+  }
+  
+  /* Make sure cards have proper spacing on mobile */
+  .mobile-user-card {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Dark mode enhancements */
+@media (max-width: 767px) {
+  .dark .mobile-user-card {
+    background-color: #1f2937;
+    border-color: #374151;
+  }
+  
+  .dark .mobile-user-card .text-gray-600 {
+    color: #9ca3af;
+  }
+  
+  .dark .mobile-user-card .text-gray-900 {
+    color: #f9fafb;
+  }
+}
+
+/* Ensure proper badge visibility in both modes */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  height: 1.5rem;
+  padding: 0 0.5rem;
+}
+
+/* Email text break for very long emails */
+.break-email {
+  word-break: break-all;
+  overflow-wrap: break-word;
+}

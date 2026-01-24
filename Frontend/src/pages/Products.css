@@ -1,0 +1,680 @@
+/* Base Container Styles */
+.products-container {
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #fafafa 0%, #ffffff 100%);
+  scroll-behavior: smooth;
+}
+
+.dark .products-container {
+  background: linear-gradient(to bottom, #0a0a0a 0%, #000000 100%);
+}
+
+/* Mobile Search Section - Sticky with Blur Effect */
+.search-section {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.dark .search-section {
+  background: rgba(0, 0, 0, 0.95);
+  border-bottom-color: #1f1f1f;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 640px) {
+  .search-section {
+    padding: 12px 16px !important;
+  }
+}
+
+/* Modern Card Styles */
+.modern-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: white;
+}
+
+.dark .modern-card {
+  background: #0a0a0a;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.08);
+}
+
+/* Desktop Hover Effects */
+@media (min-width: 641px) {
+  .modern-card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform: translateY(-4px);
+  }
+  
+  .dark .modern-card:hover {
+    box-shadow: 0 8px 25px rgba(255, 255, 255, 0.12);
+  }
+}
+
+/* Mobile Touch Effects */
+@media (max-width: 640px) {
+  .products-container > div:last-child {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    padding: 16px !important;
+  }
+  
+  .modern-card {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  }
+  
+  .modern-card:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .dark .modern-card {
+    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.1);
+  }
+  
+  .dark .modern-card:active {
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.15);
+  }
+  
+  .modern-card a {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Shimmer Effect */
+.shimmer-effect {
+  z-index: 1;
+  pointer-events: none;
+}
+
+.shimmer-corner {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, transparent 30%, rgba(0, 0, 0, 0.1) 50%, transparent 70%);
+  animation: shimmer 2s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+.dark .shimmer-corner {
+  background: linear-gradient(135deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+}
+
+.shimmer-corner.bottom-0.right-0 {
+  animation-delay: 0.5s;
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+}
+
+/* Square Color Picker with Neutral Filter */
+.square-color-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: flex-end;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.dark .square-color-picker {
+  background: rgba(0, 0, 0, 0.9);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.15);
+}
+
+/* Mobile: Horizontal Layout */
+@media (max-width: 640px) {
+  .square-color-picker {
+    flex-direction: row;
+    gap: 0.5rem;
+    padding: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .square-color-picker {
+    gap: 0.3rem;
+  }
+}
+
+.color-square {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.25s ease-in-out;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  filter: saturate(0.9) contrast(1.05);
+  min-width: 20px;
+  min-height: 20px;
+  flex-shrink: 0;
+}
+
+/* Mobile: Larger Touch Targets */
+@media (max-width: 640px) {
+  .color-square {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    border-radius: 6px;
+  }
+}
+
+/* Neutral Filter Overlay */
+.color-filter {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.45);
+  mix-blend-mode: overlay;
+  transition: all 0.25s ease-in-out;
+}
+
+.dark .color-filter {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* Desktop Hover Interaction */
+@media (min-width: 641px) {
+  .color-square:hover {
+    transform: scale(1.15);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    filter: saturate(1) brightness(1.05);
+  }
+
+  .color-square:hover .color-filter {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  .dark .color-square:hover .color-filter {
+    background: rgba(0, 0, 0, 0.25);
+  }
+  
+  .dark .color-square:hover {
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.25),
+                0 0 12px rgba(255, 255, 255, 0.35);
+    filter: saturate(1.1) brightness(1.15);
+  }
+}
+
+/* Mobile: Active State Instead of Hover */
+@media (max-width: 640px) {
+  .color-square:active {
+    transform: scale(0.95);
+  }
+}
+
+/* Glow Effect in Dark Mode */
+.dark .color-square {
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.05),
+              0 0 8px rgba(255, 255, 255, 0.08) inset;
+  filter: saturate(0.9) brightness(1.1);
+}
+
+/* Selected State */
+.color-square.is-selected {
+  transform: scale(1.2);
+  box-shadow: 0 0 0 2px white, 0 3px 8px rgba(0, 0, 0, 0.4);
+  z-index: 1;
+}
+
+.dark .color-square.is-selected {
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.3),
+              0 0 16px rgba(255, 255, 255, 0.25);
+  filter: brightness(1.2);
+}
+
+/* Responsive adjustments for square color pickers */
+@media (min-width: 640px) {
+  .color-square {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+  }
+  
+  .selection-check {
+    font-size: 0.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .color-square {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+  }
+}
+
+@media (max-width: 360px) {
+  .color-square {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.selection-check {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
+
+@media (max-width: 480px) {
+  .selection-check {
+    font-size: 0.65rem;
+  }
+}
+
+/* Image Container */
+.product-image-container {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.dark .product-image-container {
+  background: #000000;
+}
+
+/* Mobile: Better Aspect Ratio */
+@media (max-width: 640px) {
+  .product-image-container {
+    height: auto;
+    aspect-ratio: 4/3;
+    padding: 0.75rem;
+    border-radius: 12px;
+    margin: 12px 0;
+  }
+}
+
+@media (min-width: 640px) {
+  .product-image-container {
+    height: 280px;
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .product-image-container {
+    height: 240px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .product-image-container {
+    height: 260px;
+  }
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  transition: transform 0.3s ease;
+}
+
+@media (min-width: 641px) {
+  .modern-card:hover .product-image {
+    transform: scale(1.05);
+  }
+}
+
+@media (max-width: 640px) {
+  .modern-card:active .product-image {
+    transform: scale(1.02);
+  }
+}
+
+/* Card Content Spacing */
+.modern-card .card-header {
+  padding-bottom: 0.5rem;
+}
+
+.modern-card .card-title {
+  margin-bottom: 0.25rem;
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 600;
+  color: #111827;
+  min-height: 40px;
+}
+
+.dark .modern-card .card-title {
+  color: #f9fafb;
+}
+
+@media (max-width: 640px) {
+  .modern-card .card-header,
+  .modern-card .card-content,
+  .modern-card .card-footer {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  
+  .modern-card .card-header {
+    padding-top: 16px !important;
+  }
+  
+  .modern-card .card-content {
+    padding-bottom: 12px !important;
+  }
+  
+  .modern-card .card-footer {
+    padding-top: 8px !important;
+    padding-bottom: 16px !important;
+  }
+  
+  .modern-card .card-title {
+    font-size: 15px;
+    min-height: 42px;
+  }
+}
+
+/* Product Description */
+.product-description {
+  font-size: 0.85rem;
+  color: #555;
+  line-height: 1.4;
+  margin-top: 0.25rem;
+}
+
+.dark .product-description {
+  color: #ccc;
+}
+
+@media (max-width: 640px) {
+  .product-description {
+    font-size: 14px;
+    line-height: 1.6;
+    margin-top: 12px;
+    color: #6b7280;
+  }
+  
+  .dark .product-description {
+    color: #9ca3af;
+  }
+}
+
+.see-more-btn {
+  background: none;
+  border: none;
+  color: #7a7671;
+  cursor: pointer;
+  font-weight: 500;
+  padding: 0;
+  font-size: 0.85rem;
+  margin-left: 2px;
+  transition: color 0.2s;
+}
+
+.see-more-btn:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .see-more-btn {
+    color: #44413f;
+    font-weight: 500;
+  }
+  
+  .see-more-btn:hover {
+    color: #3f3832;
+    text-decoration: none;
+  }
+  
+  .dark .see-more-btn {
+    color: #805f41;
+  }
+  
+  .dark .see-more-btn:hover {
+    color: #ff8411;
+  }
+}
+
+/* Price Styling */
+.card-price {
+  font-weight: 700;
+  color: #111827;
+  font-size: 12px;
+}
+
+.dark .card-price {
+  color: #f9fafb;
+}
+
+@media (max-width: 640px) {
+  .card-price {
+    font-size: 18px;
+  }
+}
+
+/* --- Modern E-Commerce Add to Cart Button --- */
+.modern-cart-btn {
+  position: relative;
+  overflow: hidden;
+  background: #141413;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 20px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* Glare layer effect */
+.modern-cart-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.3) 50%, rgba(255, 255, 255, 0) 100%);
+  transform: skewX(-25deg);
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+
+/* Hover - Glare Sweep */
+.modern-cart-btn:hover::before {
+  left: 150%;
+}
+
+/* Hover state - lift and brighten */
+.modern-cart-btn:hover {
+  background: linear-gradient(135deg, #ffd9a6, #000000);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(255, 132, 17, 0.35);
+}
+
+/* Active state - press down */
+.modern-cart-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 8px rgba(255, 132, 17, 0.25);
+}
+
+/* Dark Mode Styling */
+.dark .modern-cart-btn {
+  background: #585858;
+  color: #c7c7c7;
+  font-weight: 700;
+  box-shadow: 0 20px 8px rgba(255, 255, 255, 0.158);
+}
+
+.dark .modern-cart-btn::before {
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.4) 50%, rgba(255, 255, 255, 0) 100%);
+}
+
+.dark .modern-cart-btn:hover {
+  background: #463f38;
+  box-shadow: 0 4px 16px rgba(129, 128, 126, 0.4);
+}
+
+.dark .modern-cart-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 8px rgba(255, 132, 17, 0.3);
+}
+
+/* Mobile optimizations for button */
+@media (max-width: 640px) {
+  .modern-cart-btn {
+    padding: 0.875rem 1.5rem;
+    font-size: 15px;
+    border-radius: 1px;
+    width: 70%;
+    margin-left: 20px;
+  }
+  
+  /* Remove transform on mobile, use scale only */
+  .modern-cart-btn:hover {
+    transform: none;
+  }
+  
+  .modern-cart-btn:active {
+    transform: scale(0.97);
+  }
+  
+  .dark .modern-cart-btn:hover {
+    transform: none;
+  }
+  
+  .dark .modern-cart-btn:active {
+    transform: scale(0.97);
+  }
+}
+
+/* Sale Badge */
+@media (max-width: 640px) {
+  .modern-card .bg-yellow-500 {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+}
+
+/* Empty State */
+@media (max-width: 640px) {
+  .col-span-full {
+    padding: 32px 24px !important;
+  }
+  
+  .col-span-full .max-w-md {
+    max-width: 100%;
+  }
+  
+  .col-span-full h3 {
+    font-size: 20px !important;
+  }
+  
+  .col-span-full p {
+    font-size: 15px !important;
+    line-height: 1.6;
+  }
+}
+
+/* Safe Area for Notched Devices */
+@media (max-width: 640px) {
+  .products-container {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Loading Animation */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+/* Container for the spliced bundle images */
+.bundle-image-splice {
+  display: flex;
+  width: 100%;
+  height: 100%; /* Use full height of container */
+  overflow: hidden;
+  border-radius: 8px;
+  gap: 2px; /* Small gap between the two images */
+}
+
+/* Style for each half of the splice */
+.bundle-splice-image-left,
+.bundle-splice-image-right {
+  width: 50%;
+  height: 100%;
+  object-fit: contain; /* Changed to contain to avoid squeezing */
+  transition: transform 0.3s ease;
+}
+
+/* Hover effect for bundle images */
+.modern-card:hover .bundle-splice-image-left,
+.modern-card:hover .bundle-splice-image-right {
+  scale: 1.05;
+}
+
+/* Ensure the standard product-image stays consistent */
+.product-image {
+  width: 100%;
+  height: 200px;
+  object-fit: contain;
+}
+.promotional-banner {
+  width: 100%;
+  max-height: 200px; /* smaller height for laptops */
+  object-fit: cover;  /* makes image fill container without stretching */
+  border-radius: 8px; /* optional: nice rounded corners */
+}
+
+/* Optional: make it responsive */
+@media (max-width: 1024px) {
+  .promotional-banner {
+    max-height: 150px; /* smaller on tablets */
+  }
+}
+
+@media (max-width: 640px) {
+  .promotional-banner {
+    max-height: 120px; /* mobile */
+  }
+}

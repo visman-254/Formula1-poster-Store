@@ -1,0 +1,10 @@
+.button-cont{
+    background: rgb(206, 205, 205);
+    color: rgb(74, 80, 80);
+    border: none;
+}
+
+.dark .button-cont{
+    background: #1a1a1a;
+    color: azure;
+}

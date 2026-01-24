@@ -1,0 +1,11 @@
+services:
+  # A Docker container serving a React frontend
+  - type: web
+    name: formula1-poster-store-2
+    env: static
+    buildCommand: npm install && npm run build
+    staticRootDir: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -1,0 +1,75 @@
+.breadcrumb-container {
+  padding: 0.75rem 1rem;
+  backdrop-filter: blur(48px) saturate(180%);
+;
+  
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+/* Wrapper */
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+/* Each crumb */
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+  color: var(--text-color-primary, #343a40);
+}
+
+/* Separator */
+.breadcrumb-item + .breadcrumb-item::before {
+  content: '/';
+  display: inline-block;
+  padding: 0 0.6rem;
+  color: var(--text-color-secondary, #6c757d);
+  opacity: 0.7;
+}
+
+/* Links */
+.breadcrumb-item a {
+  color: var(--link-color, #000000);
+  text-decoration: none;
+  transition: color 0.2s ease-in-out, opacity 0.2s ease-in-out;
+}
+
+/* Hover */
+.breadcrumb-item a:hover {
+  color: var(--link-hover-color, #0056b3);
+  opacity: 0.85;
+  text-decoration: underline;
+}
+
+/* Active state */
+.breadcrumb-item.active {
+  color: var(--text-color-primary, #343a40);
+  font-weight: 600;
+  cursor: default;
+}
+
+/* ✅ Proper Dark Mode Support */
+.dark .breadcrumb-item {
+  color: var(--dark-text-primary, #eaeaea);
+}
+
+.dark .breadcrumb-item a {
+  color: var(--dark-link-color, #ffffff);
+}
+
+.dark .breadcrumb-item a:hover {
+  color: var(--dark-link-hover, #4dabf7);
+}
+
+.dark .breadcrumb-item + .breadcrumb-item::before {
+  color: var(--dark-text-secondary, #aaaaaa);
+}
+
+.dark .breadcrumb-item.active {
+  color: #ffffff;
+}

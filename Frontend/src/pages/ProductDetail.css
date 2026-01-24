@@ -1,0 +1,81 @@
+.dark .cart-buttn {
+  background-color: #575656 !important;
+  color: #ffffff !important;
+}
+
+.image-wrapper {
+  position: relative;
+  overflow: hidden; 
+  border-radius: 0.375rem; 
+  max-width: 100%;
+}
+
+.image-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 80%; 
+  height: 80%;
+  background: radial-gradient(circle, rgba(248, 248, 248, 0.4) 0%, rgba(147, 197, 253, 0) 70%); 
+  transform: translate(-50%, -50%); 
+  z-index: 0; 
+  pointer-events: none; 
+  filter: blur(20px);
+  opacity: 0.7; 
+  transition: opacity 0.3s ease, filter 0.3s ease; 
+}
+
+.image-wrapper:hover::before {
+  opacity: 1; 
+  filter: blur(30px); 
+}
+
+.image-wrapper img {
+  position: relative;
+  z-index: 1; 
+  max-width: 100%; 
+  height: auto;
+  display: block; 
+}
+
+/* Mobile-specific fixes */
+@media screen and (max-width: 768px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .image-wrapper {
+    margin-bottom: 1.5rem;
+  }
+  
+  .image-wrapper img {
+    max-height: 250px !important;
+    width: auto;
+    margin: 0 auto;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  
+  .image-wrapper img {
+    max-height: 200px !important;
+  }
+}
+
+/* Ensure proper spacing on very small screens */
+@media screen and (max-width: 360px) {
+  .container {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  .image-wrapper img {
+    max-height: 180px !important;
+  }
+}

@@ -1,0 +1,53 @@
+
+.admin-preorders-container button {
+  background-color: #000000;
+  color: #ffffff;
+  border: 1px solid #000000;
+}
+
+.admin-preorders-container button:hover {
+  background-color: #1f1f1f;
+  color: #ffffff;
+}
+
+/* Exception for destructive delete button */
+.admin-preorders-container button[class*="destructive"] {
+  background-color: #000000;
+  border-color: #000000;
+}
+
+.admin-preorders-container button[class*="destructive"]:hover {
+  background-color: #000000;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .preorders-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .admin-preorders-container {
+    padding: 0.5rem;
+  }
+  
+  .preorder-card .flex-wrap {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .search-section .flex {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .search-input {
+    max-width: 100%;
+  }
+}
+
+.status-select-trigger{
+  background: white ;
+  color: #000000;
+
+}

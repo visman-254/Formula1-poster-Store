@@ -1,0 +1,29 @@
+
+.dark .cart-buttn {
+  background-color: #575656 !important;
+  color: #ffffff !important;
+}
+
+.product-description {
+  font-size: 0.85rem;
+  color: #555;
+  line-height: 1.4;
+}
+
+.dark .product-description {
+  color: #ccc;
+}
+
+.see-more-btn {
+  background: none;
+  border: none;
+  color: #2563eb; /* blue-600 */
+  cursor: pointer;
+  font-weight: 500;
+  padding: 0;
+  font-size: 0.85rem;
+}
+
+.see-more-btn:hover {
+  text-decoration: underline;
+}
