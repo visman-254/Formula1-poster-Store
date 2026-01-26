@@ -31,12 +31,12 @@ const login = async (req, res) => {
 
 const signup = async (req, res) => {
   try {
-    const { username, password, email, phone_number } = req.body;
-    if (!username || !password || !email || !phone_number) {
-      return res.status(400).send({ message: 'Username, password, email, and phone number are required' });
+    const { username, password, email } = req.body;
+    if (!username || !password || !email) {
+      return res.status(400).send({ message: 'Username, password, and email are required' });
     }
 
-    const result = await createUser(username, password, email, phone_number);
+    const result = await createUser(username, password, email);
 
     if (result.token) {
       // set token in cookie

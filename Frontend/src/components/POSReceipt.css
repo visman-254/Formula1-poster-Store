@@ -1,0 +1,278 @@
+.receipt-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.receipt-page {
+  background: white;
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  font-family: 'Courier New', monospace;
+  margin-bottom: 30px;
+}
+
+.receipt-header {
+  text-align: center;
+  margin-bottom: 30px;
+  border-bottom: 3px solid #667eea;
+  padding-bottom: 20px;
+}
+
+.receipt-header h1 {
+  margin: 0 0 10px 0;
+  font-size: 2rem;
+  color: #667eea;
+}
+
+.receipt-header p {
+  margin: 0;
+  font-size: 1rem;
+  color: #666;
+  font-weight: bold;
+}
+
+.receipt-meta {
+  background: #f9f9f9;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border-left: 4px solid #667eea;
+}
+
+.receipt-meta p {
+  margin: 8px 0;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.receipt-meta strong {
+  color: #667eea;
+  min-width: 100px;
+  display: inline-block;
+}
+
+.receipt-items {
+  margin: 25px 0;
+  border-top: 2px dashed #ddd;
+  border-bottom: 2px dashed #ddd;
+  padding: 15px 0;
+}
+
+.items-header {
+  display: grid;
+  grid-template-columns: 2fr 0.8fr 1.2fr 1.2fr;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #667eea;
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: #667eea;
+}
+
+.receipt-item {
+  display: grid;
+  grid-template-columns: 2fr 0.8fr 1.2fr 1.2fr;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px dashed #eee;
+  font-size: 0.95rem;
+  color: #333;
+  align-items: center;
+}
+
+.col-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-qty {
+  text-align: center;
+}
+
+.col-price {
+  text-align: right;
+}
+
+.col-total {
+  text-align: right;
+  font-weight: bold;
+  color: #667eea;
+}
+
+.receipt-totals {
+  background: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.total-row:last-child {
+  margin-bottom: 0;
+}
+
+.total-row.final {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #667eea;
+  border-top: 2px solid #667eea;
+  padding-top: 15px;
+  margin-top: 10px;
+}
+
+.receipt-footer {
+  text-align: center;
+  padding: 20px 0;
+  border-top: 2px dashed #ddd;
+  color: #666;
+}
+
+.receipt-footer p {
+  margin: 8px 0;
+  font-size: 0.95rem;
+}
+
+.receipt-footer .small {
+  font-size: 0.85rem;
+  color: #999;
+}
+
+/* Actions */
+.receipt-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-print,
+.btn-new-sale {
+  padding: 14px 30px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.btn-print {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-print:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-new-sale {
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+}
+
+.btn-new-sale:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* Print Styles */
+@media print {
+  body {
+    background: white;
+  }
+
+  .receipt-container {
+    background: white;
+    min-height: auto;
+    padding: 0;
+  }
+
+  .receipt-page {
+    box-shadow: none;
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .receipt-actions {
+    display: none;
+  }
+
+  .receipt-header {
+    page-break-inside: avoid;
+  }
+
+  .receipt-items {
+    page-break-inside: avoid;
+  }
+
+  .receipt-totals {
+    page-break-inside: avoid;
+  }
+
+  .receipt-footer {
+    page-break-inside: avoid;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .receipt-page {
+    padding: 20px;
+  }
+
+  .receipt-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .items-header,
+  .receipt-item {
+    grid-template-columns: 1.5fr 0.6fr 0.9fr;
+    gap: 8px;
+  }
+
+  .col-price {
+    display: none;
+  }
+
+  .total-row {
+    font-size: 0.95rem;
+  }
+
+  .total-row.final {
+    font-size: 1.2rem;
+  }
+
+  .receipt-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn-print,
+  .btn-new-sale {
+    width: 100%;
+  }
+}

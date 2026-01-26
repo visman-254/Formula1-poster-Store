@@ -13,7 +13,7 @@ const hashPassword = (password) => bcrypt.hash(password, saltRounds);
 const verifyPassword = (password, hashedPassword) => bcrypt.compare(password, hashedPassword);
 const generateToken = (user) =>
   jwt.sign(
-    { id: user.id, username: user.username, role: user.role, email: user.email, phone_number: user.phone_number },
+    { id: user.id, username: user.username, role: user.role, email: user.email },
     process.env.JWT_SECRET,
     { expiresIn: '35m' }
   );
@@ -34,7 +34,7 @@ export const authenticateUser = async (username, password) => {
     }
 
     const token = generateToken(user);
-    const loggedInUser = { id: user.id, username: user.username, role: user.role, email: user.email, phone_number: user.phone_number };
+    const loggedInUser = { id: user.id, username: user.username, role: user.role, email: user.email };
 
     return { message: 'Login successful', token, user: loggedInUser };
   } catch (err) {
@@ -44,7 +44,7 @@ export const authenticateUser = async (username, password) => {
 };
 
 // Signup
-export const createUser = async (username, password, email, phone_number) => {
+export const createUser = async (username, password, email) => {
   try {
     const [existingUser] = await db.execute(
       'SELECT * FROM users WHERE username = ?',
@@ -67,11 +67,11 @@ export const createUser = async (username, password, email, phone_number) => {
     
     const hashedPassword = await hashPassword(password);
     const [result] = await db.execute(
-      'INSERT INTO users (username, password_hash, email, role, phone_number) VALUES (?, ?, ?, ?, ?)',
-      [username, hashedPassword, email, 'customer', phone_number]
+      'INSERT INTO users (username, password_hash, email, role) VALUES (?, ?, ?, ?)',
+      [username, hashedPassword, email, 'customer']
     );
 
-    const user = { id: result.insertId, username, email, role: 'customer', phone_number };
+    const user = { id: result.insertId, username, email, role: 'customer' };
     const token = generateToken(user);
 
     return { message: 'User created successfully', token, user };

@@ -665,6 +665,21 @@ export const reduceProductStock = async (variantId, quantity, connection = null)
             await dbConnection.beginTransaction();
         }
 
+        // First, check if variant has sufficient stock
+        const [variantCheck] = await dbConnection.execute(
+            'SELECT stock FROM product_variants WHERE variant_id = ?',
+            [variantId]
+        );
+
+        if (!variantCheck || variantCheck.length === 0) {
+            throw new Error(`Variant ${variantId} not found.`);
+        }
+
+        const currentStock = variantCheck[0].stock;
+        if (currentStock < quantity) {
+            throw new Error(`Insufficient stock for variant ${variantId}. Needed ${quantity}, but only ${currentStock} available.`);
+        }
+
         const [batches] = await dbConnection.execute(
             'SELECT batch_id, remaining_quantity, buying_price FROM product_batches WHERE variant_id = ? AND remaining_quantity > 0 ORDER BY date_received ASC',
             [variantId]
@@ -690,10 +705,7 @@ export const reduceProductStock = async (variantId, quantity, connection = null)
             remainingToReduce -= reduceFromBatch;
         }
 
-        if (remainingToReduce > 0) {
-            throw new Error(`Insufficient stock for variant ${variantId}. Needed ${quantity}, but only ${totalQuantityReduced} available.`);
-        }
-
+        // Update the product_variants stock
         await dbConnection.execute(
             'UPDATE product_variants SET stock = stock - ? WHERE variant_id = ?',
             [quantity, variantId]

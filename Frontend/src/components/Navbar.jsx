@@ -235,14 +235,21 @@ const Navbar = ({ searchQuery, setSearchQuery }) => {
                   )}
                 </Link>
 
-                <Link to="/checkout" className="nav-link">
-                  Checkout
-                </Link>
-
-                {/* PRE-ORDER LINK ADDED HERE */}
+                {/* PRE-ORDER LINK */}
                 <Link to="/preorder" className="nav-link">
                   Pre-order
                 </Link>
+
+                {/* CHECKOUT BUTTON - Changes based on user role */}
+                {user && user.role === 'cashier' ? (
+                  <Link to="/pos" className="nav-link bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-1 rounded-lg font-bold hover:shadow-lg transition-all">
+                    💳 Checkout as Cashier
+                  </Link>
+                ) : (
+                  <Link to="/checkout" className="nav-link">
+                    Checkout
+                  </Link>
+                )}
 
                 <ThemeSwitcher />
 
@@ -377,13 +384,24 @@ const Navbar = ({ searchQuery, setSearchQuery }) => {
                   </div>
                 </div>
 
-                <Link
-                  to="/checkout"
-                  className="mobile-link"
-                  onClick={() => handleMobileLinkClick(close)}
-                >
-                  Checkout
-                </Link>
+                {/* Mobile Checkout - Changes based on user role */}
+                {user && user.role === 'cashier' ? (
+                  <Link
+                    to="/pos"
+                    className="mobile-link bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg"
+                    onClick={() => handleMobileLinkClick(close)}
+                  >
+                    💳 Checkout as Cashier
+                  </Link>
+                ) : (
+                  <Link
+                    to="/checkout"
+                    className="mobile-link"
+                    onClick={() => handleMobileLinkClick(close)}
+                  >
+                    Checkout
+                  </Link>
+                )}
               </div>
             </Disclosure.Panel>
           </>

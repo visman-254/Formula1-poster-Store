@@ -24,6 +24,7 @@ const Admin = lazy(() => import("./pages/Admin"));
 const PendingPayments = lazy(() => import("./pages/pendingpayments"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const PreOrderForm = lazy(() => import("./components/PreOrderForm")); // Add this import
+const POSPage = lazy(() => import("./components/POSPage")); // POS Checkout
 
 function App() {
   const location = useLocation();
@@ -74,6 +75,7 @@ function App() {
                 <Route path="/pendingpayments" element={<PendingPayments />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/preorder" element={<PreOrderForm />} />
+                <Route path="/pos" element={<POSPage />} />
                 <Route
                   path="/admin"
                   element={

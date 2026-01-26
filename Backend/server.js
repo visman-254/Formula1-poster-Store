@@ -18,6 +18,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import preorder from './routes/preorderApi.js';
 import productPromotionApi from "./routes/productPromotionApi.js";
+import posRoutes from "./routes/posApi.js";
 
 
 
@@ -61,6 +62,7 @@ app.use("/api/lowstock", LowStock);
 app.use("/api/featured", Featured);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api', preorder);
+app.use('/api/pos', posRoutes);
 
 
 
