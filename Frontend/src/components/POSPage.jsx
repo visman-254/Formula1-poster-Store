@@ -7,7 +7,6 @@ import {
   CardTitle,
   CardContent,
   CardFooter,
-  CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,37 +56,26 @@ const POSPage = () => {
   const getProductImage = (product) => {
     if (!product) return '/fallback.jpg';
     
-    // For bundles, use bundleImages if available
     if (product.is_bundle && product.bundleImages && product.bundleImages.length > 0) {
       return product.bundleImages[0];
     }
 
-    // Try variant image first
     const variant = product.variants?.[0];
-    if (variant?.image) {
-      return variant.image;
-    }
+    if (variant?.image) return variant.image;
 
-    // Try product gallery images
     if (product.images && product.images.length > 0) {
       const galleryImage = product.images[0]?.image_url || product.images[0];
       if (galleryImage) return galleryImage;
     }
 
-    // Fallback to primaryImage
-    if (product.primaryImage) {
-      return product.primaryImage;
-    }
+    if (product.primaryImage) return product.primaryImage;
 
     return '/fallback.jpg';
   };
 
   // Filter products based on search
   const filteredProducts = products.filter((product) => {
-    // Skip products without variants (except bundles)
-    if (!product.is_bundle && (!product.variants || product.variants.length === 0)) {
-      return false;
-    }
+    if (!product.is_bundle && (!product.variants || product.variants.length === 0)) return false;
     return product.title.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
@@ -136,11 +124,9 @@ const POSPage = () => {
       return;
     }
 
-    setCart(
-      cart.map((item) =>
-        item.variant_id === variant_id ? { ...item, quantity } : item
-      )
-    );
+    setCart(cart.map((item) =>
+      item.variant_id === variant_id ? { ...item, quantity } : item
+    ));
     setError('');
   };
 
@@ -149,12 +135,11 @@ const POSPage = () => {
     setCart(cart.filter((item) => item.variant_id !== variant_id));
   };
 
-  // Calculate totals
+  // Calculate totals (no VAT)
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const tax = subtotal * 0.16; // Assuming 16% VAT
-  const total = subtotal + tax;
+  const total = subtotal;
 
-  // Handle checkout - show M-Pesa modal if needed, otherwise process
+  // Handle checkout
   const handleCheckout = async () => {
     if (cart.length === 0) {
       setError('Cart is empty');
@@ -162,35 +147,31 @@ const POSPage = () => {
     }
 
     if (paymentMethod === 'mpesa') {
-      // For M-Pesa, show phone number modal instead of processing immediately
       setShowMpesaModal(true);
       setMpesaModalError('');
       return;
     }
 
-    // For cash and card, process immediately
     await processCheckout();
   };
 
-  // Handle M-Pesa phone submission
+  // M-Pesa phone submission
   const handleMpesaSubmit = async () => {
     if (!mpesaPhone.trim()) {
       setMpesaModalError('Phone number is required');
       return;
     }
 
-    // Validate phone number format (optional - adjust as needed)
     if (!/^\d{10,}$/.test(mpesaPhone.replace(/\D/g, ''))) {
       setMpesaModalError('Please enter a valid phone number (at least 10 digits)');
       return;
     }
 
-    // Close modal and process checkout
     setShowMpesaModal(false);
     await processCheckout();
   };
 
-  // Process the actual checkout
+  // Process checkout
   const processCheckout = async () => {
     setCheckoutLoading(true);
     setError('');
@@ -204,12 +185,9 @@ const POSPage = () => {
           payment_method: paymentMethod,
           ...(paymentMethod === 'mpesa' && { phone_number: mpesaPhone }),
         },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Show receipt
       setReceiptData(response.data.receipt);
       setShowReceipt(true);
       setCart([]);
@@ -243,10 +221,10 @@ const POSPage = () => {
               placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 pr-3 py-2 h-10 text-sm border border-gray-300 rounded-md focus:border-transparent dark:border-gray-600 dark:text-white w-full sm:w-64"
+              className="pl-8 pr-3 py-2 h-10 text-sm border border-gray-300 rounded-md focus:border-transparent w-full sm:w-64"
             />
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-4">
+          <div className="text-xs text-gray-500 whitespace-nowrap ml-4">
             {filteredProducts.length} {filteredProducts.length === 1 ? "item" : "items"}
           </div>
         </div>
@@ -262,7 +240,7 @@ const POSPage = () => {
       )}
 
       <div className="pos-main-layout">
-        {/* Products Grid - Left Side */}
+        {/* Products Grid */}
         <div className="pos-products-section">
           {loading ? (
             <div className="loading-container">
@@ -284,13 +262,9 @@ const POSPage = () => {
                           src={imageUrl}
                           alt={product.title}
                           className="pos-product-image"
-                          onError={(e) => {
-                            e.target.src = '/fallback.jpg';
-                          }}
+                          onError={(e) => { e.target.src = '/fallback.jpg'; }}
                         />
-                        {isOutOfStock && (
-                          <div className="pos-stock-badge">Out of Stock</div>
-                        )}
+                        {isOutOfStock && <div className="pos-stock-badge">Out of Stock</div>}
                       </div>
                       <div className="pos-product-info">
                         <p className="pos-product-title">{product.title}</p>
@@ -316,11 +290,11 @@ const POSPage = () => {
           )}
         </div>
 
-        {/* Cart Section - Right Side */}
+        {/* Cart Section */}
         <div className="pos-cart-section">
           <Card className="sticky-cart">
             <CardHeader>
-              <CardTitle className="text-lg">🛒 Cart ({cart.length})</CardTitle>
+              <CardTitle className="text-lg"> Cart ({cart.length})</CardTitle>
             </CardHeader>
             <CardContent>
               {cart.length === 0 ? (
@@ -337,51 +311,28 @@ const POSPage = () => {
                           <p className="pos-cart-item-price">Ksh {item.price.toLocaleString('en-KE')}</p>
                         </div>
                         <div className="pos-cart-quantity">
-                          <button
-                            onClick={() => updateQuantity(item.variant_id, item.quantity - 1)}
-                            className="qty-btn"
-                          >
-                            −
-                          </button>
+                          <button onClick={() => updateQuantity(item.variant_id, item.quantity - 1)} className="qty-btn">−</button>
                           <input
                             type="number"
                             min="1"
                             value={item.quantity}
-                            onChange={(e) =>
-                              updateQuantity(item.variant_id, parseInt(e.target.value) || 1)
-                            }
+                            onChange={(e) => updateQuantity(item.variant_id, parseInt(e.target.value) || 1)}
                             className="qty-input"
                           />
-                          <button
-                            onClick={() => updateQuantity(item.variant_id, item.quantity + 1)}
-                            className="qty-btn"
-                          >
-                            +
-                          </button>
+                          <button onClick={() => updateQuantity(item.variant_id, item.quantity + 1)} className="qty-btn">+</button>
                         </div>
                         <p className="pos-cart-item-total">
                           Ksh {(item.price * item.quantity).toLocaleString('en-KE')}
                         </p>
-                        <button
-                          onClick={() => removeFromCart(item.variant_id)}
-                          className="pos-cart-remove"
-                        >
+                        <button onClick={() => removeFromCart(item.variant_id)} className="pos-cart-remove">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                     ))}
                   </div>
 
-                  {/* Cart Totals */}
+                  {/* Cart Total */}
                   <div className="pos-cart-summary">
-                    <div className="summary-row">
-                      <span>Subtotal:</span>
-                      <span>Ksh {subtotal.toLocaleString('en-KE', { maximumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="summary-row">
-                      <span>VAT (16%):</span>
-                      <span>Ksh {tax.toLocaleString('en-KE', { maximumFractionDigits: 2 })}</span>
-                    </div>
                     <div className="summary-row total">
                       <span className="font-bold">Total:</span>
                       <span className="font-bold text-lg">Ksh {total.toLocaleString('en-KE', { maximumFractionDigits: 2 })}</span>
@@ -395,11 +346,11 @@ const POSPage = () => {
                       id="payment"
                       value={paymentMethod}
                       onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-full mt-2 p-2 border border-gray-300 rounded-md dark:bg-gray-900 dark:border-gray-700 dark:text-white"
+                      className="w-full mt-2 p-2 border border-gray-300 rounded-md"
                     >
-                      <option value="cash">💰 Cash</option>
-                      <option value="mpesa">📱 M-Pesa</option>
-                      <option value="card">💳 Card</option>
+                      <option value="cash">Cash</option>
+                      <option value="mpesa">M-Pesa</option>
+                      <option value="card">Card</option>
                     </select>
                   </div>
 
@@ -409,7 +360,7 @@ const POSPage = () => {
                     disabled={checkoutLoading || cart.length === 0}
                     className="w-full mt-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-2 rounded-lg"
                   >
-                    {checkoutLoading ? '⏳ Processing...' : '✓ Checkout & Print'}
+                    {checkoutLoading ? ' Processing...' : '✓ Checkout & Print'}
                   </Button>
                 </>
               )}
@@ -418,21 +369,19 @@ const POSPage = () => {
         </div>
       </div>
 
-      {/* M-Pesa Phone Modal */}
+      {/* M-Pesa Modal */}
       {showMpesaModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <Card className="w-96 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-lg">📱 M-Pesa Payment</CardTitle>
+              <CardTitle className="text-lg">M-Pesa Payment</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600">
                 Enter the buyer's phone number to receive M-Pesa payment prompt
               </p>
               <div>
-                <label htmlFor="mpesa-phone" className="block text-sm font-medium mb-2">
-                  Phone Number
-                </label>
+                <label htmlFor="mpesa-phone" className="block text-sm font-medium mb-2">Phone Number</label>
                 <Input
                   id="mpesa-phone"
                   type="tel"
@@ -445,23 +394,15 @@ const POSPage = () => {
                   className="w-full"
                   autoFocus
                 />
-                {mpesaModalError && (
-                  <p className="text-red-500 text-sm mt-2">{mpesaModalError}</p>
-                )}
+                {mpesaModalError && <p className="text-red-500 text-sm mt-2">{mpesaModalError}</p>}
               </div>
-              <div className="bg-blue-50 dark:bg-blue-900 p-3 rounded-md text-sm">
-                <p className="text-blue-800 dark:text-blue-200">
-                  Amount to pay: <strong>Ksh {total.toLocaleString('en-KE', { maximumFractionDigits: 2 })}</strong>
-                </p>
+              <div className="bg-blue-50 p-3 rounded-md text-sm">
+                <p>Amount to pay: <strong>Ksh {total.toLocaleString('en-KE', { maximumFractionDigits: 2 })}</strong></p>
               </div>
             </CardContent>
             <CardFooter className="flex gap-2 justify-end">
               <Button
-                onClick={() => {
-                  setShowMpesaModal(false);
-                  setMpesaPhone('');
-                  setMpesaModalError('');
-                }}
+                onClick={() => { setShowMpesaModal(false); setMpesaPhone(''); setMpesaModalError(''); }}
                 className="bg-gray-300 hover:bg-gray-400 text-black"
               >
                 Cancel
@@ -471,7 +412,7 @@ const POSPage = () => {
                 disabled={checkoutLoading || !mpesaPhone.trim()}
                 className="bg-green-500 hover:bg-green-600 text-white"
               >
-                {checkoutLoading ? '⏳ Processing...' : '✓ Proceed'}
+                {checkoutLoading ? ' Processing...' : '✓ Proceed'}
               </Button>
             </CardFooter>
           </Card>

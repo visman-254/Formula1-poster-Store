@@ -242,8 +242,8 @@ const Navbar = ({ searchQuery, setSearchQuery }) => {
 
                 {/* CHECKOUT BUTTON - Changes based on user role */}
                 {user && user.role === 'cashier' ? (
-                  <Link to="/pos" className="nav-link bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-1 rounded-lg font-bold hover:shadow-lg transition-all">
-                    💳 Checkout as Cashier
+                  <Link to="/pos" className="nav-link text-white px-4 py-1 rounded-lg font-bold hover:text-white transition-all">
+                    * Checkout as Cashier
                   </Link>
                 ) : (
                   <Link to="/checkout" className="nav-link">
@@ -388,7 +388,7 @@ const Navbar = ({ searchQuery, setSearchQuery }) => {
                 {user && user.role === 'cashier' ? (
                   <Link
                     to="/pos"
-                    className="mobile-link bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg"
+                    className="mobile-link text-white font-bold rounded-lg hover:text-white"
                     onClick={() => handleMobileLinkClick(close)}
                   >
                     💳 Checkout as Cashier
