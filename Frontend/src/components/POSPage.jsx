@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Search, X } from "lucide-react";
 import POSReceipt from './POSReceipt';
 import './POSPage.css';
+import API_BASE from '../config'; // Import your config file
 
 const POSPage = () => {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ const POSPage = () => {
   const [mpesaPhone, setMpesaPhone] = useState('');
   const [mpesaModalError, setMpesaModalError] = useState('');
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+  const API_URL = `${API_BASE}/api`; // Use your config and add /api
   const token = localStorage.getItem('token');
 
   // Fetch products on mount
@@ -37,7 +38,7 @@ const POSPage = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_BASE}/products`, {
+        const response = await axios.get(`${API_URL}/products`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setProducts(response.data);
@@ -50,7 +51,7 @@ const POSPage = () => {
     };
 
     fetchProducts();
-  }, [token]);
+  }, [token, API_URL]);
 
   // Get product image from variant or gallery
   const getProductImage = (product) => {
@@ -178,7 +179,7 @@ const POSPage = () => {
 
     try {
       const response = await axios.post(
-        `${API_BASE}/pos/checkout`,
+        `${API_URL}/pos/checkout`,
         {
           cartItems: cart,
           total: total.toFixed(2),

@@ -72,13 +72,14 @@ export const checkoutAsCashier = async (req, res) => {
       formattedPhone = "254" + formattedPhone.substring(1);
     }
 
+    // FIXED: Use the correct environment variable names
     const stkPush = await initiateSTKPush({
-      shortcode: process.env.MPESA_SHORTCODE,
-      passkey: process.env.MPESA_PASSKEY,
+      shortcode: process.env.MPESA_BUSINESS_SHORT_CODE,  // FIXED: Changed from MPESA_SHORTCODE
+      passkey: process.env.MPESA_PASS_KEY,               // FIXED: Changed from MPESA_PASSKEY
       amount: Math.round(total),
       phoneNumber: formattedPhone,
       token,
-      callbackUrl: `${process.env.APP_URL || "http://localhost:5000"}/api/mpesa/callback`,
+      callbackUrl: process.env.MPESA_CALLBACK_URL,       // FIXED: Changed from localhost URL
     });
 
     return res.status(200).json({
@@ -147,5 +148,4 @@ export const getCashierSalesAdmin = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch cashier stats" });
   }
-  
 };
