@@ -1,7 +1,7 @@
 
 import db from '../config/db.js';
 
-export const createOrderItem = async (order_id, variant_id, quantity, price, title, image, connection = null) => {
+export const createOrderItem = async (order_id, variant_id, quantity, price, title, image, imei_serial = null, connection = null) => {
   const dbConnection = connection || db;
   
   // The unit_buying_price will be calculated and updated later in the main transaction.
@@ -17,8 +17,8 @@ export const createOrderItem = async (order_id, variant_id, quantity, price, tit
   const final_product_image = image || variantRows[0]?.image;
 
   const [result] = await dbConnection.execute(
-    'INSERT INTO order_items (order_id, variant_id, quantity, price, unit_buying_price, unit_discount, product_name, product_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [order_id, variant_id, quantity, price, unit_buying_price, discount, final_product_name, final_product_image]
+    'INSERT INTO order_items (order_id, variant_id, quantity, price, unit_buying_price, unit_discount, product_name, product_image, imei_serial) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [order_id, variant_id, quantity, price, unit_buying_price, discount, final_product_name, final_product_image, imei_serial]
   );
   return result.insertId;
 }

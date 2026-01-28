@@ -31,6 +31,7 @@ export const createPOSOrder = async (
         item.price,
         item.title,
         item.image,
+        item.imei || null,
         connection
       );
 
@@ -79,7 +80,7 @@ export const generateReceipt = async (orderId) => {
   if (!orderRows.length) throw new Error("Receipt not found");
 
   const [items] = await db.execute(
-    `SELECT product_name, quantity, price
+    `SELECT product_name, quantity, price, imei_serial as imei
      FROM order_items WHERE order_id = ?`,
     [orderId]
   );
@@ -94,6 +95,7 @@ export const generateReceipt = async (orderId) => {
       quantity: i.quantity,
       price: i.price,
       total: i.price * i.quantity,
+      imei: i.imei ,
     })),
     total: orderRows[0].total,
   };

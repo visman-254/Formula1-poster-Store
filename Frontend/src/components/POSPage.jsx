@@ -6,14 +6,13 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
-  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, X } from "lucide-react";
 import POSReceipt from './POSReceipt';
 import './POSPage.css';
-import API_BASE from '../config'; // Import your config file
+import API_BASE from '../config'; 
 
 const POSPage = () => {
   const navigate = useNavigate();
@@ -30,7 +29,7 @@ const POSPage = () => {
   const [mpesaPhone, setMpesaPhone] = useState('');
   const [mpesaModalError, setMpesaModalError] = useState('');
 
-  const API_URL = `${API_BASE}/api`; // Use your config and add /api
+  const API_URL = `${API_BASE}/api`;
   const token = localStorage.getItem('token');
 
   // Fetch products on mount
@@ -80,7 +79,20 @@ const POSPage = () => {
     return product.title.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
-  // Add to cart
+  // --- CART FUNCTIONS ---
+
+  // Update IMEI for a specific cart item
+  const updateImei = (variant_id, imeiValue) => {
+    const updatedCart = cart.map((item) => {
+      if (item.variant_id === variant_id) {
+        return { ...item, imei: imeiValue };
+      }
+      return item;
+    });
+    setCart(updatedCart);
+  };
+
+  // Add product to cart
   const addToCart = (product) => {
     const variant = product.variants[0];
     if (!variant || variant.stock <= 0) {
@@ -106,6 +118,7 @@ const POSPage = () => {
           image: getProductImage(product),
           quantity: 1,
           stock: variant.stock,
+          imei: '', // Initialize with empty IMEI
         },
       ]);
     }
@@ -136,9 +149,11 @@ const POSPage = () => {
     setCart(cart.filter((item) => item.variant_id !== variant_id));
   };
 
-  // Calculate totals (no VAT)
+  // Calculate totals
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const total = subtotal;
+
+  // --- CHECKOUT FUNCTIONS ---
 
   // Handle checkout
   const handleCheckout = async () => {
@@ -178,10 +193,22 @@ const POSPage = () => {
     setError('');
 
     try {
+      // Prepare cart items with IMEI
+      const cartItemsWithImei = cart.map(item => ({
+        variant_id: item.variant_id,
+        product_id: item.product_id,
+        title: item.title,
+        price: item.price,
+        image: item.image,
+        quantity: item.quantity,
+        stock: item.stock,
+        imei: item.imei || null, // Include IMEI here
+      }));
+
       const response = await axios.post(
         `${API_URL}/pos/checkout`,
         {
-          cartItems: cart,
+          cartItems: cartItemsWithImei,
           total: total.toFixed(2),
           payment_method: paymentMethod,
           ...(paymentMethod === 'mpesa' && { phone_number: mpesaPhone }),
@@ -200,6 +227,8 @@ const POSPage = () => {
       setCheckoutLoading(false);
     }
   };
+
+  // --- RENDER LOGIC ---
 
   if (!token) {
     navigate('/login');
@@ -310,6 +339,13 @@ const POSPage = () => {
                         <div className="pos-cart-item-info">
                           <p className="pos-cart-item-name">{item.title}</p>
                           <p className="pos-cart-item-price">Ksh {item.price.toLocaleString('en-KE')}</p>
+                          <Input 
+                            type='text'
+                            placeholder='IMEI/Serial Number'
+                            value={item.imei || ''}
+                            onChange={(e) => updateImei(item.variant_id, e.target.value)}
+                            className="w-full mt-1 text-sm"
+                          />
                         </div>
                         <div className="pos-cart-quantity">
                           <button onClick={() => updateQuantity(item.variant_id, item.quantity - 1)} className="qty-btn">−</button>
