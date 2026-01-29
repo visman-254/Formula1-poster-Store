@@ -39,7 +39,7 @@ const POSReceipt = ({ receipt, onNewSale }) => {
                 margin: 0 !important;
                 padding: 0 !important;
                 font-size: 12px !important;
-                line-height: 1.2 !important;
+                line-height: 1.3 !important;
                 background: white !important;
                 color: black !important;
                 font-family: "Courier New", monospace !important;
@@ -56,10 +56,10 @@ const POSReceipt = ({ receipt, onNewSale }) => {
               width: ${thermalWidth}mm;
               max-width: ${thermalWidth}mm;
               min-width: ${thermalWidth}mm;
-              padding: 3mm;
+              padding: 4mm;
               font-family: "Courier New", monospace;
               font-size: 12px;
-              line-height: 1.2;
+              line-height: 1.4;
               background: white;
               color: black;
               margin: 0 auto;
@@ -69,95 +69,133 @@ const POSReceipt = ({ receipt, onNewSale }) => {
             
             .receipt-header {
               text-align: center;
-              margin-bottom: 8px;
-              padding-bottom: 5px;
+              margin-bottom: 10px;
+              padding-bottom: 8px;
               border-bottom: 1px dashed #000;
             }
             
             .receipt-header h1 {
               font-size: 18px;
               font-weight: bold;
-              margin: 5px 0;
+              margin: 6px 0;
               text-transform: uppercase;
               letter-spacing: 1px;
             }
             
             .receipt-header p {
-              margin: 3px 0;
+              margin: 4px 0;
               font-size: 11px;
             }
             
             .receipt-meta {
-              margin-bottom: 8px;
-              padding-bottom: 5px;
+              margin-bottom: 10px;
+              padding-bottom: 8px;
               border-bottom: 1px dashed #000;
             }
             
             .meta-row {
               display: flex;
               justify-content: space-between;
-              margin: 3px 0;
+              margin: 5px 0;
               font-size: 11px;
+              line-height: 1.4;
             }
             
             .receipt-items {
-              margin-bottom: 8px;
+              margin-bottom: 10px;
             }
             
             .item-row {
-              margin: 5px 0;
-              padding-bottom: 3px;
-              border-bottom: 1px dotted #ccc;
+              margin: 10px 0;
+              padding-bottom: 8px;
+              border-bottom: 1px dotted #999;
             }
             
             .item-name-row {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 2px;
+              display: block;
+              margin-bottom: 5px;
             }
             
             .item-name {
-              flex: 1;
+              display: block;
               font-weight: bold;
-              font-size: 11px;
+              font-size: 12px;
               word-break: break-word;
+              line-height: 1.4;
+              margin-bottom: 6px;
             }
             
             .item-qty {
-              margin-left: 5px;
+              display: inline-block;
               font-size: 11px;
+              margin-right: 8px;
             }
             
             .item-total {
+              display: block;
               font-weight: bold;
-              font-size: 11px;
+              font-size: 13px;
+              text-align: center;
+              margin-top: 4px;
+              padding: 3px 0;
+              background: #f8f8f8;
+              border-radius: 3px;
             }
             
             .item-imei {
               font-size: 9px;
-              color: #666;
-              margin-left: 10px;
+              color: #444;
+              margin-top: 5px;
               display: block;
+              font-weight: 500;
+              padding: 3px 8px;
+              background: #f0f0f0;
+              border-radius: 2px;
+              letter-spacing: 0.5px;
+              text-align: center;
             }
             
             .receipt-total {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              margin: 10px 0;
-              padding: 8px 0;
+              text-align: center;
+              margin: 15px 0;
+              padding: 12px 8px;
               border-top: 2px dashed #000;
               border-bottom: 2px dashed #000;
+              background: #f5f5f5;
+            }
+            
+            .receipt-total .label {
+              display: block;
+              font-size: 11px;
+              font-weight: normal;
+              margin-bottom: 5px;
+              letter-spacing: 1px;
+            }
+            
+            .receipt-total .amount {
+              display: block;
+              font-size: 18px;
               font-weight: bold;
-              font-size: 14px;
+              letter-spacing: 0.5px;
             }
             
             .receipt-footer {
               text-align: center;
-              margin-top: 10px;
-              padding-top: 5px;
+              margin-top: 15px;
+              padding-top: 10px;
               border-top: 1px dashed #000;
-              font-size: 10px;
+              font-size: 11px;
+              line-height: 1.8;
+            }
+            
+            .receipt-footer p {
+              margin: 7px 0;
+              color: #000;
+            }
+            
+            .receipt-footer .emoji {
+              font-size: 16px;
+              margin: 5px 0;
             }
             
             /* Print controls */
@@ -232,24 +270,26 @@ const POSReceipt = ({ receipt, onNewSale }) => {
                 <div class="item-row">
                   <div class="item-name-row">
                     <span class="item-name">${item.name}</span>
-                    <span class="item-qty">x${item.quantity}</span>
-                    <span class="item-total">Ksh ${item.total.toLocaleString("en-KE")}</span>
+                    <div>
+                      <span class="item-qty">Qty: ${item.quantity}</span>
+                    </div>
                   </div>
                   ${item.imei ? `<span class="item-imei">IMEI: ${item.imei}</span>` : ''}
+                  <div class="item-total">Ksh ${item.total.toLocaleString("en-KE")}</div>
                 </div>
               `).join('')}
             </div>
             
             <!-- Total -->
             <div class="receipt-total">
-              <span>TOTAL:</span>
-              <span>Ksh ${receipt.total.toLocaleString("en-KE")}</span>
+              <span class="label">TOTAL</span>
+              <span class="amount">Ksh ${receipt.total.toLocaleString("en-KE")}</span>
             </div>
             
             <!-- Footer -->
             <div class="receipt-footer">
               <p>Thank you for shopping with us!</p>
-              <p>❤️</p>
+              <p class="emoji">❤️</p>
               <p>Printed: ${new Date().toLocaleString("en-KE")}</p>
               <p>Tel: +254 700 000 000</p>
             </div>
