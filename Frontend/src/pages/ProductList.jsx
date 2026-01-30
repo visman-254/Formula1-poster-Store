@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import PromotionalBanner from "../components/PromotionalBanner";
-
 import {
   Card,
   CardHeader,
@@ -16,8 +15,6 @@ import { Search, Tag } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import API_BASE from "../config";
 import "./Products.css";
-
-
 import SideMenu from "../components/SideMenu";
 import "../components/SideMenu.css";
 
@@ -155,7 +152,6 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
 
   return (
     <div className="products-container">
-
       {/* 🔥 PROMOTIONAL BANNER */}
       <div className="px-4 md:px-8 pt-4">
         <PromotionalBanner className="promotional-banner"/>
@@ -178,7 +174,8 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
           selectedCategory={category}
         />
 
-        <div className="grid flex-grow grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 p-4 md:p-8">
+        {/* Updated grid to use pos-products-grid */}
+        <div className="pos-products-grid flex-grow">
           {filteredProducts.length > 0 ? (
             filteredProducts.map((product) => {
               if (!product.is_bundle && !product.variants?.length) return null;
@@ -204,16 +201,15 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
                   )}
 
                   <Link to={`/products/${product.product_id}`}>
+                    <div className="pos-product-image-wrapper">
+                      {renderProductImage(product)}
+                    </div>
+                    
                     <CardHeader>
                       <CardTitle className="text-sm line-clamp-2 h-10">
                         {product.title}
                       </CardTitle>
-
-                      <div className="product-image-container">
-                        {renderProductImage(product)}
-                      </div>
-
-                      <CardDescription>
+                      <CardDescription className="product-description">
                         <DescriptionText
                           description={product.description}
                         />

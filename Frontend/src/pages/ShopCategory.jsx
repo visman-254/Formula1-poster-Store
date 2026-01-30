@@ -15,7 +15,6 @@ import { Search, Tag } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import API_BASE from "../config";
 import "./Products.css";
-
 import SideMenu from "../components/SideMenu";
 import PromotionalBanner from "../components/PromotionalBanner";
 import "../components/SideMenu.css";
@@ -131,19 +130,18 @@ const ShopCategory = () => {
         </div>
       </div>
 
-      {/* Layout: Sidebar + Products */}
       <div className="flex">
         <SideMenu
           onCategorySelect={handleCategorySelect}
           selectedCategory={selectedCategory}
         />
 
-        <div className="flex-grow px-4 md:px-8">
+        <div className="flex-grow">
           {/* Promotional Banner */}
           <PromotionalBanner displayLocation="shop_category_top" />
 
-          {/* Products Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          {/* Updated grid to use pos-products-grid */}
+          <div className="pos-products-grid">
             {filteredProducts.length > 0 ? (
               filteredProducts.map((product) => {
                 if (!product.variants?.length) return null;
@@ -161,12 +159,6 @@ const ShopCategory = () => {
                     key={product.product_id}
                     className="modern-card relative transition-all duration-300 ease-in-out hover:scale-105 border-none bg-white dark:bg-black group"
                   >
-                    {/* Shimmer Effect */}
-                    <div className="shimmer-effect absolute inset-0 overflow-hidden rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                      <div className="shimmer-corner top-0 left-0"></div>
-                      <div className="shimmer-corner bottom-0 right-0"></div>
-                    </div>
-
                     {/* Color Picker */}
                     <div className="absolute top-3 right-3 z-10">
                       <div className="square-color-picker">
@@ -201,18 +193,19 @@ const ShopCategory = () => {
                     )}
 
                     <Link to={`/products/${product.product_id}`}>
+                      <div className="pos-product-image-wrapper">
+                        <img
+                          src={selectedVariant.image}
+                          alt={product.title}
+                          className="product-image"
+                          loading="lazy"
+                        />
+                      </div>
+                      
                       <CardHeader>
                         <CardTitle className="text-sm font-medium line-clamp-2 h-10 overflow-hidden">
                           {product.title}
                         </CardTitle>
-                        <div className="product-image-container">
-                          <img
-                            src={selectedVariant.image}
-                            alt={product.title}
-                            className="product-image"
-                            loading="lazy"
-                          />
-                        </div>
                         <CardDescription className="product-description">
                           <DescriptionText description={product.description} />
                         </CardDescription>
@@ -236,7 +229,7 @@ const ShopCategory = () => {
 
                     <CardFooter className="card-foter p-3 pt-1">
                       <Button
-                        className="modern-cart-btn w-30 md:w-30"
+                        className="modern-cart-btn"
                         onClick={() => handleAddToCart(product)}
                       >
                         Add to cart
@@ -276,7 +269,6 @@ const ShopCategory = () => {
   );
 };
 
-// Description component
 const DescriptionText = ({ description }) => {
   const [expanded, setExpanded] = useState(false);
   const words = description.split(" ");
