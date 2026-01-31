@@ -7,6 +7,7 @@ import {
   getAllPOSOrders,
   getMySales,
   getCashierSalesAdmin,
+  getPOSPaymentStatus, // Add this import
 } from "../controllers/posController.js";
 
 const router = express.Router();
@@ -37,6 +38,13 @@ router.get("/products", verifyToken, verifyCashier, getPOSProducts);
  * Access: Cashier, Admin
  */
 router.post("/checkout", verifyToken, verifyCashier, checkoutAsCashier);
+
+/**
+ * GET /api/pos/payment-status/:checkoutId
+ * Check the status of a POS M-Pesa transaction
+ * Access: Cashier, Admin
+ */
+router.get("/payment-status/:checkoutId", verifyToken, verifyCashier, getPOSPaymentStatus);
 
 /**
  * GET /api/pos/receipt/:orderId

@@ -126,8 +126,54 @@ export const checkoutAsCashier = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Fatal POS Checkout Error:", error);
+    console.error("POS Checkout Error:", error);
     res.status(500).json({ message: "Checkout failed", error: error.message });
+  }
+};
+
+/**
+ * GET /api/pos/payment-status/:checkoutId
+ */
+export const getPOSPaymentStatus = async (req, res) => {
+  try {
+    const { checkoutId } = req.params;
+
+    // 1. Check status in mpesa_transactions
+    const [txRows] = await db.execute(
+      `SELECT status FROM mpesa_transactions WHERE checkout_id = ? LIMIT 1`,
+      [checkoutId]
+    );
+
+    if (!txRows.length) {
+      return res.status(404).json({ status: "not_found" });
+    }
+
+    const status = txRows[0].status;
+
+    // 2. If paid, find order and generate receipt
+    if (status === "paid") {
+      const [orderRows] = await db.execute(
+        `SELECT id FROM orders WHERE checkout_request_id = ? AND order_type = 'pos' LIMIT 1`,
+        [checkoutId]
+      );
+
+      if (!orderRows.length) {
+        // This case can happen if the callback processed but failed to create the order
+        return res.status(404).json({ status: "paid_but_order_failed" });
+      }
+      
+      const orderId = orderRows[0].id;
+      const receipt = await generateReceipt(orderId);
+      
+      return res.json({ status: "paid", receipt });
+    }
+
+    // 3. If not paid, just return the status
+    return res.json({ status });
+
+  } catch (error) {
+    console.error("Get POS Payment Status Error:", error);
+    res.status(500).json({ message: "Failed to get payment status", error: error.message });
   }
 };
 

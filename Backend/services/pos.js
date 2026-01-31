@@ -7,18 +7,19 @@ export const createPOSOrder = async (
   total,
   cartItems,
   payment_method = "cash",
-  phone_number = null
+  checkoutRequestId = null, // Added parameter
+  existingConnection = null // Added for transactions
 ) => {
-  const connection = await db.getConnection();
+  const connection = existingConnection || await db.getConnection();
 
   try {
-    await connection.beginTransaction();
+    if (!existingConnection) await connection.beginTransaction();
 
     const [orderResult] = await connection.execute(
       `INSERT INTO orders 
-        (user_id, total, status, order_type, sales_person_id, payment_method, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-      [sales_person_id, total, "paid", "pos", sales_person_id, payment_method]
+        (user_id, total, status, order_type, sales_person_id, payment_method, checkout_request_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [sales_person_id, total, "paid", "pos", sales_person_id, payment_method, checkoutRequestId]
     );
 
     const orderId = orderResult.insertId;
@@ -48,23 +49,22 @@ export const createPOSOrder = async (
       }
     }
 
-    await connection.commit();
+    if (!existingConnection) await connection.commit();
 
     return {
       success: true,
       orderId,
       total,
       payment_method,
-      phone_number,
       timestamp: new Date().toISOString(),
     };
 
   } catch (err) {
-    await connection.rollback();
+    if (!existingConnection) await connection.rollback();
     console.error("POS ORDER ERROR:", err.message);
     throw err;
   } finally {
-    connection.release();
+    if (!existingConnection && connection) connection.release();
   }
 };
 

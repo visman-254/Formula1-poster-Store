@@ -1,13 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, X } from "lucide-react";
@@ -30,15 +24,36 @@ const POSPage = () => {
   const [mpesaPhone, setMpesaPhone] = useState('');
   const [mpesaModalError, setMpesaModalError] = useState('');
 
+  // --- Polling State ---
+  const [isPolling, setIsPolling] = useState(false);
+  const [mpesaCheckoutId, setMpesaCheckoutId] = useState(null);
+  const pollingIntervalRef = useRef(null);
+
   const API_URL = `${API_BASE}/api`;
   const token = localStorage.getItem('token');
 
-  // Fetch products on mount
+  // --- Utility Functions ---
+  const resetSale = () => {
+    setCart([]);
+    setMpesaPhone('');
+    setError('');
+    setCheckoutLoading(false);
+    setShowReceipt(false);
+    setReceiptData(null);
+    setIsPolling(false);
+    setMpesaCheckoutId(null);
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+  };
+
+  // --- API Calls ---
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_URL}/products`, {
+        const response = await axios.get(`${API_URL}/pos/products`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setProducts(response.data);
@@ -49,274 +64,180 @@ const POSPage = () => {
         setLoading(false);
       }
     };
-
     fetchProducts();
   }, [token, API_URL]);
 
-  // Get product image from variant or gallery
+  // --- Polling Logic ---
+  useEffect(() => {
+    if (isPolling && mpesaCheckoutId) {
+      pollingIntervalRef.current = setInterval(async () => {
+        try {
+          const { data } = await axios.get(`${API_URL}/pos/payment-status/${mpesaCheckoutId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (data.status === 'paid' && data.receipt) {
+            setReceiptData(data.receipt);
+            setShowReceipt(true);
+            resetSale(); // This will also stop the polling
+          } else if (['failed', 'cancelled', 'not_found', 'paid_but_order_failed'].includes(data.status)) {
+            setError(`Payment failed or was not found. Status: ${data.status}`);
+            resetSale();
+          }
+          // If status is 'pending', do nothing and let it poll again.
+        } catch (err) {
+          console.error('Polling error:', err);
+          setError('An error occurred while checking payment status.');
+          resetSale();
+        }
+      }, 3000); // Poll every 3 seconds
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [isPolling, mpesaCheckoutId, API_URL, token]);
+
+
+  // Get product image
   const getProductImage = (product) => {
     if (!product) return '/fallback.jpg';
-    
-    if (product.is_bundle && product.bundleImages && product.bundleImages.length > 0) {
-      return product.bundleImages[0];
-    }
-
+    if (product.is_bundle && product.bundleImages?.length > 0) return product.bundleImages[0];
     const variant = product.variants?.[0];
     if (variant?.image) return variant.image;
-
-    if (product.images && product.images.length > 0) {
-      const galleryImage = product.images[0]?.image_url || product.images[0];
-      if (galleryImage) return galleryImage;
-    }
-
+    if (product.images?.length > 0) return product.images[0]?.image_url || product.images[0];
     if (product.primaryImage) return product.primaryImage;
-
     return '/fallback.jpg';
   };
 
-  // Filter products based on search
-  const filteredProducts = products.filter((product) => {
-    if (!product.is_bundle && (!product.variants || product.variants.length === 0)) return false;
-    return product.title.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+  const filteredProducts = products.filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  // --- CART FUNCTIONS ---
-
-  // Update IMEI for a specific cart item
-  const updateImei = (variant_id, imeiValue) => {
-    const updatedCart = cart.map((item) => {
-      if (item.variant_id === variant_id) {
-        return { ...item, imei: imeiValue };
-      }
-      return item;
-    });
-    setCart(updatedCart);
-  };
-
-  // Add product to cart
+  // --- Cart Functions ---
+  const updateImei = (variant_id, imeiValue) => setCart(cart.map((i) => (i.variant_id === variant_id ? { ...i, imei: imeiValue } : i)));
   const addToCart = (product) => {
     const variant = product.variants[0];
-    if (!variant || variant.stock <= 0) {
-      setError('Product out of stock');
-      return;
-    }
-
-    const existingItem = cart.find((item) => item.variant_id === variant.variant_id);
-    if (existingItem) {
-      if (existingItem.quantity >= variant.stock) {
-        setError('Insufficient stock');
-        return;
-      }
-      updateQuantity(variant.variant_id, existingItem.quantity + 1);
+    if (!variant || variant.stock <= 0) return setError('Product out of stock');
+    const existing = cart.find((i) => i.variant_id === variant.variant_id);
+    if (existing) {
+      if (existing.quantity >= variant.stock) return setError('Insufficient stock');
+      updateQuantity(variant.variant_id, existing.quantity + 1);
     } else {
-      setCart([
-        ...cart,
-        {
-          variant_id: variant.variant_id,
-          product_id: product.product_id,
-          title: product.title,
-          price: variant.price,
-          image: getProductImage(product),
-          quantity: 1,
-          stock: variant.stock,
-          imei: '', // Initialize with empty IMEI
-        },
-      ]);
+      setCart([...cart, { ...product, ...variant, quantity: 1, title: product.title, image: getProductImage(product), imei: '' }]);
     }
-    setError('');
   };
-
-  // Update quantity
   const updateQuantity = (variant_id, quantity) => {
-    if (quantity <= 0) {
-      removeFromCart(variant_id);
-      return;
-    }
-
-    const item = cart.find((item) => item.variant_id === variant_id);
-    if (item && quantity > item.stock) {
-      setError('Insufficient stock');
-      return;
-    }
-
-    setCart(cart.map((item) =>
-      item.variant_id === variant_id ? { ...item, quantity } : item
-    ));
-    setError('');
+    if (quantity <= 0) return removeFromCart(variant_id);
+    const item = cart.find((i) => i.variant_id === variant_id);
+    if (item && quantity > item.stock) return setError('Insufficient stock');
+    setCart(cart.map((i) => (i.variant_id === variant_id ? { ...i, quantity } : i)));
   };
+  const removeFromCart = (variant_id) => setCart(cart.filter((i) => i.variant_id !== variant_id));
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  // Remove from cart
-  const removeFromCart = (variant_id) => {
-    setCart(cart.filter((item) => item.variant_id !== variant_id));
-  };
-
-  // Calculate totals
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const total = subtotal;
-
-  // --- CHECKOUT FUNCTIONS ---
-
-  // Handle checkout
+  // --- Checkout Functions ---
   const handleCheckout = async () => {
-    if (cart.length === 0) {
-      setError('Cart is empty');
-      return;
-    }
+    if (cart.length === 0) return setError('Cart is empty');
+    setError('');
 
     if (paymentMethod === 'mpesa') {
       setShowMpesaModal(true);
       setMpesaModalError('');
-      return;
+    } else {
+      await processImmediateCheckout();
     }
-
-    await processCheckout();
   };
-
-  // M-Pesa phone submission
+  
   const handleMpesaSubmit = async () => {
-    if (!mpesaPhone.trim()) {
-      setMpesaModalError('Phone number is required');
-      return;
+    if (!mpesaPhone.trim() || !/^\d{10,}$/.test(mpesaPhone.replace(/\D/g, ''))) {
+      return setMpesaModalError('Please enter a valid phone number');
     }
-
-    if (!/^\d{10,}$/.test(mpesaPhone.replace(/\D/g, ''))) {
-      setMpesaModalError('Please enter a valid phone number (at least 10 digits)');
-      return;
-    }
-
     setShowMpesaModal(false);
-    await processCheckout();
+    await initiateMpesaPayment();
   };
 
-  // Process checkout
-  const processCheckout = async () => {
+  const processImmediateCheckout = async () => {
     setCheckoutLoading(true);
-    setError('');
-
     try {
-      // Prepare cart items with IMEI
-      const cartItemsWithImei = cart.map(item => ({
-        variant_id: item.variant_id,
-        product_id: item.product_id,
-        title: item.title,
-        price: item.price,
-        image: item.image,
-        quantity: item.quantity,
-        stock: item.stock,
-        imei: item.imei || null, // Include IMEI here
-      }));
-
-      const response = await axios.post(
-        `${API_URL}/pos/checkout`,
-        {
-          cartItems: cartItemsWithImei,
-          total: total.toFixed(2),
-          payment_method: paymentMethod,
-          ...(paymentMethod === 'mpesa' && { phone_number: mpesaPhone }),
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
+      const response = await axios.post(`${API_URL}/pos/checkout`, {
+        cartItems: cart, total: total.toFixed(2), payment_method: paymentMethod,
+      }, { headers: { Authorization: `Bearer ${token}` } });
       setReceiptData(response.data.receipt);
       setShowReceipt(true);
-      setCart([]);
-      setMpesaPhone('');
+      resetSale();
     } catch (err) {
       console.error('Checkout error:', err);
       setError(err.response?.data?.message || 'Checkout failed');
-    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  const initiateMpesaPayment = async () => {
+    setCheckoutLoading(true);
+    setError('');
+    try {
+      const response = await axios.post(`${API_URL}/pos/checkout`, {
+        cartItems: cart, total: total.toFixed(2), payment_method: 'mpesa', phone_number: mpesaPhone,
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      
+      if (response.data.success && response.data.checkoutRequestID) {
+        setMpesaCheckoutId(response.data.checkoutRequestID);
+        setIsPolling(true);
+      } else {
+        throw new Error("M-Pesa initiation failed. No Checkout ID received.");
+      }
+    } catch (err) {
+      console.error('M-Pesa initiation error:', err);
+      setError(err.response?.data?.message || 'M-Pesa initiation failed.');
       setCheckoutLoading(false);
     }
   };
 
   // --- RENDER LOGIC ---
-
   if (!token) {
     navigate('/login');
     return null;
   }
 
   if (showReceipt && receiptData) {
-    return <POSReceipt receipt={receiptData} onNewSale={() => setShowReceipt(false)} />;
+    return <POSReceipt receipt={receiptData} onNewSale={() => { setShowReceipt(false); setReceiptData(null); }} />;
   }
 
   return (
     <div className="pos-page-container">
-      {/* Search Section */}
-      <div className="pos-search-section">
-        <div className="pos-search-wrapper">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              type="text"
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 pr-3 py-2 h-10 text-sm border border-gray-300 rounded-md focus:border-transparent w-full sm:w-64"
-            />
-          </div>
-          <div className="text-xs text-gray-500 whitespace-nowrap ml-4">
-            {filteredProducts.length} {filteredProducts.length === 1 ? "item" : "items"}
-          </div>
+      {/* Search Section & Alerts */}
+      {isPolling && (
+        <div className="pos-info-alert">
+          <p>Awaiting M-Pesa payment confirmation for Ksh {total.toLocaleString('en-KE')}... Please ask the customer to complete the transaction on their phone.</p>
         </div>
-      </div>
-
+      )}
       {error && (
         <div className="pos-error-alert">
           <p>{error}</p>
-          <button onClick={() => setError('')}>
-            <X className="w-4 h-4" />
-          </button>
+          <button onClick={() => setError('')}><X className="w-4 h-4" /></button>
         </div>
       )}
-
+      
+      {/* Main Layout */}
       <div className="pos-main-layout">
         {/* Products Grid */}
         <div className="pos-products-section">
-          {loading ? (
-            <div className="loading-container">
-              <div className="spinner"></div>
-              <p>Loading products...</p>
-            </div>
-          ) : filteredProducts.length > 0 ? (
+          {loading ? <p>Loading...</p> : (
             <div className="pos-products-grid">
-              {filteredProducts.map((product) => {
-                const variant = product.variants?.[0];
-                const isOutOfStock = !variant || variant.stock <= 0;
-                const imageUrl = getProductImage(product);
-
-                return (
-                  <Card key={product.product_id} className={`pos-product-card ${isOutOfStock ? 'out-of-stock' : ''}`}>
-                    <CardContent className="p-0">
-                      <div className="pos-product-image-wrapper">
-                        <img
-                          src={imageUrl}
-                          alt={product.title}
-                          className="pos-product-image"
-                          onError={(e) => { e.target.src = '/fallback.jpg'; }}
-                        />
-                        {isOutOfStock && <div className="pos-stock-badge">Out of Stock</div>}
-                      </div>
-                      <div className="pos-product-info">
-                        <p className="pos-product-title">{product.title}</p>
-                        <p className="pos-product-price">Ksh {variant?.price?.toLocaleString('en-KE') || 'N/A'}</p>
-                        <p className="pos-product-stock">Stock: {variant?.stock || 0}</p>
-                        <Button
-                          onClick={() => addToCart(product)}
-                          disabled={isOutOfStock || checkoutLoading}
-                          className="w-full mt-2 bg-green-500 hover:bg-green-600 text-white"
-                        >
-                          Add to Cart
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="empty-search">
-              <p>No products found</p>
+              {filteredProducts.map((product) => (
+                <Card key={product.product_id} className={`pos-product-card ${product.variants[0]?.stock <= 0 ? 'out-of-stock' : ''}`}>
+                  <CardContent className="p-0">
+                    <img src={getProductImage(product)} alt={product.title} className="pos-product-image" />
+                    {product.variants[0]?.stock <= 0 && <div className="pos-stock-badge">Out of Stock</div>}
+                    <div className="pos-product-info">
+                      <p className="pos-product-title">{product.title}</p>
+                      <p className="pos-product-price">Ksh {product.variants[0]?.price?.toLocaleString('en-KE')}</p>
+                      <Button onClick={() => addToCart(product)} disabled={product.variants[0]?.stock <= 0 || checkoutLoading || isPolling} className="w-full mt-2">Add to Cart</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </div>
@@ -324,81 +245,41 @@ const POSPage = () => {
         {/* Cart Section */}
         <div className="pos-cart-section">
           <Card className="sticky-cart">
-            <CardHeader>
-              <CardTitle className="text-lg"> Cart ({cart.length})</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Cart ({cart.length})</CardTitle></CardHeader>
             <CardContent>
-              {cart.length === 0 ? (
-                <div className="empty-cart-message">
-                  <p>Cart is empty</p>
-                </div>
-              ) : (
+              {cart.length === 0 ? <p>Cart is empty</p> : (
                 <>
                   <div className="pos-cart-items">
                     {cart.map((item) => (
                       <div key={item.variant_id} className="pos-cart-item">
-                        <div className="pos-cart-item-info">
-                          <p className="pos-cart-item-name">{item.title}</p>
-                          <p className="pos-cart-item-price">Ksh {item.price.toLocaleString('en-KE')}</p>
-                          <Input 
-                            type='text'
-                            placeholder='IMEI/Serial Number'
-                            value={item.imei || ''}
-                            onChange={(e) => updateImei(item.variant_id, e.target.value)}
-                            className="w-full mt-1 text-sm"
-                          />
+                        <div>
+                          <p>{item.title}</p>
+                          <p>Ksh {item.price.toLocaleString('en-KE')}</p>
+                          <Input type='text' placeholder='IMEI/Serial' value={item.imei} onChange={(e) => updateImei(item.variant_id, e.target.value)} className="w-full mt-1" />
                         </div>
                         <div className="pos-cart-quantity">
-                          <button onClick={() => updateQuantity(item.variant_id, item.quantity - 1)} className="qty-btn">−</button>
-                          <input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) => updateQuantity(item.variant_id, parseInt(e.target.value) || 1)}
-                            className="qty-input"
-                          />
-                          <button onClick={() => updateQuantity(item.variant_id, item.quantity + 1)} className="qty-btn">+</button>
+                          <button onClick={() => updateQuantity(item.variant_id, item.quantity - 1)}>−</button>
+                          <input type="number" min="1" value={item.quantity} onChange={(e) => updateQuantity(item.variant_id, parseInt(e.target.value) || 1)} />
+                          <button onClick={() => updateQuantity(item.variant_id, item.quantity + 1)}>+</button>
                         </div>
-                        <p className="pos-cart-item-total">
-                          Ksh {(item.price * item.quantity).toLocaleString('en-KE')}
-                        </p>
-                        <button onClick={() => removeFromCart(item.variant_id)} className="pos-cart-remove">
-                          <X className="w-4 h-4" />
-                        </button>
+                        <p>Ksh {(item.price * item.quantity).toLocaleString('en-KE')}</p>
+                        <button onClick={() => removeFromCart(item.variant_id)}><X className="w-4 h-4" /></button>
                       </div>
                     ))}
                   </div>
-
-                  {/* Cart Total */}
                   <div className="pos-cart-summary">
-                    <div className="summary-row total">
-                      <span className="font-bold">Total:</span>
-                      <span className="font-bold text-lg">Ksh {total.toLocaleString('en-KE', { maximumFractionDigits: 2 })}</span>
-                    </div>
+                    <span className="font-bold">Total:</span>
+                    <span className="font-bold text-lg">Ksh {total.toLocaleString('en-KE')}</span>
                   </div>
-
-                  {/* Payment Method */}
                   <div className="pos-payment-method">
-                    <label htmlFor="payment" className="text-sm font-semibold">Payment Method:</label>
-                    <select
-                      id="payment"
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-full mt-2 p-2 border border-gray-300 rounded-md"
-                    >
+                    <select id="payment" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} disabled={checkoutLoading || isPolling} className="w-full mt-2 p-2">
                       <option value="cash">Cash</option>
                       <option value="mpesa">M-Pesa</option>
                       <option value="card">Card</option>
                     </select>
                   </div>
-
-                  {/* Checkout Button */}
-                  <Button
-                    onClick={handleCheckout}
-                    disabled={checkoutLoading || cart.length === 0}
-                    className="w-full mt-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-2 rounded-lg"
-                  >
-                    {checkoutLoading ? ' Processing...' : '✓ Checkout & Print'}
+                  <Button onClick={handleCheckout} disabled={checkoutLoading || cart.length === 0 || isPolling} className="w-full mt-4">
+                    {checkoutLoading ? (isPolling ? 'Awaiting Payment...' : 'Processing...') : '✓ Checkout & Print'}
                   </Button>
                 </>
               )}
@@ -410,48 +291,17 @@ const POSPage = () => {
       {/* M-Pesa Modal */}
       {showMpesaModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-96 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-lg">M-Pesa Payment</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Enter the buyer's phone number to receive M-Pesa payment prompt
-              </p>
-              <div>
-                <label htmlFor="mpesa-phone" className="block text-sm font-medium mb-2">Phone Number</label>
-                <Input
-                  id="mpesa-phone"
-                  type="tel"
-                  placeholder="e.g., 0712345678"
-                  value={mpesaPhone}
-                  onChange={(e) => {
-                    setMpesaPhone(e.target.value);
-                    setMpesaModalError('');
-                  }}
-                  className="w-full"
-                  autoFocus
-                />
-                {mpesaModalError && <p className="text-red-500 text-sm mt-2">{mpesaModalError}</p>}
-              </div>
-              <div className="bg-blue-50 p-3 rounded-md text-sm">
-                <p>Amount to pay: <strong>Ksh {total.toLocaleString('en-KE', { maximumFractionDigits: 2 })}</strong></p>
-              </div>
+          <Card className="w-96">
+            <CardHeader><CardTitle>M-Pesa Payment</CardTitle></CardHeader>
+            <CardContent>
+              <p>Enter phone number to receive payment prompt.</p>
+              <Input id="mpesa-phone" type="tel" placeholder="e.g., 0712345678" value={mpesaPhone} onChange={(e) => { setMpesaPhone(e.target.value); setMpesaModalError(''); }} autoFocus />
+              {mpesaModalError && <p className="text-red-500 text-sm mt-2">{mpesaModalError}</p>}
+              <p>Amount: <strong>Ksh {total.toLocaleString('en-KE')}</strong></p>
             </CardContent>
             <CardFooter className="flex gap-2 justify-end">
-              <Button
-                onClick={() => { setShowMpesaModal(false); setMpesaPhone(''); setMpesaModalError(''); }}
-                className="bg-gray-300 hover:bg-gray-400 text-black"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleMpesaSubmit}
-                disabled={checkoutLoading || !mpesaPhone.trim()}
-                className="bg-green-500 hover:bg-green-600 text-white"
-              >
-                {checkoutLoading ? ' Processing...' : '✓ Proceed'}
-              </Button>
+              <Button onClick={() => setShowMpesaModal(false)} variant="ghost">Cancel</Button>
+              <Button onClick={handleMpesaSubmit} disabled={!mpesaPhone.trim()}>✓ Proceed</Button>
             </CardFooter>
           </Card>
         </div>
