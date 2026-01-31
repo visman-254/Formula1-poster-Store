@@ -103,13 +103,45 @@ const POSPage = () => {
 
   // Get product image
   const getProductImage = (product) => {
-    if (!product) return '/fallback.jpg';
-    if (product.is_bundle && product.bundleImages?.length > 0) return product.bundleImages[0];
+    const fallback = '/fallback.jpg';
+    if (!product) return fallback;
+
+    const getImageUrl = (path) => {
+      if (!path) return null;
+      // If it's already a full URL, return it. Otherwise, construct the full URL.
+      if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+      }
+      // Assuming the backend serves static files from a root path that matches the stored path
+      // Example stored path: 'uploads/images/1758006367748.jpg'
+      // API_BASE: 'http://localhost:5000'
+      // Result: 'http://localhost:5000/uploads/images/1758006367748.jpg'
+      return `${API_BASE}/${path.replace(/\\/g, '/')}`;
+    };
+
+    if (product.is_bundle && product.bundleImages?.length > 0) {
+      const url = getImageUrl(product.bundleImages[0]);
+      if (url) return url;
+    }
+
     const variant = product.variants?.[0];
-    if (variant?.image) return variant.image;
-    if (product.images?.length > 0) return product.images[0]?.image_url || product.images[0];
-    if (product.primaryImage) return product.primaryImage;
-    return '/fallback.jpg';
+    if (variant?.image) {
+      const url = getImageUrl(variant.image);
+      if (url) return url;
+    }
+
+    if (product.images?.length > 0) {
+      const galleryImage = product.images[0]?.image_url || product.images[0];
+      const url = getImageUrl(galleryImage);
+      if (url) return url;
+    }
+
+    if (product.primaryImage) {
+      const url = getImageUrl(product.primaryImage);
+      if (url) return url;
+    }
+
+    return fallback;
   };
 
   const filteredProducts = products.filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -118,14 +150,34 @@ const POSPage = () => {
   const updateImei = (variant_id, imeiValue) => setCart(cart.map((i) => (i.variant_id === variant_id ? { ...i, imei: imeiValue } : i)));
   const addToCart = (product) => {
     const variant = product.variants[0];
-    if (!variant || variant.stock <= 0) return setError('Product out of stock');
-    const existing = cart.find((i) => i.variant_id === variant.variant_id);
-    if (existing) {
-      if (existing.quantity >= variant.stock) return setError('Insufficient stock');
-      updateQuantity(variant.variant_id, existing.quantity + 1);
-    } else {
-      setCart([...cart, { ...product, ...variant, quantity: 1, title: product.title, image: getProductImage(product), imei: '' }]);
+    if (!variant || variant.stock <= 0) {
+      setError('Product out of stock');
+      return;
     }
+
+    const existingItem = cart.find((item) => item.variant_id === variant.variant_id);
+    if (existingItem) {
+      if (existingItem.quantity >= variant.stock) {
+        setError('Insufficient stock');
+        return;
+      }
+      updateQuantity(variant.variant_id, existingItem.quantity + 1);
+    } else {
+      setCart([
+        ...cart,
+        {
+          variant_id: variant.variant_id,
+          product_id: product.product_id,
+          title: product.title,
+          price: variant.price,
+          image: getProductImage(product),
+          quantity: 1,
+          stock: variant.stock,
+          imei: '', // Initialize with empty IMEI
+        },
+      ]);
+    }
+    setError('');
   };
   const updateQuantity = (variant_id, quantity) => {
     if (quantity <= 0) return removeFromCart(variant_id);
@@ -223,21 +275,41 @@ const POSPage = () => {
       <div className="pos-main-layout">
         {/* Products Grid */}
         <div className="pos-products-section">
-          {loading ? <p>Loading...</p> : (
+          {loading ? <div className="loading-container"><div className="spinner"></div><p>Loading products...</p></div> : (
             <div className="pos-products-grid">
-              {filteredProducts.map((product) => (
-                <Card key={product.product_id} className={`pos-product-card ${product.variants[0]?.stock <= 0 ? 'out-of-stock' : ''}`}>
-                  <CardContent className="p-0">
-                    <img src={getProductImage(product)} alt={product.title} className="pos-product-image" />
-                    {product.variants[0]?.stock <= 0 && <div className="pos-stock-badge">Out of Stock</div>}
-                    <div className="pos-product-info">
-                      <p className="pos-product-title">{product.title}</p>
-                      <p className="pos-product-price">Ksh {product.variants[0]?.price?.toLocaleString('en-KE')}</p>
-                      <Button onClick={() => addToCart(product)} disabled={product.variants[0]?.stock <= 0 || checkoutLoading || isPolling} className="w-full mt-2">Add to Cart</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {filteredProducts.map((product) => {
+                const variant = product.variants?.[0];
+                const isOutOfStock = !variant || variant.stock <= 0;
+                const imageUrl = getProductImage(product);
+
+                return (
+                  <Card key={product.product_id} className={`pos-product-card ${isOutOfStock ? 'out-of-stock' : ''}`}>
+                    <CardContent className="p-0">
+                      <div className="pos-product-image-wrapper">
+                        <img
+                          src={imageUrl}
+                          alt={product.title}
+                          className="pos-product-image"
+                          onError={(e) => { e.target.src = '/fallback.jpg'; }}
+                        />
+                        {isOutOfStock && <div className="pos-stock-badge">Out of Stock</div>}
+                      </div>
+                      <div className="pos-product-info">
+                        <p className="pos-product-title">{product.title}</p>
+                        <p className="pos-product-price">Ksh {variant?.price?.toLocaleString('en-KE') || 'N/A'}</p>
+                        <p className="pos-product-stock">Stock: {variant?.stock || 0}</p>
+                        <Button
+                          onClick={() => addToCart(product)}
+                          disabled={isOutOfStock || checkoutLoading || isPolling}
+                          className="w-full mt-2 bg-green-500 hover:bg-green-600 text-white"
+                        >
+                          Add to Cart
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
@@ -252,33 +324,68 @@ const POSPage = () => {
                   <div className="pos-cart-items">
                     {cart.map((item) => (
                       <div key={item.variant_id} className="pos-cart-item">
-                        <div>
-                          <p>{item.title}</p>
-                          <p>Ksh {item.price.toLocaleString('en-KE')}</p>
-                          <Input type='text' placeholder='IMEI/Serial' value={item.imei} onChange={(e) => updateImei(item.variant_id, e.target.value)} className="w-full mt-1" />
+                        <div className="pos-cart-item-info">
+                          <p className="pos-cart-item-name">{item.title}</p>
+                          <p className="pos-cart-item-price">Ksh {item.price.toLocaleString('en-KE')}</p>
+                          <Input 
+                            type='text'
+                            placeholder='IMEI/Serial Number'
+                            value={item.imei || ''}
+                            onChange={(e) => updateImei(item.variant_id, e.target.value)}
+                            className="w-full mt-1 text-sm"
+                          />
                         </div>
                         <div className="pos-cart-quantity">
-                          <button onClick={() => updateQuantity(item.variant_id, item.quantity - 1)}>−</button>
-                          <input type="number" min="1" value={item.quantity} onChange={(e) => updateQuantity(item.variant_id, parseInt(e.target.value) || 1)} />
-                          <button onClick={() => updateQuantity(item.variant_id, item.quantity + 1)}>+</button>
+                          <button onClick={() => updateQuantity(item.variant_id, item.quantity - 1)} className="qty-btn">−</button>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => updateQuantity(item.variant_id, parseInt(e.target.value) || 1)}
+                            className="qty-input"
+                          />
+                          <button onClick={() => updateQuantity(item.variant_id, item.quantity + 1)} className="qty-btn">+</button>
                         </div>
-                        <p>Ksh {(item.price * item.quantity).toLocaleString('en-KE')}</p>
-                        <button onClick={() => removeFromCart(item.variant_id)}><X className="w-4 h-4" /></button>
+                        <p className="pos-cart-item-total">
+                          Ksh {(item.price * item.quantity).toLocaleString('en-KE')}
+                        </p>
+                        <button onClick={() => removeFromCart(item.variant_id)} className="pos-cart-remove">
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
                     ))}
                   </div>
+
+                  {/* Cart Total */}
                   <div className="pos-cart-summary">
-                    <span className="font-bold">Total:</span>
-                    <span className="font-bold text-lg">Ksh {total.toLocaleString('en-KE')}</span>
+                    <div className="summary-row total">
+                      <span className="font-bold">Total:</span>
+                      <span className="font-bold text-lg">Ksh {total.toLocaleString('en-KE', { maximumFractionDigits: 2 })}</span>
+                    </div>
                   </div>
+
+                  {/* Payment Method */}
                   <div className="pos-payment-method">
-                    <select id="payment" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} disabled={checkoutLoading || isPolling} className="w-full mt-2 p-2">
+                    <label htmlFor="payment" className="text-sm font-semibold">Payment Method:</label>
+                    <select
+                      id="payment"
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      disabled={checkoutLoading || isPolling}
+                      className="w-full mt-2 p-2 border border-gray-300 rounded-md"
+                    >
                       <option value="cash">Cash</option>
                       <option value="mpesa">M-Pesa</option>
                       <option value="card">Card</option>
                     </select>
                   </div>
-                  <Button onClick={handleCheckout} disabled={checkoutLoading || cart.length === 0 || isPolling} className="w-full mt-4">
+
+                  {/* Checkout Button */}
+                  <Button
+                    onClick={handleCheckout}
+                    disabled={checkoutLoading || cart.length === 0 || isPolling}
+                    className="w-full mt-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-2 rounded-lg"
+                  >
                     {checkoutLoading ? (isPolling ? 'Awaiting Payment...' : 'Processing...') : '✓ Checkout & Print'}
                   </Button>
                 </>
