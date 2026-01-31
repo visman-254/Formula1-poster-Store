@@ -1,6 +1,7 @@
 import { createPOSOrder, generateReceipt, getPOSOrders, getCashierSales } from "../services/pos.js";
 import { getProducts } from "../services/product.js";
 import { getAccessToken, initiateSTKPush } from "../services/mpesa.js";
+import db from "../config/db.js";
 
 /**
  * GET /api/pos/products
@@ -19,19 +20,24 @@ export const getPOSProducts = async (req, res) => {
  * POST /api/pos/checkout
  */
 export const checkoutAsCashier = async (req, res) => {
+  console.log("Received POS checkout request:", req.body); // Log request body
+
   try {
     const sales_person_id = req.user.id;
     const { cartItems, total, payment_method = "cash", phone_number } = req.body;
 
     if (!cartItems?.length) {
+      console.log("Checkout failed: Cart is empty.");
       return res.status(400).json({ message: "Cart is empty" });
     }
 
     if (!total || total <= 0) {
+      console.log(`Checkout failed: Invalid total - ${total}`);
       return res.status(400).json({ message: "Invalid total" });
     }
 
     if (!["cash", "mpesa", "card"].includes(payment_method)) {
+      console.log(`Checkout failed: Invalid payment method - ${payment_method}`);
       return res.status(400).json({ message: "Invalid payment method" });
     }
 
@@ -39,6 +45,7 @@ export const checkoutAsCashier = async (req, res) => {
     // CASH & CARD → COMPLETE SALE IMMEDIATELY
     // =====================
     if (payment_method === "cash" || payment_method === "card") {
+      console.log(`Processing ${payment_method} payment...`);
       const result = await createPOSOrder(
         sales_person_id,
         total,
@@ -47,6 +54,7 @@ export const checkoutAsCashier = async (req, res) => {
       );
 
       const receipt = await generateReceipt(result.orderId);
+      console.log("Sale completed successfully for order:", result.orderId);
 
       return res.status(201).json({
         success: true,
@@ -58,45 +66,67 @@ export const checkoutAsCashier = async (req, res) => {
     // =====================
     // MPESA → PAYMENT FIRST
     // =====================
+    console.log("Processing M-Pesa payment...");
     if (!phone_number) {
+      console.log("M-Pesa checkout failed: Phone number is required.");
       return res.status(400).json({ message: "Phone number required for Mpesa" });
     }
 
+    console.log("Requesting M-Pesa access token...");
     const token = await getAccessToken(
       process.env.MPESA_CONSUMER_KEY,
       process.env.MPESA_CONSUMER_SECRET
     );
+    console.log("M-Pesa access token obtained:", token ? "Token received" : "Token is null/undefined");
 
     let formattedPhone = phone_number.replace(/\D/g, "");
     if (formattedPhone.length === 10) {
       formattedPhone = "254" + formattedPhone.substring(1);
     }
+    console.log(`Formatted phone number: ${formattedPhone}`);
 
-    // FIXED: Use the correct environment variable names
+    const callbackUrl = `${process.env.MPESA_CALLBACK_URL}/pos`;
+    console.log(`Using M-Pesa callback URL: ${callbackUrl}`);
+
+    console.log("Initiating STK push...");
     const stkPush = await initiateSTKPush({
-      shortcode: process.env.MPESA_BUSINESS_SHORT_CODE,  // FIXED: Changed from MPESA_SHORTCODE
-      passkey: process.env.MPESA_PASS_KEY,               // FIXED: Changed from MPESA_PASSKEY
+      shortcode: process.env.MPESA_BUSINESS_SHORT_CODE,
+      passkey: process.env.MPESA_PASS_KEY,
       amount: Math.round(total),
       phoneNumber: formattedPhone,
       token,
-      callbackUrl: process.env.MPESA_CALLBACK_URL,       // FIXED: Changed from localhost URL
+      callbackUrl: callbackUrl,
     });
+    console.log("STK push initiated. Response:", stkPush);
+    
+    const checkoutRequestID = stkPush.CheckoutRequestID || stkPush.checkoutRequestID;
+    console.log(`CheckoutRequestID: ${checkoutRequestID}`);
+
+    if (!checkoutRequestID) {
+      console.error("STK Push failed: No CheckoutRequestID in response.", stkPush);
+      return res.status(500).json({
+        message: "M-Pesa STK push failed. Check server logs.",
+        error: stkPush.errorMessage || "No checkout request ID returned."
+      });
+    }
+
+    console.log("Saving pending transaction to database...");
+    await db.execute(
+      `INSERT INTO mpesa_transactions
+      (checkout_id, user_id, amount, phone, cart_items, status)
+      VALUES (?, ?, ?, ?, ?, ?)`,
+      [checkoutRequestID, sales_person_id, Math.round(total), formattedPhone, JSON.stringify(cartItems), "pending"]
+    );
+    console.log("Pending transaction saved successfully.");
 
     return res.status(200).json({
       success: true,
       message: "M-Pesa prompt sent. Awaiting payment confirmation.",
-      checkoutRequestID: stkPush.CheckoutRequestID,
-      pendingOrder: {
-        sales_person_id,
-        cartItems,
-        total,
-        payment_method,
-        phone_number,
-      },
+      checkoutRequestID,
     });
 
   } catch (error) {
-    console.error("POS Checkout Error:", error);
+    console.error("Fatal POS Checkout Error:", error);
     res.status(500).json({ message: "Checkout failed", error: error.message });
   }
 };

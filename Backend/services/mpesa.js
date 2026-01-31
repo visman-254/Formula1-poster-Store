@@ -46,13 +46,15 @@ export const initiateSTKPush = async ({
     TransactionDesc: "Payment for order",
   };
 
-  console.log("Using callback url:", callbackUrl || process.env.MPESA_CALLBACK_URL);
+  console.log("M-Pesa STK Push Payload:", payload);
+
   const response = await axios.post(stkUrl, payload, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
 
+  console.log("M-Pesa STK Push Response:", response.data);
   // return raw response data (which should include MerchantRequestID and CheckoutRequestID)
   return response.data;
 };

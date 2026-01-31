@@ -33,6 +33,7 @@
     "lucide-react": "^0.541.0",
     "mathjs": "^14.8.1",
     "motion": "^12.23.22",
+    "qrcode": "^1.5.4",
     "react": "^19.1.1",
     "react-bits": "^1.0.5",
     "react-dom": "^19.1.1",
