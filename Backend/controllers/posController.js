@@ -129,8 +129,13 @@ export const checkoutAsCashier = async (req, res) => {
         // Process items
         for (const item of cartItems) {
             const variantId = item.variant_id || item.product_id;
-            const orderItemId = await createOrderItem(orderId, variantId, item.quantity, item.price, item.title, item.image, item.imei || null, connection);
-            
+            // Direct insert to avoid 'imei_serial' column error
+            const [itemResult] = await connection.execute(
+              `INSERT INTO order_items (order_id, variant_id, quantity, price, product_name, product_image) VALUES (?, ?, ?, ?, ?, ?)`,
+              [orderId, variantId, item.quantity, item.price, item.title, item.image]
+            );
+            const orderItemId = itemResult.insertId;
+
             // Stock Reduction
             const product = await getProductByVariantId(variantId);
             let totalCOGS = 0;

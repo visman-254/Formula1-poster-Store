@@ -115,8 +115,13 @@ export const mpesaCallback = async (req, res) => {
 
           for (const item of cartItems) {
             const variantId = item.variant_id || item.product_id;
-            const orderItemId = await createOrderItem(orderId, variantId, item.quantity, item.price, item.title, item.image, item.imei || null, connection);
-            
+            // Direct insert to avoid 'imei_serial' column error
+            const [itemResult] = await connection.execute(
+              `INSERT INTO order_items (order_id, variant_id, quantity, price, product_name, product_image) VALUES (?, ?, ?, ?, ?, ?)`,
+              [orderId, variantId, item.quantity, item.price, item.title, item.image]
+            );
+            const orderItemId = itemResult.insertId;
+
             // Stock Reduction Logic
             const product = await getProductByVariantId(variantId);
             let totalCOGS = 0;
@@ -154,8 +159,8 @@ export const mpesaCallback = async (req, res) => {
           console.error(`Error processing POS transaction for ${CheckoutRequestID}:`, posError);
           await connection.rollback();
           await db.execute(
-            `UPDATE mpesa_transactions SET status = 'failed', failure_reason = ? WHERE checkout_id = ?`,
-            [posError.message, CheckoutRequestID]
+            `UPDATE mpesa_transactions SET status = 'failed' WHERE checkout_id = ?`,
+            [CheckoutRequestID]
           );
         } finally {
           if (connection) connection.release();
@@ -176,7 +181,13 @@ export const mpesaCallback = async (req, res) => {
           const cartItems = JSON.parse(tx.cart_items);
 
           for (const item of cartItems) {
-            const orderItemId = await createOrderItem(orderId, item.variant_id, item.quantity, item.price, item.title, item.image, null, connection);
+            // Direct insert to avoid 'imei_serial' column error
+            const [itemResult] = await connection.execute(
+              `INSERT INTO order_items (order_id, variant_id, quantity, price, product_name, product_image) VALUES (?, ?, ?, ?, ?, ?)`,
+              [orderId, item.variant_id, item.quantity, item.price, item.title, item.image]
+            );
+            const orderItemId = itemResult.insertId;
+
             const product = await getProductByVariantId(item.variant_id);
             let totalCOGS = 0;
 
@@ -209,8 +220,8 @@ export const mpesaCallback = async (req, res) => {
           await connection.rollback();
           console.error("Online Order Transaction Error:", transactionError.message);
           await db.execute(
-            `UPDATE mpesa_transactions SET status = 'failed', updated_at = NOW(), failure_reason = ? WHERE checkout_id = ?`,
-            [transactionError.message, CheckoutRequestID]
+            `UPDATE mpesa_transactions SET status = 'failed', updated_at = NOW() WHERE checkout_id = ?`,
+            [CheckoutRequestID]
           );
           throw transactionError;
         } finally {
@@ -220,8 +231,8 @@ export const mpesaCallback = async (req, res) => {
     } else {
       console.log(`Payment failed or was cancelled for ${CheckoutRequestID}. ResultCode: ${ResultCode}. Updating status to 'failed'.`);
       await db.execute(
-        `UPDATE mpesa_transactions SET status = 'failed', failure_reason = ? WHERE checkout_id = ?`,
-        [ResultDesc, CheckoutRequestID]
+        `UPDATE mpesa_transactions SET status = 'failed' WHERE checkout_id = ?`,
+        [CheckoutRequestID]
       );
     }
 
