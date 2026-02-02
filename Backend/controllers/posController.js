@@ -1,5 +1,7 @@
 import { createPOSOrder, generateReceipt, getPOSOrders, getCashierSales } from "../services/pos.js";
-import { getProducts } from "../services/product.js";
+import { getProducts, reduceProductStock, getProductByVariantId } from "../services/product.js";
+import { createOrder } from "../services/orders.js";
+import { createOrderItem } from "../services/OrderItems.js";
 import { getAccessToken, initiateSTKPush } from "../services/mpesa.js";
 import db from "../config/db.js";
 
@@ -114,15 +116,59 @@ export const checkoutAsCashier = async (req, res) => {
     // =====================
     if (payment_method === "cash" || payment_method === "card") {
       console.log(`Processing ${payment_method} payment for user ${sales_person_id}...`);
-      const result = await createPOSOrder(
-        sales_person_id,
-        total,
-        cartItems,
-        payment_method
-      );
+      
+      const connection = await db.getConnection();
+      let orderId;
+      
+      try {
+        await connection.beginTransaction();
+        
+        // Create base order
+        orderId = await createOrder(sales_person_id, total, "paid", null, 0, null, connection);
+        
+        // Process items
+        for (const item of cartItems) {
+            const variantId = item.variant_id || item.product_id;
+            const orderItemId = await createOrderItem(orderId, variantId, item.quantity, item.price, item.title, item.image, item.imei || null, connection);
+            
+            // Stock Reduction
+            const product = await getProductByVariantId(variantId);
+            let totalCOGS = 0;
 
-      const receipt = await generateReceipt(result.orderId);
-      console.log(`Sale completed successfully for order: ${result.orderId}. Sending response.`);
+            if (product && product.is_bundle) {
+              const bundleComponents = JSON.parse(product.bundle_of || '[]');
+              for (const component of bundleComponents) {
+                if (component.variant_id && component.quantity) {
+                  const quantityToReduce = component.quantity * item.quantity;
+                  const componentCOGS = await reduceProductStock(component.variant_id, quantityToReduce, connection);
+                  totalCOGS += componentCOGS * quantityToReduce;
+                }
+              }
+            } else {
+              totalCOGS = await reduceProductStock(variantId, item.quantity, connection);
+              totalCOGS *= item.quantity;
+            }
+            
+            const averageUnitCOGS = item.quantity > 0 ? totalCOGS / item.quantity : 0;
+            await connection.execute('UPDATE order_items SET unit_buying_price = ? WHERE id = ?', [averageUnitCOGS, orderItemId]);
+        }
+
+        // Mark as POS
+        await connection.execute(
+            `UPDATE orders SET order_type = 'pos', sales_person_id = ?, payment_method = ? WHERE id = ?`,
+            [sales_person_id, payment_method, orderId]
+        );
+
+        await connection.commit();
+      } catch (err) {
+        await connection.rollback();
+        throw err;
+      } finally {
+        connection.release();
+      }
+
+      const receipt = await generateReceipt(orderId);
+      console.log(`Sale completed successfully for order: ${orderId}. Sending response.`);
 
       return res.status(201).json({
         success: true,
@@ -177,8 +223,8 @@ export const checkoutAsCashier = async (req, res) => {
     console.log("Saving pending transaction to database...");
     await db.execute(
       `INSERT INTO mpesa_transactions
-      (checkout_id, user_id, amount, phone, cart_items, status)
-      VALUES (?, ?, ?, ?, ?, ?)`,
+      (checkout_id, user_id, amount, phone, cart_items, status, delivery_address)
+      VALUES (?, ?, ?, ?, ?, ?, NULL)`,
       [checkoutRequestID, sales_person_id, Math.round(total), formattedPhone, JSON.stringify(cartItems), "pending"]
     );
     console.log("Pending transaction saved successfully.");
@@ -217,7 +263,7 @@ export const getPOSPaymentStatus = async (req, res) => {
     // 2. If paid, find order and generate receipt
     if (status === "paid") {
       const [orderRows] = await db.execute(
-        `SELECT id FROM orders WHERE checkout_request_id = ? AND order_type = 'pos' LIMIT 1`,
+        `SELECT id FROM orders WHERE checkout_request_id = ? LIMIT 1`,
         [checkoutId]
       );
 

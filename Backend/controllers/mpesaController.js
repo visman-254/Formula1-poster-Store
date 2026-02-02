@@ -90,7 +90,13 @@ export const mpesaCallback = async (req, res) => {
     if (ResultCode === 0) {
       console.log(`Payment successful for ${CheckoutRequestID}.`);
       
-      const isPosTransaction = !tx.delivery_address && tx.user_id; 
+      // Robust check for POS: No delivery address (NULL or empty) and has user_id (salesperson)
+      const isPosTransaction = (!tx.delivery_address || tx.delivery_address === '') && tx.user_id;
+
+      // Extract metadata common to both flows
+      const newAmount = CallbackMetadata?.Item?.find(item => item.Name === "Amount")?.Value;
+      const mpesaReceiptNumber = CallbackMetadata?.Item?.find(item => item.Name === "MpesaReceiptNumber")?.Value;
+      const amountPaid = newAmount || tx.amount;
 
       if (isPosTransaction) {
         console.log(`Processing as POS transaction for user ID: ${tx.user_id}`);
@@ -99,20 +105,47 @@ export const mpesaCallback = async (req, res) => {
           await connection.beginTransaction();
 
           await connection.execute(
-            `UPDATE mpesa_transactions SET status = 'paid', updated_at = NOW() WHERE checkout_id = ?`,
-            [CheckoutRequestID]
+            `UPDATE mpesa_transactions SET status = 'paid', merchant_request_id = ?, updated_at = NOW() WHERE checkout_id = ?`,
+            [mpesaReceiptNumber, CheckoutRequestID]
           );
 
-          const result = await createPOSOrder(
-            tx.user_id, // sales_person_id
-            tx.amount,
-            JSON.parse(tx.cart_items),
-            'mpesa',
-            CheckoutRequestID, // Pass the CheckoutRequestID
-            connection // Pass connection
+          // Use standard createOrder to avoid deadlocks/issues with createPOSOrder service
+          const orderId = await createOrder(tx.user_id, amountPaid, "paid", mpesaReceiptNumber, 0, null, connection);
+          const cartItems = JSON.parse(tx.cart_items);
+
+          for (const item of cartItems) {
+            const variantId = item.variant_id || item.product_id;
+            const orderItemId = await createOrderItem(orderId, variantId, item.quantity, item.price, item.title, item.image, item.imei || null, connection);
+            
+            // Stock Reduction Logic
+            const product = await getProductByVariantId(variantId);
+            let totalCOGS = 0;
+
+            if (product && product.is_bundle) {
+              const bundleComponents = JSON.parse(product.bundle_of || '[]');
+              for (const component of bundleComponents) {
+                if (component.variant_id && component.quantity) {
+                  const quantityToReduce = component.quantity * item.quantity;
+                  const componentCOGS = await reduceProductStock(component.variant_id, quantityToReduce, connection);
+                  totalCOGS += componentCOGS * quantityToReduce;
+                }
+              }
+            } else {
+              totalCOGS = await reduceProductStock(variantId, item.quantity, connection);
+              totalCOGS *= item.quantity;
+            }
+            
+            const averageUnitCOGS = item.quantity > 0 ? totalCOGS / item.quantity : 0;
+            await connection.execute('UPDATE order_items SET unit_buying_price = ? WHERE id = ?', [averageUnitCOGS, orderItemId]);
+          }
+          
+          // Explicitly mark as POS and link checkout ID
+          await connection.execute(
+            `UPDATE orders SET checkout_request_id = ?, order_type = 'pos', sales_person_id = ? WHERE id = ?`,
+            [CheckoutRequestID, tx.user_id, orderId]
           );
           
-          console.log(`POS order ${result.orderId} created successfully.`);
+          console.log(`POS order ${orderId} created successfully via manual flow.`);
 
           await connection.commit();
           console.log(`Transaction for ${CheckoutRequestID} committed successfully.`);
@@ -133,10 +166,6 @@ export const mpesaCallback = async (req, res) => {
         const connection = await db.getConnection();
         try {
           await connection.beginTransaction();
-
-          const newAmount = CallbackMetadata?.Item?.find(item => item.Name === "Amount")?.Value;
-          const mpesaReceiptNumber = CallbackMetadata?.Item?.find(item => item.Name === "MpesaReceiptNumber")?.Value;
-          const amountPaid = newAmount || tx.amount;
 
           await connection.execute(
             `UPDATE mpesa_transactions SET status = 'paid', merchant_request_id = ?, updated_at = NOW() WHERE checkout_id = ?`,
