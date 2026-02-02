@@ -79,16 +79,38 @@ const POSPage = () => {
           if (data.status === 'paid' && data.receipt) {
             setReceiptData(data.receipt);
             setShowReceipt(true);
-            resetSale(); // This will also stop the polling
+            // Clear cart and stop polling, but keep receipt visible
+            setCart([]);
+            setMpesaPhone('');
+            setError('');
+            setCheckoutLoading(false);
+            setIsPolling(false);
+            setMpesaCheckoutId(null);
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
           } else if (['failed', 'cancelled', 'not_found', 'paid_but_order_failed'].includes(data.status)) {
             setError(`Payment failed or was not found. Status: ${data.status}`);
-            resetSale();
+            setCheckoutLoading(false);
+            setIsPolling(false);
+            setMpesaCheckoutId(null);
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
           }
           // If status is 'pending', do nothing and let it poll again.
         } catch (err) {
           console.error('Polling error:', err);
           setError('An error occurred while checking payment status.');
-          resetSale();
+          setCheckoutLoading(false);
+          setIsPolling(false);
+          setMpesaCheckoutId(null);
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
         }
       }, 3000); // Poll every 3 seconds
     }
@@ -217,7 +239,10 @@ const POSPage = () => {
       }, { headers: { Authorization: `Bearer ${token}` } });
       setReceiptData(response.data.receipt);
       setShowReceipt(true);
-      resetSale();
+      setCart([]);
+      setMpesaPhone('');
+      setError('');
+      setCheckoutLoading(false);
     } catch (err) {
       console.error('Checkout error:', err);
       setError(err.response?.data?.message || 'Checkout failed');

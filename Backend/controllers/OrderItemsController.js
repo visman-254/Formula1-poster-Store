@@ -34,6 +34,10 @@ export const fetchFullOrderDetails = async (req, res) => {
   try {
     const { orderId } = req.params;
     const orderDetails = await getFullOrderDetails(orderId);
+    if (orderDetails && (orderDetails.order_type === 'pos' || orderDetails.sales_person_id != null)) {
+      orderDetails.status = 'delivered';
+      orderDetails.order_type = 'pos';
+    }
     res.json(orderDetails);
   } catch (error) {
     console.error("Error getting full order details:", error);

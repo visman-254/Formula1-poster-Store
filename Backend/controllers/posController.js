@@ -3,13 +3,81 @@ import { getProducts } from "../services/product.js";
 import { getAccessToken, initiateSTKPush } from "../services/mpesa.js";
 import db from "../config/db.js";
 
+// Helper to format image URLs
+const formatProductImage = (req, image) => {
+  if (!image) return null;
+  if (/^https?:\/\//i.test(image)) return image;
+
+  // Normalize path separators to forward slashes
+  const normalizedImage = String(image).replace(/\\/g, "/");
+
+  const cleaned = normalizedImage.replace(/^\/+/, "");
+  const normalizedPath = cleaned.includes("uploads/images")
+    ? cleaned
+    : `uploads/images/${cleaned}`;
+
+  return `${req.protocol}://${req.get("host")}/${normalizedPath}`;
+};
+
+const formatProduct = (req, product) => {
+  const formattedProduct = { ...product };
+
+  // 1. Format all standard variant images first
+  if (formattedProduct.variants) {
+    formattedProduct.variants = formattedProduct.variants.map(variant => ({
+      ...variant,
+      image: formatProductImage(req, variant.image),
+    }));
+  }
+
+  // 2. Handle Bundle Image Splicing
+  if (formattedProduct.is_bundle) {
+    // Format child products recursively
+    if (formattedProduct.bundle_products) {
+      formattedProduct.bundle_products = formattedProduct.bundle_products.map(bp => formatProduct(req, bp));
+    }
+
+    // Get images from product.images (gallery) first, then fallback to bundle_products
+    let bundleImages = [];
+    if (formattedProduct.images && formattedProduct.images.length >= 2) {
+      bundleImages = formattedProduct.images.slice(0, 2).map(img => formatProductImage(req, img));
+    } else if (formattedProduct.bundle_products && formattedProduct.bundle_products.length > 0) {
+      bundleImages = formattedProduct.bundle_products
+        .map(bp => bp.primaryImage)
+        .filter(img => img !== null)
+        .slice(0, 2);
+    }
+
+    // Set a new property 'bundleImages' for the frontend to use
+    if (bundleImages.length >= 2) {
+      formattedProduct.bundleImages = bundleImages;
+    }
+
+    // Set primaryImage
+    formattedProduct.primaryImage = bundleImages.length > 0 ? bundleImages[0] : null;
+
+  } else {
+    // Standard product logic
+    const firstVariantWithImage = formattedProduct.variants?.find(v => v.image);
+    if (firstVariantWithImage) {
+      formattedProduct.primaryImage = firstVariantWithImage.image;
+    } else if (formattedProduct.images && formattedProduct.images.length > 0) {
+      formattedProduct.primaryImage = formatProductImage(req, formattedProduct.images[0]);
+    } else {
+      formattedProduct.primaryImage = null;
+    }
+  }
+
+  return formattedProduct;
+};
+
 /**
  * GET /api/pos/products
  */
 export const getPOSProducts = async (req, res) => {
   try {
     const products = await getProducts();
-    res.json(products);
+    res.json(products.map((p) => formatProduct(req, p)));
   } catch (error) {
     console.error("Error fetching POS products:", error);
     res.status(500).json({ message: "Failed to fetch products" });

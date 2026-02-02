@@ -116,13 +116,21 @@ const OrderItems = () => {
       ) : (
         <ScrollArea className="h-[600px] pr-4">
           <div className="min-h-screen bg-glass p-4 grid grid-cols-1 gap-4">
-            {filtered.map((order) => (
+            {filtered.map((order) => {
+              const displayStatus = order.order_type === 'pos' ? 'delivered' : order.status;
+
+              return (
               <Card key={order.id} className="shadow-md">
                 <CardHeader>
                   <div className="flex justify-between items-center ">
-                    <CardTitle>Order #{order.id}</CardTitle>
-                    <Badge className={getStatusColor(order.status)}>
-                      {order.status}
+                    <div className="flex items-center gap-2">
+                      <CardTitle>Order #{order.id}</CardTitle>
+                      {order.order_type === 'pos' && (
+                        <Badge className="bg-blue-600 hover:bg-blue-700">POS</Badge>
+                      )}
+                    </div>
+                    <Badge className={getStatusColor(displayStatus)}>
+                      {displayStatus}
                     </Badge>
                   </div>
                   <p className="text-sm text-gray-500">
@@ -151,7 +159,7 @@ const OrderItems = () => {
                       onValueChange={(value) =>
                         handleStatusChange(order.id, value)
                       }
-                      defaultValue={order.status}
+                      defaultValue={displayStatus}
                       className="select"
                     >
                       <SelectTrigger className="select-trigger">
@@ -223,7 +231,7 @@ const OrderItems = () => {
                   </p>
                 </CardContent>
               </Card>
-            ))}
+            )})}
           </div>
         </ScrollArea>
       )}

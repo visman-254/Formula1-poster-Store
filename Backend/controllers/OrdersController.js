@@ -27,6 +27,7 @@ export const getAllOrders = async (req, res) => {
 
     const formattedOrders = orders.map(order => ({
       ...order,
+      status: order.order_type === 'pos' ? 'delivered' : order.status,
       items: order.items.map(item => ({
         ...item,
         image: formatImageUrl(req, item.image) 
@@ -84,13 +85,18 @@ export const fetchAllOrders = async (req, res) => {
     const { q } = req.query; // Get the search query from the URL
     const orders = await giveAllOrders();
 
-    const formattedOrders = orders.map(order => ({
-      ...order,
-      items: order.items.map(item => ({
-        ...item,
-        image: formatImageUrl(req, item.image)
-      }))
-    }));
+    const formattedOrders = orders.map(order => {
+      const isPos = order.order_type === 'pos' || (order.sales_person_id != null);
+      return {
+        ...order,
+        order_type: isPos ? 'pos' : (order.order_type || 'online'),
+        status: isPos ? 'delivered' : order.status,
+        items: order.items.map(item => ({
+          ...item,
+          image: formatImageUrl(req, item.image)
+        }))
+      };
+    });
 
     if (q) {
       const needle = q.trim().toLowerCase();
