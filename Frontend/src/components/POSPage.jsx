@@ -72,7 +72,7 @@ const POSPage = () => {
     if (isPolling && mpesaCheckoutId) {
       pollingIntervalRef.current = setInterval(async () => {
         try {
-          const { data } = await axios.get(`${API_URL}/pos/payment-status/${mpesaCheckoutId}`, {
+          const { data } = await axios.get(`${API_URL}/pos/payment-status/${encodeURIComponent(mpesaCheckoutId)}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
 
@@ -103,6 +103,11 @@ const POSPage = () => {
           // If status is 'pending', do nothing and let it poll again.
         } catch (err) {
           console.error('Polling error:', err);
+          // Ignore network errors (transient) and keep polling
+          if (err.code === 'ERR_NETWORK' || !err.response) {
+            return;
+          }
+
           setError('An error occurred while checking payment status.');
           setCheckoutLoading(false);
           setIsPolling(false);
