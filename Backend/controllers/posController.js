@@ -153,9 +153,6 @@ export const checkoutAsCashier = async (req, res) => {
     }
     console.log(`Formatted phone number: ${formattedPhone}`);
 
-    const callbackUrl = `${process.env.MPESA_CALLBACK_URL}/pos`;
-    console.log(`Using M-Pesa callback URL: ${callbackUrl}`);
-
     console.log("Initiating STK push...");
     const stkPush = await initiateSTKPush({
       shortcode: process.env.MPESA_BUSINESS_SHORT_CODE,
@@ -163,7 +160,6 @@ export const checkoutAsCashier = async (req, res) => {
       amount: Math.round(total),
       phoneNumber: formattedPhone,
       token,
-      callbackUrl: callbackUrl,
     });
     console.log("STK push initiated. Response:", stkPush);
     
