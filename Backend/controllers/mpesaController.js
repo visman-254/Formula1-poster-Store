@@ -215,7 +215,39 @@ export const getPaymentStatus = async (req, res) => {
  return res.json({ status: "pending" });
  }
 
- return res.json({ status: rows[0].status || "pending" });
+ const status = rows[0].status || "pending";
+ let receipt = null;
+
+ if (status === "paid") {
+   // Fetch order details for receipt generation
+   const [orders] = await db.execute(
+     `SELECT id, total, created_at, payment_method FROM orders WHERE checkout_request_id = ? LIMIT 1`,
+     [checkoutRequestID]
+   );
+
+   if (orders.length > 0) {
+     const order = orders[0];
+     const [items] = await db.execute(
+       `SELECT product_name as name, quantity, price FROM order_items WHERE order_id = ?`,
+       [order.id]
+     );
+
+     receipt = {
+       orderId: order.id,
+       total: order.total,
+       date: order.created_at,
+       paymentMethod: order.payment_method,
+       items: items.map(i => ({
+         name: i.name,
+         quantity: i.quantity,
+         price: i.price,
+         total: i.price * i.quantity
+       }))
+     };
+   }
+ }
+
+ return res.json({ status, receipt });
  } catch (err) {
 console.error("Error fetching payment status:", err);
  return res.status(500).json({ status: "pending" });

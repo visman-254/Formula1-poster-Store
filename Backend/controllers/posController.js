@@ -20,7 +20,7 @@ export const getPOSProducts = async (req, res) => {
  * POST /api/pos/checkout
  */
 export const checkoutAsCashier = async (req, res) => {
-  console.log("Received POS checkout request:", req.body); // Log request body
+  console.log("Received POS checkout request:", JSON.stringify(req.body, null, 2));
 
   try {
     const sales_person_id = req.user.id;
@@ -45,7 +45,7 @@ export const checkoutAsCashier = async (req, res) => {
     // CASH & CARD → COMPLETE SALE IMMEDIATELY
     // =====================
     if (payment_method === "cash" || payment_method === "card") {
-      console.log(`Processing ${payment_method} payment...`);
+      console.log(`Processing ${payment_method} payment for user ${sales_person_id}...`);
       const result = await createPOSOrder(
         sales_person_id,
         total,
@@ -54,7 +54,7 @@ export const checkoutAsCashier = async (req, res) => {
       );
 
       const receipt = await generateReceipt(result.orderId);
-      console.log("Sale completed successfully for order:", result.orderId);
+      console.log(`Sale completed successfully for order: ${result.orderId}. Sending response.`);
 
       return res.status(201).json({
         success: true,

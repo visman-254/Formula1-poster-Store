@@ -6,7 +6,7 @@ import API_BASE from "../config";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Loader2, Printer } from "lucide-react";
 
 const PendingPayment = () => {
   const location = useLocation();
@@ -15,6 +15,7 @@ const PendingPayment = () => {
   const { checkoutRequestID: stateId, amount, phone } = location.state || {};
   const [status, setStatus] = useState("Waiting for payment...");
   const [loading, setLoading] = useState(true);
+  const [receipt, setReceipt] = useState(null);
 
   useEffect(() => {
     const id = stateId || localStorage.getItem("checkoutRequestID");
@@ -31,6 +32,9 @@ const PendingPayment = () => {
         if (data.status === "paid") {
           setStatus("Payment confirmed! Order created.");
           setLoading(false);
+          if (data.receipt) {
+            setReceipt(data.receipt);
+          }
           localStorage.removeItem("checkoutRequestID");
         } else if (data.status === "failed") {
           setStatus("Payment failed or cancelled.");
@@ -52,6 +56,53 @@ const PendingPayment = () => {
   const retryPayment = () => {
     localStorage.removeItem("checkoutRequestID");
     navigate("/cart");
+  };
+
+  const handlePrintReceipt = () => {
+    if (!receipt) return;
+    
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Receipt #${receipt.orderId}</title>
+          <style>
+            body { font-family: 'Courier New', monospace; padding: 20px; text-align: center; font-size: 12px; }
+            .header { margin-bottom: 20px; border-bottom: 1px dashed #000; padding-bottom: 10px; }
+            .item { display: flex; justify-content: space-between; margin: 5px 0; }
+            .total { border-top: 1px dashed #000; margin-top: 10px; padding-top: 10px; font-weight: bold; font-size: 14px; display: flex; justify-content: space-between; }
+            .footer { margin-top: 20px; font-size: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2>PANNA MUSIC</h2>
+            <p>Order #${receipt.orderId}</p>
+            <p>${new Date(receipt.date).toLocaleString()}</p>
+            <p>Method: ${receipt.paymentMethod}</p>
+          </div>
+          <div class="items">
+            ${receipt.items.map(item => `
+              <div class="item">
+                <span>${item.name} (x${item.quantity})</span>
+                <span>Ksh ${(item.price * item.quantity).toFixed(2)}</span>
+              </div>
+            `).join('')}
+          </div>
+          <div class="total">
+            <span>TOTAL</span>
+            <span>Ksh ${Number(receipt.total).toLocaleString()}</span>
+          </div>
+          <div class="footer">
+            <p>Thank you for shopping!</p>
+          </div>
+          <script>
+            window.onload = () => { window.print(); setTimeout(() => window.close(), 500); };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const getStatusBadge = () => {
@@ -89,9 +140,16 @@ const PendingPayment = () => {
           )}
 
           {status === "Payment confirmed! Order created." && (
-            <Button asChild variant="default" className="w-full">
-              <Link to="/orders">Go to My Orders</Link>
-            </Button>
+            <div className="space-y-2">
+              <Button asChild variant="default" className="w-full">
+                <Link to="/orders">Go to My Orders</Link>
+              </Button>
+              {receipt && (
+                <Button onClick={handlePrintReceipt} variant="outline" className="w-full">
+                  <Printer className="w-4 h-4 mr-2" /> Print Receipt
+                </Button>
+              )}
+            </div>
           )}
 
           {status === "Payment failed or cancelled." && (
