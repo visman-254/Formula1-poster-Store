@@ -8,8 +8,9 @@ import {
   ChartNoAxesCombined,
   HeartCrack,
   BellElectric,
-  Shuffle
+  Shuffle,
 } from "lucide-react";
+import { useAdminNotification } from "../context/AdminNotificationContext";
 
 import elegantwaterBg from "../assets/elegantwater.jpg";
 
@@ -36,30 +37,45 @@ import "./Admin.css";
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("products");
 
+  // 🟢 Admin notification context
+  const {
+    newOrdersCount,
+    newPreordersCount,
+    lowStockCount,
+    resetNewOrdersCount,
+    resetNewPreordersCount,
+  } = useAdminNotification();
+
+  // Handle tab clicks
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+
+    if (tab === "orders") resetNewOrdersCount();
+    if (tab === "preorders") resetNewPreordersCount();
+  };
+
+  // Sidebar tabs
   const tabs = [
     { value: "products", label: "Products", icon: <PackageSearch /> },
     { value: "add", label: "Add Product", icon: <BookmarkPlus /> },
     { value: "delete", label: "Delete Category", icon: <Delete /> },
-    { value: "orders", label: "Orders", icon: <Forklift /> },
+    { value: "orders", label: "Orders", icon: <Forklift />, count: newOrdersCount },
     { value: "backorders", label: "Backorders", icon: <Forklift /> },
     { value: "users", label: "Users", icon: <User /> },
     { value: "uncategorized", label: "Uncategorized", icon: <HeartCrack /> },
     { value: "analytics", label: "Analytics", icon: <ChartNoAxesCombined /> },
     { value: "create-hero", label: "Create Hero Slide", icon: <PackageSearch /> },
     { value: "create-promotion", label: "Create Promotion", icon: <PackageSearch /> },
-    { value: "low-stock", label: "Low Stock Alert", icon: <BellElectric /> },
-    { value: "preorders", label: "Preorders", icon: <Shuffle /> },
+    { value: "low-stock", label: "Low Stock Alert", icon: <BellElectric />, count: lowStockCount },
+    { value: "preorders", label: "Preorders", icon: <Shuffle />, count: newPreordersCount },
   ];
 
-  // 🔥 FORCE DARK MODE FOR ADMIN AND ALL CHILD COMPONENTS
+  // Force dark mode for admin
   useEffect(() => {
     const root = document.documentElement;
-
-    // Force dark mode
     root.classList.add("dark");
     root.classList.remove("light");
 
-    // Prevent removal of dark mode by any child
     const observer = new MutationObserver(() => {
       if (!root.classList.contains("dark")) {
         root.classList.add("dark");
@@ -74,43 +90,65 @@ export default function AdminPage() {
   return (
     <div className="admin-root">
       {/* Background */}
-      <div
-        className="admin-background"
-        style={{ backgroundImage: `url(${elegantwaterBg})` }}
-      >
+      <div className="admin-background" style={{ backgroundImage: `url(${elegantwaterBg})` }}>
         <div className="background-overlay" />
       </div>
 
       <div className="admin-container">
         {/* Sidebar */}
         <aside className="sidebar">
-          {tabs.map(tab => (
+          {tabs.map((tab) => (
             <button
               key={tab.value}
               className={`tab ${activeTab === tab.value ? "active" : ""}`}
-              onClick={() => setActiveTab(tab.value)}
+              onClick={() => handleTabClick(tab.value)}
               type="button"
             >
               {tab.icon}
               <span>{tab.label}</span>
+              {/* 🔴 Notification dot */}
+              {tab.count > 0 && (
+                <span className="notification-dot">{tab.count}</span>
+              )}
             </button>
           ))}
         </aside>
 
         {/* Main Content */}
         <main className="admin-main">
-          {activeTab === "products" && <GlassmorphicContainer><ProductsGrids /></GlassmorphicContainer>}
-          {activeTab === "add" && <GlassmorphicContainer><AddProductForm /></GlassmorphicContainer>}
-          {activeTab === "delete" && <GlassmorphicContainer><DeleteCategory /></GlassmorphicContainer>}
-          {activeTab === "orders" && <GlassmorphicContainer><OrderItems /></GlassmorphicContainer>}
-          {activeTab === "users" && <GlassmorphicContainer><Users /></GlassmorphicContainer>}
-          {activeTab === "uncategorized" && <GlassmorphicContainer><UncategorizedProducts /></GlassmorphicContainer>}
-          {activeTab === "create-hero" && <GlassmorphicContainer><CreateHero /></GlassmorphicContainer>}
-          {activeTab === "create-promotion" && <GlassmorphicContainer><CreatePromotion /></GlassmorphicContainer>}
-          {activeTab === "low-stock" && <GlassmorphicContainer><LowStockAlert /></GlassmorphicContainer>}
-          {activeTab === "backorders" && <GlassmorphicContainer><Backorders /></GlassmorphicContainer>}
-          {activeTab === "preorders" && <GlassmorphicContainer><AdminPreorders /></GlassmorphicContainer>}
-
+          {activeTab === "products" && (
+            <GlassmorphicContainer><ProductsGrids /></GlassmorphicContainer>
+          )}
+          {activeTab === "add" && (
+            <GlassmorphicContainer><AddProductForm /></GlassmorphicContainer>
+          )}
+          {activeTab === "delete" && (
+            <GlassmorphicContainer><DeleteCategory /></GlassmorphicContainer>
+          )}
+          {activeTab === "orders" && (
+            <GlassmorphicContainer><OrderItems /></GlassmorphicContainer>
+          )}
+          {activeTab === "users" && (
+            <GlassmorphicContainer><Users /></GlassmorphicContainer>
+          )}
+          {activeTab === "uncategorized" && (
+            <GlassmorphicContainer><UncategorizedProducts /></GlassmorphicContainer>
+          )}
+          {activeTab === "create-hero" && (
+            <GlassmorphicContainer><CreateHero /></GlassmorphicContainer>
+          )}
+          {activeTab === "create-promotion" && (
+            <GlassmorphicContainer><CreatePromotion /></GlassmorphicContainer>
+          )}
+          {activeTab === "low-stock" && (
+            <GlassmorphicContainer><LowStockAlert /></GlassmorphicContainer>
+          )}
+          {activeTab === "backorders" && (
+            <GlassmorphicContainer><Backorders /></GlassmorphicContainer>
+          )}
+          {activeTab === "preorders" && (
+            <GlassmorphicContainer><AdminPreorders /></GlassmorphicContainer>
+          )}
           {activeTab === "analytics" && (
             <GlassmorphicContainer>
               <div className="analytics-container">
@@ -120,7 +158,6 @@ export default function AdminPage() {
                   <div className="analytics-section"><ProfitAnalyticsDay /></div>
                   <div className="analytics-section"><ProfitMonthly /></div>
                 </div>
-
                 <div className="product-analytics-section">
                   <ProductAnalytics />
                 </div>

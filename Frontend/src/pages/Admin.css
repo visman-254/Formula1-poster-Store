@@ -94,7 +94,25 @@ html.dark .sidebar {
   white-space: nowrap;
   flex-shrink: 0;
 
+  position: relative; /* Add this for positioning the dot */
+
   transition: all 0.25s ease;
+}
+
+.notification-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  background-color: red;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 html.dark .tab {

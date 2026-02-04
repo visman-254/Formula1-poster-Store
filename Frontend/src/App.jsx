@@ -5,6 +5,7 @@ import LoadingScreen from "./components/LoadingScreen";
 import { Toaster } from "sonner";
 import { CartProvider } from "./context/CartContext";
 import { UserProvider } from "./context/UserContext";
+import { AdminNotificationProvider } from "./context/AdminNotificationContext";
 import AdminRoute from "../ProtectedRoute";
 import Contactus from "./components/Contactus";
 import Breadcrumbs from "./components/Breadcrumbs";
@@ -80,7 +81,9 @@ function App() {
                   path="/admin"
                   element={
                     <AdminRoute>
-                      <Admin />
+                      <AdminNotificationProvider>
+                        <Admin />
+                      </AdminNotificationProvider>
                     </AdminRoute>
                   }
                 />
