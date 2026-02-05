@@ -85,6 +85,8 @@ export const fetchAllOrders = async (req, res) => {
     const { q } = req.query; // Get the search query from the URL
     const orders = await giveAllOrders();
 
+    console.log('First order order_type:', orders[0]?.order_type);
+
     const formattedOrders = orders.map(order => {
       const isPos = order.order_type === 'pos' || (order.sales_person_id != null);
       return {
