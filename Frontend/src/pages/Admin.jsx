@@ -32,12 +32,20 @@ import CreatePromotion from "../components/CreatePromotion";
 import ProductAnalytics from "../components/ProductAnalytics";
 import GlassmorphicContainer from "../components/GlassmorphicContainer";
 
+// Import the new POS vs Online analytics components
+import OrderTypeDailyComparison from "../components/OrderTypeDailyComparison";
+import SalesByOrderType from "../components/SalesByOrderType";
+import POSDailySales from "../components/POSDailySales";
+import OnlineDailySales from "../components/OnlineDailySales";
+import POSMonthlySales from "../components/POSMonthlySales";
+import OnlineMonthlySales from "../components/OnlineMonthlySales";
+
 import "./Admin.css";
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("products");
 
-  // 🟢 Admin notification context
+  // Admin notification context
   const {
     newOrdersCount,
     newPreordersCount,
@@ -63,7 +71,7 @@ export default function AdminPage() {
     { value: "backorders", label: "Backorders", icon: <Forklift /> },
     { value: "users", label: "Users", icon: <User /> },
     { value: "uncategorized", label: "Uncategorized", icon: <HeartCrack /> },
-    { value: "analytics", label: "Analytics", icon: <ChartNoAxesCombined /> },
+    { value: "analytics", label: "Sales Analytics", icon: <ChartNoAxesCombined /> },
     { value: "create-hero", label: "Create Hero Slide", icon: <PackageSearch /> },
     { value: "create-promotion", label: "Create Promotion", icon: <PackageSearch /> },
     { value: "low-stock", label: "Low Stock Alert", icon: <BellElectric />, count: lowStockCount },
@@ -106,7 +114,7 @@ export default function AdminPage() {
             >
               {tab.icon}
               <span>{tab.label}</span>
-              {/* 🔴 Notification dot */}
+              
               {tab.count > 0 && (
                 <span className="notification-dot">{tab.count}</span>
               )}
@@ -152,15 +160,61 @@ export default function AdminPage() {
           {activeTab === "analytics" && (
             <GlassmorphicContainer>
               <div className="analytics-container">
+                
+                {/* Overall Sales Analytics */}
+                <h2 className="analytics-section-header">Overall Sales Analytics</h2>
                 <div className="analytics-grid">
                   <div className="analytics-section"><AnalyticsDay /></div>
                   <div className="analytics-section"><AnalyticsMonthly /></div>
                   <div className="analytics-section"><ProfitAnalyticsDay /></div>
                   <div className="analytics-section"><ProfitMonthly /></div>
                 </div>
+                
+                <hr className="analytics-divider" />
+                
+                {/* Product Performance Analytics */}
+                <h2 className="product-analytics-header">Product Performance Analytics</h2>
                 <div className="product-analytics-section">
                   <ProductAnalytics />
                 </div>
+                
+                <hr className="analytics-divider" />
+                
+                {/* POS/Online Analytics Section */}
+                <h2 className="pos-online-header">POS vs Online Sales Analytics</h2>
+                
+                {/* Main comparison charts */}
+                <div className="pos-online-comparison-grid">
+                  <div className="comparison-section">
+                    <OrderTypeDailyComparison />
+                  </div>
+                  <div className="comparison-section">
+                    <SalesByOrderType />
+                  </div>
+                </div>
+                
+                {/* Daily Sales Comparison */}
+                <h3 className="sub-section-header">Daily Sales Comparison</h3>
+                <div className="daily-comparison-grid">
+                  <div className="comparison-section">
+                    <POSDailySales />
+                  </div>
+                  <div className="comparison-section">
+                    <OnlineDailySales />
+                  </div>
+                </div>
+                
+                {/* Monthly Sales Comparison */}
+                <h3 className="sub-section-header">Monthly Sales Comparison</h3>
+                <div className="monthly-comparison-grid">
+                  <div className="comparison-section">
+                    <POSMonthlySales />
+                  </div>
+                  <div className="comparison-section">
+                    <OnlineMonthlySales />
+                  </div>
+                </div>
+                
               </div>
             </GlassmorphicContainer>
           )}

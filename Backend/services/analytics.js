@@ -219,3 +219,187 @@ export const getProductCostHistory = async (productId) => {
   }
 };
 
+// Add to the end of your services/analytics.js file:
+
+export const getPOSDailySales = async () => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT DATE(o.created_at) AS order_date, 
+             SUM(oi.quantity * oi.price) AS total_revenue
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      WHERE o.order_type = 'pos'
+      GROUP BY DATE(o.created_at)
+      ORDER BY order_date DESC
+    `);
+
+    const now = new Date();
+    const currentDate = now.toISOString().slice(0, 10);
+
+    // normalize rows to YYYY-MM-DD
+    const normalizedRows = rows.map(row => ({
+      order_date: new Date(row.order_date).toISOString().slice(0, 10),
+      total_revenue: Number(row.total_revenue) || 0,
+    }));
+
+    const currentDayData = normalizedRows.find(
+      row => row.order_date === currentDate
+    );
+
+    if (!currentDayData) {
+      normalizedRows.push({ order_date: currentDate, total_revenue: 0 });
+    }
+
+    return normalizedRows;
+  } catch (err) {
+    console.error("Error fetching POS daily sales:", err);
+    throw err;
+  }
+};
+
+export const getOnlineDailySales = async () => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT DATE(o.created_at) AS order_date, 
+             SUM(oi.quantity * oi.price) AS total_revenue
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      WHERE o.order_type = 'online'
+      GROUP BY DATE(o.created_at)
+      ORDER BY order_date DESC
+    `);
+
+    const now = new Date();
+    const currentDate = now.toISOString().slice(0, 10);
+
+    // normalize rows to YYYY-MM-DD
+    const normalizedRows = rows.map(row => ({
+      order_date: new Date(row.order_date).toISOString().slice(0, 10),
+      total_revenue: Number(row.total_revenue) || 0,
+    }));
+
+    const currentDayData = normalizedRows.find(
+      row => row.order_date === currentDate
+    );
+
+    if (!currentDayData) {
+      normalizedRows.push({ order_date: currentDate, total_revenue: 0 });
+    }
+
+    return normalizedRows;
+  } catch (err) {
+    console.error("Error fetching Online daily sales:", err);
+    throw err;
+  }
+};
+
+export const getPOSMonthlySales = async () => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT DATE_FORMAT(o.created_at, '%Y-%m') AS order_date, 
+             SUM(oi.quantity * oi.price) AS total_revenue
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      WHERE o.order_type = 'pos'
+      GROUP BY DATE_FORMAT(o.created_at, '%Y-%m')
+      ORDER BY order_date DESC
+    `);
+
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    const currentMonthData = rows.find(row => row.order_date === currentMonth);
+
+    if (!currentMonthData) {
+      rows.push({ order_date: currentMonth, total_revenue: 0 });
+    }
+
+    return rows;
+  } catch (err) {
+    console.error("Error fetching POS monthly sales:", err);
+    throw err;
+  }
+};
+
+export const getOnlineMonthlySales = async () => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT DATE_FORMAT(o.created_at, '%Y-%m') AS order_date, 
+             SUM(oi.quantity * oi.price) AS total_revenue
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      WHERE o.order_type = 'online'
+      GROUP BY DATE_FORMAT(o.created_at, '%Y-%m')
+      ORDER BY order_date DESC
+    `);
+
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    const currentMonthData = rows.find(row => row.order_date === currentMonth);
+
+    if (!currentMonthData) {
+      rows.push({ order_date: currentMonth, total_revenue: 0 });
+    }
+
+    return rows;
+  } catch (err) {
+    console.error("Error fetching Online monthly sales:", err);
+    throw err;
+  }
+};
+
+export const getSalesByOrderType = async () => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT 
+        o.order_type,
+        COUNT(DISTINCT o.id) AS order_count,
+        SUM(oi.quantity * oi.price) AS total_revenue,
+        SUM(oi.quantity) AS total_quantity
+      FROM orders o
+      JOIN order_items oi ON o.id = oi.order_id
+      GROUP BY o.order_type
+      ORDER BY total_revenue DESC
+    `);
+
+    return rows;
+  } catch (err) {
+    console.error("Error fetching sales by order type:", err);
+    throw err;
+  }
+};
+
+export const getOrderTypeDailyComparison = async () => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT 
+        DATE(o.created_at) AS order_date,
+        o.order_type,
+        SUM(oi.quantity * oi.price) AS total_revenue
+      FROM orders o
+      JOIN order_items oi ON o.id = oi.order_id
+      WHERE o.order_type IN ('pos', 'online')
+      GROUP BY DATE(o.created_at), o.order_type
+      ORDER BY order_date DESC
+      LIMIT 30
+    `);
+
+    // Transform data for chart
+    const dateMap = {};
+    rows.forEach(row => {
+      const date = new Date(row.order_date).toISOString().slice(0, 10);
+      if (!dateMap[date]) {
+        dateMap[date] = { order_date: date, pos: 0, online: 0 };
+      }
+      dateMap[date][row.order_type] = Number(row.total_revenue) || 0;
+    });
+
+    return Object.values(dateMap).sort((a, b) => 
+      new Date(a.order_date) - new Date(b.order_date)
+    );
+  } catch (err) {
+    console.error("Error fetching order type daily comparison:", err);
+    throw err;
+  }
+};

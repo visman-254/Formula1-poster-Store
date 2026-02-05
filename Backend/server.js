@@ -20,6 +20,7 @@ import preorder from './routes/preorderApi.js';
 import productPromotionApi from "./routes/productPromotionApi.js";
 import posRoutes from "./routes/posApi.js";
 import adminNotificationRoutes from "./routes/adminNotificationRoutes.js";
+import orderTypeAnalyticsRoutes from "./routes/orderTypeAnalytics.js";
 
 
 
@@ -65,7 +66,7 @@ app.use('/api/gallery', galleryRoutes);
 app.use('/api', preorder);
 app.use('/api/pos', posRoutes);
 app.use("/api/admin", adminNotificationRoutes);
-
+app.use("/api/order-type-analytics", orderTypeAnalyticsRoutes);
 
 
 if(process.env.NODE_ENV === "production") {

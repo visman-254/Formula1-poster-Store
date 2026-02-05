@@ -51,14 +51,16 @@
   position: sticky;
   top: 0;
   height: 100vh;
-
+  max-height: 100vh;
+  
   padding: 1.5rem 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-
+  
   overflow-y: auto;
-
+  overflow-x: hidden;
+  
   background: rgba(255,255,255,0.55);
   backdrop-filter: blur(8px);
   border-right: 1px solid rgba(255,255,255,0.15);
@@ -71,31 +73,29 @@ html.dark .sidebar {
 }
 
 /* Tabs */
-
 .tab {
   all: unset;
   cursor: pointer;
-
+  
   display: flex;
   align-items: center;
   gap: 0.75rem;
-
+  
   height: 44px;
   padding: 0 1rem;
-
+  
   border-radius: 12px;
   font-weight: 500;
   font-size: 0.95rem;
-
+  
   color: #475569;
   background: rgba(255,255,255,0.5);
   border: 1px solid rgba(255,255,255,0.25);
-
+  
   white-space: nowrap;
   flex-shrink: 0;
-
-  position: relative; /* Add this for positioning the dot */
-
+  
+  position: relative;
   transition: all 0.25s ease;
 }
 
@@ -148,21 +148,21 @@ html.dark .tab.active {
 
 .admin-main {
   min-width: 0;
-  overflow-x: hidden;
   overflow-y: auto;
-
+  overflow-x: hidden;
+  
+  height: 100vh;
+  max-height: 100vh;
+  
   padding: 2rem;
 }
 
-html.dark .admin-main {
-
-}
-
 /* =========================
-   ANALYTICS
+   ANALYTICS PAGE LAYOUT
 ========================= */
 
 .analytics-container {
+  padding: 1rem;
   animation: fadeIn 0.6s ease;
 }
 
@@ -171,10 +171,39 @@ html.dark .admin-main {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Overall Sales Analytics Section */
+.analytics-section-header {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  text-align: center;
+  color: #1e293b;
+  position: relative;
+  padding-bottom: 0.75rem;
+}
+
+html.dark .analytics-section-header {
+  color: #f1f5f9;
+}
+
+.analytics-section-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 4px;
+  background: linear-gradient(90deg, #8884d8, #82ca9d);
+  border-radius: 2px;
+}
+
+/* Original analytics grid */
 .analytics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1.5rem;
+  margin-bottom: 3rem;
 }
 
 .analytics-section {
@@ -186,8 +215,235 @@ html.dark .admin-main {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Product Performance Analytics */
 .product-analytics-section {
-  margin-top: 2rem;
+  margin: 3rem 0;
+}
+
+.product-analytics-header {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  text-align: center;
+  color: #1e293b;
+  position: relative;
+  padding-bottom: 0.75rem;
+}
+
+html.dark .product-analytics-header {
+  color: #f1f5f9;
+}
+
+.product-analytics-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 4px;
+  background: linear-gradient(90deg, #ff8042, #ffbb28);
+  border-radius: 2px;
+}
+
+/* Divider */
+.analytics-divider {
+  margin: 3rem 0;
+  border: none;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255,255,255,0.3) 25%, 
+    rgba(255,255,255,0.3) 75%, 
+    transparent 100%
+  );
+}
+
+html.dark .analytics-divider {
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255,255,255,0.15) 25%, 
+    rgba(255,255,255,0.15) 75%, 
+    transparent 100%
+  );
+}
+
+/* =========================
+   POS/ONLINE ANALYTICS SECTION
+========================= */
+
+.pos-online-header {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  text-align: center;
+  color: #1e293b;
+  position: relative;
+  padding-bottom: 0.75rem;
+}
+
+html.dark .pos-online-header {
+  color: #f1f5f9;
+}
+
+.pos-online-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 4px;
+  background: linear-gradient(90deg, #0088FE, #00C49F);
+  border-radius: 2px;
+}
+
+.pos-online-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 1200px) {
+  .pos-online-comparison-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.comparison-section {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+html.dark .comparison-section {
+  background: rgba(10, 10, 10, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.comparison-section:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.daily-comparison-grid,
+.monthly-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.sub-section-header {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 2.5rem 0 1.5rem;
+  text-align: center;
+  color: #334155;
+}
+
+html.dark .sub-section-header {
+  color: #e2e8f0;
+}
+
+.sub-section-header::after {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #8884d8, #82ca9d);
+  margin: 0.5rem auto 0;
+  border-radius: 2px;
+}
+
+/* =========================
+   CHART STYLES
+========================= */
+
+.chart-container {
+  height: 300px;
+  width: 100%;
+  position: relative;
+}
+
+.chart-container-sm {
+  height: 220px;
+  width: 100%;
+  position: relative;
+}
+
+.sales-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.metric-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.metric-card .metric-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.metric-card.pos .metric-value {
+  color: #8884d8;
+}
+
+.metric-card.online .metric-value {
+  color: #82ca9d;
+}
+
+.metric-card .metric-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+html.dark .metric-card .metric-label {
+  color: #94a3b8;
+}
+
+.order-type-legend {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.legend-color.pos {
+  background-color: #8884d8;
+}
+
+.legend-color.online {
+  background-color: #82ca9d;
 }
 
 /* =========================
@@ -237,6 +493,10 @@ html.dark .admin-main::-webkit-scrollbar-thumb {
   .admin-container {
     grid-template-columns: 220px 1fr;
   }
+  
+  .pos-online-comparison-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Tablet & Mobile Navigation Bar */
@@ -273,7 +533,30 @@ html.dark .admin-main::-webkit-scrollbar-thumb {
   }
 
   .admin-main {
+    height: calc(100vh - 64px);
+    max-height: calc(100vh - 64px);
     padding: 1.2rem;
+  }
+  
+  .pos-online-comparison-grid,
+  .daily-comparison-grid,
+  .monthly-comparison-grid,
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .chart-container {
+    height: 250px;
+  }
+  
+  .chart-container-sm {
+    height: 200px;
+  }
+  
+  .analytics-section-header,
+  .product-analytics-header,
+  .pos-online-header {
+    font-size: 1.5rem;
   }
 }
 
@@ -288,10 +571,44 @@ html.dark .admin-main::-webkit-scrollbar-thumb {
   .tab {
     height: 38px;
     min-height: 38px;
+    padding: 0 0.8rem;
     font-size: 0.85rem;
   }
 
-  .analytics-grid {
+  .admin-main {
+    height: calc(100vh - 58px);
+    max-height: calc(100vh - 58px);
+  }
+  
+  .sales-metrics-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .order-type-legend {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  
+  .chart-container {
+    height: 220px;
+  }
+  
+  .chart-container-sm {
+    height: 180px;
+  }
+  
+  .metric-card .metric-value {
+    font-size: 1.5rem;
+  }
+  
+  .analytics-section-header,
+  .product-analytics-header,
+  .pos-online-header {
+    font-size: 1.3rem;
+  }
+  
+  .sub-section-header {
+    font-size: 1.2rem;
   }
 }
