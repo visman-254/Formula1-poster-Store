@@ -499,3 +499,161 @@ html.dark .receipt-paper * {
   color: #000 !important;
   filter: none !important;
 }
+/* Add these styles to your existing POSReceipt.css */
+
+/* Mobile print hint */
+.mobile-print-hint {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 15px;
+  text-align: center;
+  font-size: 12px;
+  color: #e2e8f0;
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.mobile-print-hint small {
+  opacity: 0.9;
+  line-height: 1.4;
+}
+
+/* Responsive receipt actions */
+@media (max-width: 768px) {
+  .receipt-actions {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 320px;
+  }
+  
+  .btn-print, .btn-new-sale {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+    border-radius: 12px;
+  }
+  
+  .receipt-paper {
+    width: 95%;
+    max-width: 400px;
+    padding: 30px 24px 40px;
+    margin: 0 auto;
+  }
+  
+  .item-name {
+    font-size: 0.95rem;
+  }
+  
+  .item-total {
+    font-size: 1rem;
+  }
+}
+
+/* Fix for small screens */
+@media (max-width: 480px) {
+  .receipt-paper {
+    padding: 24px 20px 36px;
+  }
+  
+  .receipt-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .receipt-total span:last-child {
+    font-size: 1.3rem;
+  }
+}
+
+/* Print media query updates */
+@media print {
+  .mobile-print-hint {
+    display: none !important;
+  }
+  
+  .receipt-actions {
+    display: none !important;
+  }
+  
+  /* Ensure QR code prints */
+  .receipt-qr {
+    width: 100px !important;
+    height: 100px !important;
+  }
+}
+
+/* Additional receipt row styling for better item display */
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed rgba(0,0,0,0.1);
+}
+
+.item-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item-name {
+  font-weight: bold;
+  font-size: 1.05rem;
+  color: #000 !important;
+}
+
+.item-imei {
+  font-size: 0.85rem;
+  color: #333 !important;
+  font-family: monospace;
+  background: #f0f0f0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  max-width: fit-content;
+}
+
+.item-qty {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.item-total {
+  font-weight: bold;
+  font-size: 1.1rem;
+  white-space: nowrap;
+  margin-left: 10px;
+}
+
+/* Receipt total styling */
+.receipt-total {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 24px 0;
+  padding: 16px 0;
+  border-top: 2px dashed #000;
+  border-bottom: 2px dashed #000;
+  background: rgba(0,0,0,0.03);
+}
+
+.receipt-total span:first-child {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.receipt-total span:last-child {
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
