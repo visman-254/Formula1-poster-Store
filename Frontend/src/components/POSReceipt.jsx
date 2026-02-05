@@ -431,7 +431,7 @@ ${isMobile ? `
         box-shadow: 0 20px 60px rgba(0,0,0,0.3);
       ">
         <h3 style="color: #007bff; margin-bottom: 20px; font-size: 22px;">
-          📱 Mobile Printing
+           Mobile Printing
         </h3>
         
         <div style="text-align: left; margin-bottom: 25px;">
@@ -447,7 +447,7 @@ ${isMobile ? `
           
           <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
             <p style="margin: 0; font-size: 14px; color: #666;">
-              💡 <strong>Alternative:</strong> Use browser menu (⋮) → "Print"
+               <strong>Alternative:</strong> Use browser menu (⋮) → "Print"
             </p>
           </div>
         </div>
@@ -466,7 +466,7 @@ ${isMobile ? `
             font-weight: bold;
             cursor: pointer;
           ">
-            🖨️ Try Auto Print
+             Try Auto Print
           </button>
           
           <button onclick="
@@ -482,7 +482,7 @@ ${isMobile ? `
             font-weight: bold;
             cursor: pointer;
           ">
-            📥 Download & Print
+             Download & Print
           </button>
           
           <button onclick="this.parentElement.parentElement.parentElement.remove()" style="
@@ -599,7 +599,7 @@ ${isMobile ? `
                 <li>Disable headers & footers in print settings</li>
               </ul>
               <p className="tiny">
-                💡 If print button doesn't work: Browser menu → "Print"
+                 If print button doesn't work: Browser menu → "Print"
               </p>
             </div>
           )}
