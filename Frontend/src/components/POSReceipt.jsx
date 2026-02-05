@@ -11,7 +11,7 @@ const POSReceipt = ({ receipt, onNewSale }) => {
     Math.random().toString(36).substring(2, 8).toUpperCase()
   );
   const [isMobile, setIsMobile] = useState(false);
-  const [printMethod, setPrintMethod] = useState("auto"); // auto, popup, download
+  const [printMethod, setPrintMethod] = useState("auto");
 
   useEffect(() => {
     // Detect if user is on mobile
@@ -42,281 +42,250 @@ const POSReceipt = ({ receipt, onNewSale }) => {
   const formatTime = () =>
     new Date().toLocaleString("en-KE", { timeZone: "Africa/Nairobi" });
 
-  // Create the print content HTML
+  // Create the print content HTML using OLD DESIGN
   const createPrintContent = (qrUrl) => {
     return `
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Receipt #${receipt.orderId}</title>
+
 <style>
-  @page { 
-    margin: 0 !important; 
-    size: 58mm auto !important; 
-  }
-  
-  body {
-    margin: 0 !important;
-    padding: 0 !important;
-    font-family: "Courier New", Consolas, monospace !important;
-    font-size: 12px !important;
-    background: white !important;
-    color: black !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
-  }
-  
-  .thermal-receipt {
-    width: 58mm !important;
-    max-width: 58mm !important;
-    min-width: 58mm !important;
-    padding: 4mm !important;
-    margin: 0 auto !important;
-    text-align: center !important;
-    box-sizing: border-box !important;
-  }
-  
-  .receipt-logo {
-    width: 85px !important;
-    height: auto !important;
-    display: block !important;
-    margin: 0 auto 8px !important;
-  }
-  
-  .receipt-divider {
-    letter-spacing: 3px !important;
-    margin: 10px 0 !important;
-    font-size: 14px !important;
-  }
-  
-  .receipt-meta {
-    text-align: left !important;
-    margin-bottom: 12px !important;
-    font-size: 11px !important;
-  }
-  
-  .receipt-row {
-    display: flex !important;
-    justify-content: space-between !important;
-    margin: 4px 0 !important;
-    padding-bottom: 4px !important;
-    border-bottom: 1px dotted #999 !important;
-  }
-  
-  .receipt-total {
-    border-top: 2px dashed #000 !important;
-    border-bottom: 2px dashed #000 !important;
-    margin: 15px 0 !important;
-    padding: 12px 0 !important;
-    font-size: 16px !important;
-    font-weight: bold !important;
-    text-align: center !important;
-  }
-  
-  .receipt-qr {
-    width: 100px !important;
-    height: 100px !important;
-    display: block !important;
-    margin: 12px auto !important;
-  }
-  
-  .receipt-footer {
-    margin-top: 15px !important;
-    padding-top: 10px !important;
-    border-top: 1px dashed #000 !important;
-    font-size: 10px !important;
-    text-align: center !important;
-  }
-  
-  /* Mobile instructions */
+@page { margin: 0; size: 58mm auto; }
+
+body {
+  margin: 0;
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 12px;
+  background: white;
+}
+
+.thermal {
+  width: 58mm;
+  padding: 4mm;
+  text-align: center;
+}
+
+.logo {
+  width: 85px;
+  margin: 0 auto 6px;
+  display: block;
+}
+
+.divider {
+  letter-spacing: 2px;
+  margin: 6px 0;
+}
+
+.meta, .footer {
+  text-align: left;
+  margin: 6px 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  margin: 3px 0;
+}
+
+.item {
+  margin: 6px 0;
+  border-bottom: 1px dotted #999;
+  padding-bottom: 6px;
+}
+
+.total {
+  border-top: 2px dashed #000;
+  border-bottom: 2px dashed #000;
+  margin: 8px 0;
+  padding: 8px 0;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.qr {
+  width: 100px;
+  margin: 6px auto;
+}
+
+/* Mobile instructions */
+.mobile-print-guide {
+  display: none;
+  background: #f8f9fa;
+  border: 2px solid #007bff;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px auto;
+  max-width: 500px;
+  text-align: left;
+}
+
+.mobile-print-guide h3 {
+  color: #007bff;
+  margin-top: 0;
+  margin-bottom: 15px;
+  text-align: center;
+  font-size: 18px;
+}
+
+.mobile-print-guide ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.mobile-print-guide li {
+  margin-bottom: 10px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.print-button {
+  display: none;
+  width: 90%;
+  max-width: 300px;
+  margin: 25px auto;
+  padding: 18px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  text-align: center;
+}
+
+@media screen {
   .mobile-print-guide {
-    display: none !important;
+    display: ${isMobile ? 'block' : 'none'};
   }
   
   .print-button {
+    display: block;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  .thermal, .thermal * {
+    visibility: visible;
+  }
+  
+  .thermal {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+  
+  .mobile-print-guide,
+  .print-button {
     display: none !important;
   }
-  
-  @media screen {
-    .mobile-print-guide {
-      display: block !important;
-      background: #f8f9fa !important;
-      border: 2px solid #007bff !important;
-      border-radius: 12px !important;
-      padding: 20px !important;
-      margin: 25px auto !important;
-      max-width: 500px !important;
-      text-align: left !important;
-    }
-    
-    .mobile-print-guide h3 {
-      color: #007bff !important;
-      margin-top: 0 !important;
-      margin-bottom: 15px !important;
-      text-align: center !important;
-      font-size: 18px !important;
-    }
-    
-    .mobile-print-guide ol {
-      margin: 0 !important;
-      padding-left: 20px !important;
-    }
-    
-    .mobile-print-guide li {
-      margin-bottom: 10px !important;
-      font-size: 14px !important;
-      line-height: 1.4 !important;
-    }
-    
-    .print-button {
-      display: block !important;
-      width: 90% !important;
-      max-width: 300px !important;
-      margin: 25px auto !important;
-      padding: 18px !important;
-      background: #007bff !important;
-      color: white !important;
-      border: none !important;
-      border-radius: 12px !important;
-      font-size: 18px !important;
-      font-weight: bold !important;
-      cursor: pointer !important;
-      text-align: center !important;
-    }
-    
-    .print-button:hover {
-      background: #0056b3 !important;
-    }
-  }
-  
-  @media print {
-    body * {
-      visibility: hidden !important;
-    }
-    
-    .thermal-receipt,
-    .thermal-receipt * {
-      visibility: visible !important;
-    }
-    
-    .thermal-receipt {
-      position: absolute !important;
-      left: 0 !important;
-      top: 0 !important;
-    }
-    
-    .mobile-print-guide,
-    .print-button {
-      display: none !important;
-    }
-  }
+}
 </style>
 </head>
 <body>
-  <div class="thermal-receipt">
-    <img src="${logo}" class="receipt-logo" alt="Panna Store Logo"/>
-    
-    <div class="receipt-divider">✦ ✦ ✦ ✦ ✦ ✦</div>
-    
-    <div class="receipt-meta">
-      <div class="receipt-row">
-        <span><strong>Order:</strong></span>
-        <span>#${receipt.orderId}</span>
-      </div>
-      <div class="receipt-row">
-        <span><strong>Cashier:</strong></span>
-        <span>${receipt.cashier}</span>
-      </div>
-      <div class="receipt-row">
-        <span><strong>Date:</strong></span>
-        <span>${formatTime()}</span>
-      </div>
-    </div>
-    
-    <div class="receipt-divider">-------------------------</div>
-    
-    ${receipt.items.map(item => `
-      <div class="receipt-item">
-        <div style="text-align: left; margin-bottom: 4px;"><strong>${item.name}</strong></div>
-        <div class="receipt-row">
-          <span>Qty: ${item.quantity}</span>
-          <span>Ksh ${item.total.toLocaleString("en-KE")}</span>
-        </div>
-        ${item.imei ? `<div style="text-align: left; font-size: 10px; font-family: monospace;">IMEI: ${item.imei}</div>` : ''}
-      </div>
-    `).join('')}
-    
-    <div class="receipt-total">
-      TOTAL: Ksh ${receipt.total.toLocaleString("en-KE")}
-    </div>
-    
-    ${qrUrl ? `<img src="${qrUrl}" class="receipt-qr" alt="Verification QR Code"/>` : ''}
-    
-    <div>Verify at: pannamusic.co.ke/verify/${receipt.orderId}</div>
-    
-    <div class="receipt-divider">-------------------------</div>
-    
-    <div style="font-weight: bold; margin: 10px 0;">
-      Security Code: ${securityCode}
-    </div>
-    
-    <div class="receipt-footer">
-      <p>Thank you for shopping ❤️</p>
-      <p>Panna Music Center</p>
-      <p>📞 0711 772 995</p>
-    </div>
+<div class="thermal">
+
+<img src="${logo}" class="logo"/>
+
+<div class="divider">* * * * * * * *</div>
+
+<div class="meta">
+  <div class="row"><span>Order:</span><span>#${receipt.orderId}</span></div>
+  <div class="row"><span>Cashier:</span><span>${receipt.cashier}</span></div>
+  <div class="row"><span>Date:</span><span>${formatTime()}</span></div>
+</div>
+
+<div class="divider">-------------------------</div>
+
+${receipt.items
+  .map(
+    (item) => `
+<div class="item">
+  <div>${item.name}</div>
+  <div class="row">
+    <span>Qty: ${item.quantity}</span>
+    <span>Ksh ${item.total.toLocaleString("en-KE")}</span>
   </div>
+  ${item.imei ? `<div>IMEI: ${item.imei}</div>` : ""}
+</div>`
+  )
+  .join("")}
+
+<div class="total">
+  TOTAL: Ksh ${receipt.total.toLocaleString("en-KE")}
+</div>
+
+<img src="${qrUrl}" class="qr"/>
+
+<div>Verify Receipt</div>
+
+<div class="divider">-------------------------</div>
+
+<div>Security Code: ${securityCode}</div>
+
+<div class="footer">
+  <p>Thank you for shopping ❤️</p>
+  <p>Panna Store</p>
+  <p>0711 772 995</p>
+</div>
+
+</div>
+
+${isMobile ? `
+<div class="mobile-print-guide">
+  <h3>📱 Mobile Printing Instructions</h3>
+  <ol>
+    <li>Tap the <strong>"Print Receipt"</strong> button below</li>
+    <li>In the print preview screen:</li>
+    <li>• Select your printer</li>
+    <li>• Set paper size to <strong>58mm</strong></li>
+    <li>• Disable headers and footers</li>
+    <li>• If using thermal printer, select <strong>"Save as PDF"</strong> first</li>
+  </ol>
+  <p style="text-align: center; margin-top: 15px; font-size: 12px;">
+    💡 <strong>Alternative:</strong> Use browser menu (⋮) → "Print"
+  </p>
+</div>
+` : ''}
+
+<button class="print-button" onclick="window.print()">
+  ${isMobile ? '🖨️ TAP TO PRINT RECEIPT' : '📄 Print Receipt Now'}
+</button>
+
+<script>
+  // Try auto-print on desktop (not mobile)
+  if (!${isMobile}) {
+    setTimeout(() => {
+      try {
+        window.print();
+        setTimeout(() => {
+          if (window.opener === null) {
+            window.close();
+          }
+        }, 1000);
+      } catch (error) {
+        console.log("Auto-print failed, manual button available");
+      }
+    }, 800);
+  }
   
-  ${isMobile ? `
-    <div class="mobile-print-guide">
-      <h3>📱 Mobile Printing Instructions</h3>
-      <ol>
-        <li>Tap the <strong>"Print Receipt"</strong> button below</li>
-        <li>In the print preview screen:</li>
-        <li>• Select your printer</li>
-        <li>• Set paper size to <strong>58mm</strong></li>
-        <li>• Disable headers and footers</li>
-        <li>• If using thermal printer, select <strong>"Save as PDF"</strong> first</li>
-      </ol>
-      <p style="text-align: center; margin-top: 15px; font-size: 12px;">
-        💡 <strong>Alternative:</strong> Use browser menu (⋮) → "Print"
-      </p>
-    </div>
-  ` : ''}
-  
-  <button class="print-button" onclick="window.print()">
-    ${isMobile ? '🖨️ TAP TO PRINT RECEIPT' : '📄 Print Receipt Now'}
-  </button>
-  
-  <script>
-    // Try auto-print on desktop (not mobile)
-    if (!${isMobile}) {
-      setTimeout(() => {
-        try {
-          window.print();
-          setTimeout(() => {
-            if (window.opener === null) {
-              window.close();
-            }
-          }, 1000);
-        } catch (error) {
-          console.log("Auto-print failed, manual button available");
-        }
-      }, 800);
-    }
-    
-    // Listen for print completion
-    window.addEventListener('afterprint', function() {
-      setTimeout(function() {
-        if (window.opener === null && !window.closed) {
-          window.close();
-        }
-      }, 500);
-    });
-  </script>
+  // Listen for print completion
+  window.addEventListener('afterprint', function() {
+    setTimeout(function() {
+      if (window.opener === null && !window.closed) {
+        window.close();
+      }
+    }, 500);
+  });
+</script>
+
 </body>
 </html>`;
   };
@@ -557,67 +526,72 @@ const POSReceipt = ({ receipt, onNewSale }) => {
       style={{ backgroundImage: `url(${elegantwaterBg})` }}
     >
       <div className="receipt-overlay" />
-      
+
       <div className="receipt-wrap">
         <div className="receipt-paper">
-          <img src={logo} alt="Panna Music Center" className="receipt-logo-premium" />
-          
+
+          <img src={logo} alt="logo" className="receipt-logo-premium" />
+
           <div className="receipt-divider">✦ ✦ ✦ ✦ ✦ ✦</div>
-          
+
           <div className="receipt-meta">
             <p><strong>Order:</strong> #{receipt.orderId}</p>
             <p><strong>Cashier:</strong> {receipt.cashier}</p>
             <p><strong>Date:</strong> {formatTime()}</p>
           </div>
-          
+
           <div className="receipt-items">
             {receipt.items.map((item, index) => (
               <div key={index} className="receipt-row">
-                <div className="item-details">
-                  <span className="item-name">{item.name}</span>
-                  {item.imei && <span className="item-imei">IMEI: {item.imei}</span>}
-                  <span className="item-qty">Qty: {item.quantity}</span>
+                <div>
+                  <strong>{item.name}</strong>
+                  {item.imei && <div className="imei">IMEI: {item.imei}</div>}
                 </div>
-                <span className="item-total">Ksh {item.total.toLocaleString("en-KE")}</span>
+                <span>Ksh {item.total.toLocaleString("en-KE")}</span>
               </div>
             ))}
           </div>
-          
+
           <div className="receipt-total-premium">
             TOTAL: Ksh {receipt.total.toLocaleString("en-KE")}
           </div>
-          
+
           {isGeneratingQR ? (
-            <div className="qr-loading">
-              <div className="spinner"></div>
-              <p>Generating QR code...</p>
+            <div style={{ textAlign: "center", margin: "20px 0" }}>
+              Generating QR code...
             </div>
           ) : qrUrl ? (
-            <img src={qrUrl} alt="Verification QR Code" className="receipt-qr" />
+            <img 
+              src={qrUrl} 
+              alt="QR Code" 
+              style={{ 
+                width: "120px", 
+                display: "block", 
+                margin: "20px auto" 
+              }} 
+            />
           ) : null}
-          
+
           <div className="receipt-footer">
-            <p><strong>Security Code:</strong> {securityCode}</p>
-            <p>Thank you for shopping with us ❤️</p>
-            <p>Panna Music Center • 0711 772 995</p>
-            <div className="verify-link">
-              Verify at: pannamusic.co.ke/verify/{receipt.orderId}
-            </div>
+            <p>Security Code: {securityCode}</p>
+            <p>Thank you for shopping ❤️</p>
+            <p>Panna Store • 0711 772 995</p>
           </div>
+
         </div>
-        
+
         <div className="receipt-actions">
           <button className="btn-print" onClick={handlePrint}>
-            {isMobile ? "📱 Print Receipt" : "🖨️ Print Receipt"}
+            {isMobile ? " Print Receipt" : " Print Receipt"}
           </button>
           
           <button className="btn-new-sale" onClick={onNewSale}>
-            🛒 New Sale
+             New Sale
           </button>
           
           {isMobile && (
             <div className="mobile-print-tips">
-              <h4>📋 Mobile Printing Tips</h4>
+              <h4> Mobile Printing Tips</h4>
               <ul>
                 <li>Use <strong>Chrome</strong> browser for best results</li>
                 <li>Allow popups when prompted</li>
@@ -633,7 +607,7 @@ const POSReceipt = ({ receipt, onNewSale }) => {
           <div className="print-method-info">
             <small>
               Method: <strong>{printMethod}</strong> • 
-              {isMobile ? " 📱 Mobile mode" : " 🖥️ Desktop mode"}
+              {isMobile ? "  Mobile mode" : "  Desktop mode"}
             </small>
           </div>
         </div>
