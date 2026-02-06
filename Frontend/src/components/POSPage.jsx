@@ -305,6 +305,30 @@ const POSPage = () => {
       <div className="pos-main-layout">
         {/* Products Grid */}
         <div className="pos-products-section">
+          {/* Search Bar - Added on top of products grid */}
+          <div className="search-container" style={{ marginBottom: '1rem' }}>
+            <div className="relative w-full">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-10 w-full"
+                />
+                {searchTerm && (
+                  <button
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={() => setSearchTerm('')}
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+          
           {loading ? <div className="loading-container"><div className="spinner"></div><p>Loading products...</p></div> : (
             <div className="pos-products-grid">
               {filteredProducts.map((product) => {
