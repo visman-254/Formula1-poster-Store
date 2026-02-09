@@ -107,10 +107,10 @@ export const imeiService = {
    * @param {number} variantId - The variant ID (optional, to check specific variant)
    * @returns {Promise<{valid: boolean, status?: string, error?: string}>}
    */
-  validateIMEI: async (imeiNumber, variantId = null) => {
+  validateIMEI: async (imeiNumber, variantId = null, productId = null) => {
     try {
       // First, check if IMEI exists for ANY variant
-      let query = 'SELECT it.*, pv.color as variant_color, p.title as product_title ' +
+      let query = 'SELECT it.*, pv.color as variant_color, p.title as product_title, pv.product_id as imei_product_id ' +
                   'FROM imei_tracking it ' +
                   'LEFT JOIN product_variants pv ON it.variant_id = pv.variant_id ' +
                   'LEFT JOIN products p ON pv.product_id = p.product_id ' +
@@ -128,15 +128,42 @@ export const imeiService = {
 
       const imei = anyImei[0];
       
-      // If IMEI exists but for a different variant, return info about it
+      // If variantId is provided, check if IMEI belongs to the requested variant
       if (variantId && imei.variant_id !== variantId) {
+        // Additional check: if productId is also provided, verify it matches
+        if (productId && imei.imei_product_id !== productId) {
+          // IMEI belongs to a different product entirely
+          return {
+            valid: false,
+            status: 'wrong_product',
+            error: `IMEI belongs to a different product: ${imei.product_title || 'Unknown'} (${imei.variant_color || 'Unknown variant'})`,
+            found_variant_id: imei.variant_id,
+            found_product_title: imei.product_title,
+            found_variant_color: imei.variant_color,
+            imei_status: imei.status
+          };
+        }
+        
+        // IMEI exists but for a different variant
         return {
           valid: false,
-          status: 'wrong_product',
-          error: `IMEI belongs to a different product: ${imei.product_title || 'Unknown'} (${imei.variant_color || 'Unknown variant'})`,
+          status: 'wrong_variant',
+          error: `IMEI belongs to a different variant: ${imei.variant_color || 'Variant ' + imei.variant_id}. Required variant: ${variantId}`,
           found_variant_id: imei.variant_id,
           found_product_title: imei.product_title,
           found_variant_color: imei.variant_color,
+          imei_status: imei.status
+        };
+      }
+      
+      // If productId is provided and doesn't match, reject it
+      if (productId && imei.imei_product_id !== productId) {
+        return {
+          valid: false,
+          status: 'wrong_product',
+          error: `IMEI belongs to a different product: ${imei.product_title || 'Unknown'}`,
+          found_variant_id: imei.variant_id,
+          found_product_title: imei.product_title,
           imei_status: imei.status
         };
       }

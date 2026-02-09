@@ -121,12 +121,13 @@ export const imeiController = {
    */
   validateIMEI: async (req, res) => {
     try {
-      const { imeiNumber, variantId } = req.body;
+      const { imeiNumber, variantId, productId } = req.body;
 
       console.log('=== IMEI VALIDATION REQUEST ===');
       console.log('Received body:', req.body);
       console.log('imeiNumber:', imeiNumber, 'type:', typeof imeiNumber);
       console.log('variantId:', variantId, 'type:', typeof variantId);
+      console.log('productId:', productId, 'type:', typeof productId);
 
       // Handle all falsy values
       if (imeiNumber === null || imeiNumber === undefined || imeiNumber === '') {
@@ -151,14 +152,25 @@ export const imeiController = {
         }
       }
       
-      console.log('Calling validateIMEI service with:', trimmedImei, parsedVariantId);
+      // Handle productId - can be null/undefined (optional)
+      let parsedProductId = null;
+      if (productId !== null && productId !== undefined && productId !== '') {
+        if (typeof productId === 'number') {
+          parsedProductId = productId;
+        } else if (typeof productId === 'string') {
+          parsedProductId = parseInt(productId, 10);
+        }
+      }
       
-      const result = await imeiService.validateIMEI(trimmedImei, parsedVariantId);
+      console.log('Calling validateIMEI service with:', trimmedImei, parsedVariantId, parsedProductId);
+      
+      const result = await imeiService.validateIMEI(trimmedImei, parsedVariantId, parsedProductId);
       console.log('Validation result:', result);
 
       res.json({
         imei: trimmedImei,
         requestedVariantId: variantId,
+        requestedProductId: productId,
         ...result
       });
     } catch (err) {

@@ -187,19 +187,43 @@ const POSPage = () => {
     // Track this validation request
     latestValidationVariantRef.current = variantId;
     
+    console.log('DEBUG: validateImei called:', { 
+      imeiValue: imeiValue, 
+      variantId: variantId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Make the request with cache-busting
+    const requestBody = {
+      imeiNumber: imeiValue.trim(),
+      variantId: variantId
+    };
+    
+    // Also get the productId from the cart item for additional validation
+    const cartItem = cart.find(i => i.variant_id === variantId);
+    if (cartItem && cartItem.product_id) {
+      requestBody.productId = cartItem.product_id;
+    }
+    
+    console.log('DEBUG: Sending validation request:', requestBody);
+    
     try {
-      const response = await axios.post(`${API_URL}/imei/validate`, {
-        imeiNumber: imeiValue.trim(),
-        variantId
-      }, {
+      const response = await axios.post(`${API_URL}/imei/validate?_=${Date.now()}`, requestBody, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       const { data } = response;
       
+      console.log('DEBUG: validateImei response:', {
+        data: data,
+        latestVariant: latestValidationVariantRef.current,
+        productId: data.requestedProductId
+      });
+      
       // Check if this is still the latest validation request
       if (latestValidationVariantRef.current !== variantId) {
         // This is a stale response, ignore it
+        console.log('DEBUG: Stale response ignored for variant', variantId);
         return { valid: null, status: 'stale', error: null };
       }
       
@@ -267,6 +291,16 @@ const POSPage = () => {
           found_variant_color: errorData?.found_variant_color
         };
       }
+      if (errorData?.status === 'wrong_variant') {
+        return { 
+          valid: false, 
+          status: 'wrong_variant', 
+          error: errorData?.error || 'IMEI belongs to a different variant',
+          found_variant_id: errorData?.found_variant_id,
+          found_product_title: errorData?.found_product_title,
+          found_variant_color: errorData?.found_variant_color
+        };
+      }
       
       // For network errors, show error and don't allow
       console.error('IMEI validation error:', errorData || err.message);
@@ -279,6 +313,12 @@ const POSPage = () => {
   };
 
   const updateImei = async (variant_id, imeiValue) => {
+    console.log('DEBUG: updateImei called:', {
+      variant_id: variant_id,
+      imeiValue: imeiValue,
+      timestamp: new Date().toISOString()
+    });
+    
     // Store the full IMEI
     setCart(cart.map((i) => (i.variant_id === variant_id ? { 
       ...i, 
@@ -294,8 +334,11 @@ const POSPage = () => {
       
       // Skip stale results
       if (result.status === 'stale') {
+        console.log('DEBUG: Stale result skipped');
         return;
       }
+      
+      console.log('DEBUG: updateImei setting validation result:', result);
       
       setCart(cart.map((i) => (i.variant_id === variant_id ? { 
         ...i, 
@@ -387,7 +430,15 @@ const POSPage = () => {
         imeiError: null,
         imeiWarning: null
       };
-      setCart([...cart, newItem]);
+      setCart(prevCart => {
+        const newCart = [...prevCart, newItem];
+        console.log('DEBUG: Added new cart item:', {
+          variant_id: newItem.variant_id,
+          product_id: newItem.product_id,
+          title: newItem.title
+        });
+        return newCart;
+      });
       toast.info('Scan or enter IMEI for this product');
     }
   };
@@ -623,6 +674,13 @@ const POSPage = () => {
                   <div className="pos-cart-items">
                     {cart.map((item) => (
                       <div key={item.variant_id} className="pos-cart-item">
+                        {console.log('DEBUG: Cart item rendered:', {
+                          variant_id: item.variant_id,
+                          product_id: item.product_id,
+                          title: item.title,
+                          imei: item.imei,
+                          imeiValid: item.imeiValid
+                        })}
                         <div className="pos-cart-item-info">
                           <p className="pos-cart-item-name">{item.title}</p>
                           {item.variantColor && (
