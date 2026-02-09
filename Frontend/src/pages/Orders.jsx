@@ -207,6 +207,11 @@ const Orders = () => {
                               Qty: <span className="font-medium">{item.quantity}</span> × 
                               <span className="font-medium ml-1">Kshs {item.price}</span>
                             </p>
+                            {item.imei_serial && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                IMEI: <span className="font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded">{item.imei_serial}</span>
+                              </p>
+                            )}
                           </div>
                           <div className="text-right">
                             <p className="text-lg font-bold text-black dark:text-white">

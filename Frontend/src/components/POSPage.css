@@ -236,6 +236,100 @@
   color: #9ca3af;
 }
 
+/* Variant Selector */
+.pos-variant-selector {
+  margin: 6px 0;
+}
+
+.pos-variant-dropdown {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.8rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.pos-variant-dropdown:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.15);
+}
+
+.dark .pos-variant-dropdown {
+  background: #374151;
+  color: #e5e7eb;
+  border-color: #4b5563;
+}
+
+/* Variant Chips */
+.pos-variant-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.pos-variant-chip {
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  background: #f9fafb;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.pos-variant-chip:hover {
+  border-color: #059669;
+  background: #ecfdf5;
+}
+
+.pos-variant-chip.active {
+  background: #059669;
+  color: #fff;
+  border-color: #059669;
+}
+
+.pos-variant-chip.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.dark .pos-variant-chip {
+  background: #374151;
+  color: #d1d5db;
+  border-color: #4b5563;
+}
+
+.dark .pos-variant-chip:hover {
+  border-color: #10b981;
+  background: #064e3b;
+}
+
+.dark .pos-variant-chip.active {
+  background: #059669;
+  color: #fff;
+}
+
+/* Cart Variant Info */
+.pos-cart-item-variant {
+  font-size: 0.75rem;
+  color: #059669;
+  margin: 0;
+  font-weight: 500;
+}
+
+.dark .pos-cart-item-variant {
+  color: #34d399;
+}
+
 /* Loading Container */
 .loading-container {
   display: flex;

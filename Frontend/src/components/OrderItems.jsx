@@ -205,29 +205,43 @@ const OrderItems = () => {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Product</TableHead>
+                            <TableHead>IMEI</TableHead>
                             <TableHead>Quantity</TableHead>
                             <TableHead>Price</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {groupItems(order.items).map((group) => (
-                            <TableRow key={group.items[0]?.variant_id}>
-                              <TableCell className="flex items-center gap-2">
-                                {group.images.map((img, idx) => (
-                                  <img
-                                    key={idx}
-                                    src={img}
-                                    alt={group.names[idx]}
-                                    className="w-10 h-10 object-cover rounded-md"
-                                  />
-                                ))}
-                                {group.is_bundle
-                                  ? `Bundle: ${group.names.join(" + ")}`
-                                  : group.names[0]}
-                              </TableCell>
-                              <TableCell>x{group.total_quantity}</TableCell>
-                              <TableCell>Kshs {group.total_price.toFixed(2)}</TableCell>
-                            </TableRow>
+                          {groupItems(order.items).map((group, groupIdx) => (
+                            <React.Fragment key={group.items[0]?.variant_id || groupIdx}>
+                              {group.items.map((item, itemIdx) => (
+                                <TableRow key={`${item.variant_id}-${itemIdx}`}>
+                                  <TableCell className="flex items-center gap-2">
+                                    {item.image && (
+                                      <img
+                                        src={item.image}
+                                        alt={item.name}
+                                        className="w-10 h-10 object-cover rounded-md"
+                                      />
+                                    )}
+                                    {item.name}
+                                    {item.color && (
+                                      <span className="text-sm text-gray-500">({item.color})</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {item.imei_serial ? (
+                                      <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                                        {item.imei_serial}
+                                      </span>
+                                    ) : (
+                                      <span className="text-gray-400 text-sm">-</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>x{item.quantity}</TableCell>
+                                  <TableCell>Kshs {parseFloat(item.price).toFixed(2)}</TableCell>
+                                </TableRow>
+                              ))}
+                            </React.Fragment>
                           ))}
                         </TableBody>
                       </Table>

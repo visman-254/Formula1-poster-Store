@@ -2,6 +2,7 @@ import { createPOSOrder, generateReceipt, getPOSOrders, getCashierSales } from "
 import { getProducts, reduceProductStock, getProductByVariantId } from "../services/product.js";
 import { createOrder } from "../services/orders.js";
 import { getAccessToken, initiateSTKPush } from "../services/mpesa.js";
+import { imeiService } from "../services/imeiTracking.js";
 import db from "../config/db.js";
 
 // Helper to format image URLs
@@ -111,6 +112,31 @@ export const checkoutAsCashier = async (req, res) => {
     }
 
     // =====================
+    // VALIDATE ALL IMEIs BEFORE CHECKOUT
+    // =====================
+    for (const item of cartItems) {
+      if (item.imei) {
+        const variantId = item.variant_id || item.product_id;
+        const imeiValidation = await imeiService.validateIMEI(item.imei.trim(), variantId);
+        
+        if (!imeiValidation.valid) {
+          console.log(`Checkout failed: IMEI ${item.imei} validation failed - ${imeiValidation.status}`);
+          return res.status(400).json({ 
+            message: `IMEI validation failed for ${item.title}: ${imeiValidation.error || 'Invalid IMEI'}`,
+            imei: item.imei,
+            product: item.title,
+            status: imeiValidation.status
+          });
+        }
+        
+        // If IMEI was auto-assigned (reserved with NULL order_id), it's valid for checkout
+        if (imeiValidation.status === 'reserved' && imeiValidation.valid) {
+          console.log(`IMEI ${item.imei} was auto-assigned and is ready for checkout`);
+        }
+      }
+    }
+
+    // =====================
     // CASH & CARD → COMPLETE SALE IMMEDIATELY
     // =====================
     if (payment_method === "cash" || payment_method === "card") {
@@ -128,22 +154,52 @@ export const checkoutAsCashier = async (req, res) => {
         // Process items
         for (const item of cartItems) {
             const variantId = item.variant_id || item.product_id;
+            
+            // Get imei_id if IMEI was auto-assigned
+            let imeiId = null;
+            if (item.imei && item.imeiId) {
+              imeiId = item.imeiId;
+            } else if (item.imei) {
+              // Try to get imei_id from tracking table
+              try {
+                const [imeiRows] = await connection.execute(
+                  'SELECT imei_id FROM imei_tracking WHERE imei_number = ?',
+                  [item.imei]
+                );
+                if (imeiRows.length > 0) {
+                  imeiId = imeiRows[0].imei_id;
+                }
+              } catch (e) {
+                console.log('IMEI not found in tracking table');
+              }
+            }
+            
             // Direct insert with IMEI support
             const [itemResult] = await connection.execute(
-              `INSERT INTO order_items (order_id, variant_id, quantity, price, product_name, product_image, imei_serial) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-              [orderId, variantId, item.quantity, item.price, item.title, item.image, item.imei || null]
+              `INSERT INTO order_items (order_id, variant_id, quantity, price, product_name, product_image, imei_serial, imei_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              [orderId, variantId, item.quantity, item.price, item.title, item.image, item.imei || null, imeiId]
             );
             const orderItemId = itemResult.insertId;
 
-            // Handle IMEI if provided (mark as used in tracking)
-            if (item.imei) {
+            // Handle IMEI if provided (mark as used in tracking and link to order)
+            if (imeiId) {
               try {
                 await connection.execute(
-                  'UPDATE imei_tracking SET status = ?, used_at = CURRENT_TIMESTAMP WHERE imei_number = ?',
-                  ['used', item.imei]
+                  'UPDATE imei_tracking SET status = ?, order_id = ?, used_at = CURRENT_TIMESTAMP WHERE imei_id = ?',
+                  ['used', orderId, imeiId]
                 );
               } catch (imeiErr) {
                 console.error('Error marking IMEI as used:', imeiErr);
+              }
+            } else if (item.imei) {
+              // IMEI manually entered - try to find and update
+              try {
+                await connection.execute(
+                  'UPDATE imei_tracking SET status = ?, order_id = ?, used_at = CURRENT_TIMESTAMP WHERE imei_number = ?',
+                  ['used', orderId, item.imei]
+                );
+              } catch (imeiErr) {
+                console.log('IMEI not in tracking system - manual entry');
               }
             }
 
@@ -197,6 +253,25 @@ export const checkoutAsCashier = async (req, res) => {
     // MPESA → PAYMENT FIRST
     // =====================
     console.log("Processing M-Pesa payment...");
+    
+    // Validate all IMEIs before initiating M-Pesa
+    for (const item of cartItems) {
+      if (item.imei) {
+        const variantId = item.variant_id || item.product_id;
+        const imeiValidation = await imeiService.validateIMEI(item.imei.trim(), variantId);
+        
+        if (!imeiValidation.valid) {
+          console.log(`M-Pesa checkout failed: IMEI ${item.imei} validation failed - ${imeiValidation.status}`);
+          return res.status(400).json({ 
+            message: `IMEI validation failed for ${item.title}: ${imeiValidation.error || 'Invalid IMEI'}`,
+            imei: item.imei,
+            product: item.title,
+            status: imeiValidation.status
+          });
+        }
+      }
+    }
+    
     if (!phone_number) {
       console.log("M-Pesa checkout failed: Phone number is required.");
       return res.status(400).json({ message: "Phone number required for Mpesa" });
@@ -351,3 +426,5 @@ export const getCashierSalesAdmin = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch cashier stats" });
   }
 };
+
+

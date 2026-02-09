@@ -109,24 +109,72 @@ export const imeiService = {
    */
   validateIMEI: async (imeiNumber, variantId = null) => {
     try {
+      // First, check if IMEI exists for ANY variant
       let query = 'SELECT * FROM imei_tracking WHERE imei_number = ?';
-      const params = [imeiNumber.trim()];
+      const [anyImei] = await db.execute(query, [imeiNumber.trim()]);
 
-      if (variantId) {
-        query += ' AND variant_id = ?';
-        params.push(variantId);
+      if (anyImei.length === 0) {
+        // IMEI not found in database - INVALID
+        return { 
+          valid: false, 
+          status: 'not_found', 
+          error: 'IMEI not found in database. Only registered IMEIs are allowed.'
+        };
       }
 
-      const [rows] = await db.execute(query, params);
+      const imei = anyImei[0];
 
-      if (rows.length === 0) {
-        return { valid: false, error: 'IMEI not found' };
+      // If the IMEI is used, reject it
+      if (imei.status === 'used') {
+        return { 
+          valid: false, 
+          status: 'used', 
+          error: 'IMEI has already been used in another order',
+          variant_id: imei.variant_id,
+          imei_id: imei.imei_id
+        };
       }
 
-      const imei = rows[0];
+      // If the IMEI is reserved, check if it can be used
+      if (imei.status === 'reserved') {
+        // If order_id is NULL, it was auto-assigned from POS and is valid for this checkout
+        if (imei.order_id === null) {
+          return {
+            valid: true,
+            status: 'reserved',
+            variant_id: imei.variant_id,
+            imei_id: imei.imei_id,
+            note: 'Auto-assigned from available stock'
+          };
+        }
+        // Otherwise, it's reserved for another order
+        return {
+          valid: false,
+          status: 'reserved',
+          error: 'IMEI is reserved for another order',
+          variant_id: imei.variant_id,
+          imei_id: imei.imei_id
+        };
+      }
+
+      // If IMEI is available and matches the requested variant, it's valid
+      if (variantId && imei.variant_id !== variantId) {
+        // IMEI is available but for a different variant
+        // Show a warning but still allow it (the user might be swapping products)
+        return {
+          valid: true,
+          status: 'available',
+          warning: 'IMEI belongs to a different product variant',
+          variant_id: imei.variant_id,
+          imei_id: imei.imei_id,
+          original_variant_id: variantId
+        };
+      }
+
+      // Available - can be used
       return {
         valid: true,
-        status: imei.status,
+        status: 'available',
         variant_id: imei.variant_id,
         imei_id: imei.imei_id
       };
@@ -387,10 +435,11 @@ export const imeiService = {
 
       const imei = imeis[0];
 
-      // Reserve it for the order
+      // Reserve it for the order - use NULL if orderId is 0 or invalid
+      const orderIdValue = orderId && orderId > 0 ? orderId : null;
       await connection.execute(
         'UPDATE imei_tracking SET status = ?, order_id = ? WHERE imei_id = ?',
-        ['reserved', orderId, imei.imei_id]
+        ['reserved', orderIdValue, imei.imei_id]
       );
 
       await connection.commit();

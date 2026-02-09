@@ -123,14 +123,42 @@ export const imeiController = {
     try {
       const { imeiNumber, variantId } = req.body;
 
-      if (!imeiNumber) {
+      console.log('=== IMEI VALIDATION REQUEST ===');
+      console.log('Received body:', req.body);
+      console.log('imeiNumber:', imeiNumber, 'type:', typeof imeiNumber);
+      console.log('variantId:', variantId, 'type:', typeof variantId);
+
+      // Handle all falsy values
+      if (imeiNumber === null || imeiNumber === undefined || imeiNumber === '') {
+        console.log('ERROR: IMEI number is missing');
         return res.status(400).json({ error: 'IMEI number is required' });
       }
 
-      const result = await imeiService.validateIMEI(imeiNumber, variantId || null);
+      const trimmedImei = String(imeiNumber).trim();
+      
+      if (trimmedImei.length < 5) {
+        console.log('ERROR: IMEI too short');
+        return res.status(400).json({ error: 'IMEI number is too short' });
+      }
+
+      // Handle variantId - can be null/undefined (optional)
+      let parsedVariantId = null;
+      if (variantId !== null && variantId !== undefined && variantId !== '') {
+        if (typeof variantId === 'number') {
+          parsedVariantId = variantId;
+        } else if (typeof variantId === 'string') {
+          parsedVariantId = parseInt(variantId, 10);
+        }
+      }
+      
+      console.log('Calling validateIMEI service with:', trimmedImei, parsedVariantId);
+      
+      const result = await imeiService.validateIMEI(trimmedImei, parsedVariantId);
+      console.log('Validation result:', result);
 
       res.json({
-        imei: imeiNumber,
+        imei: trimmedImei,
+        requestedVariantId: variantId,
         ...result
       });
     } catch (err) {
@@ -257,15 +285,51 @@ export const imeiController = {
   autoAssignIMEI: async (req, res) => {
     try {
       const { variantId, orderId } = req.body;
+      
+      console.log('=== IMEI AUTO-ASSIGN ===');
+      console.log('Received body:', req.body);
+      console.log('variantId:', variantId, 'type:', typeof variantId);
+      console.log('orderId:', orderId, 'type:', typeof orderId);
 
-      if (!variantId || !orderId) {
-        return res.status(400).json({ error: 'Variant ID and order ID are required' });
+      // Handle all falsy values (null, undefined, '', 0)
+      if (variantId === null || variantId === undefined || variantId === '') {
+        console.log('ERROR: Variant ID is missing or empty');
+        return res.status(400).json({ error: 'Variant ID is required' });
       }
 
-      const result = await imeiService.autoAssignIMEI(parseInt(variantId), parseInt(orderId));
+      // Try to parse variantId as integer
+      let parsedVariantId;
+      if (typeof variantId === 'number') {
+        parsedVariantId = variantId;
+      } else if (typeof variantId === 'string') {
+        parsedVariantId = parseInt(variantId, 10);
+      } else {
+        console.log('ERROR: Invalid variantId type:', typeof variantId);
+        return res.status(400).json({ error: 'Invalid variant ID' });
+      }
+
+      if (isNaN(parsedVariantId) || parsedVariantId <= 0) {
+        console.log('ERROR: Invalid variant ID after parsing:', parsedVariantId);
+        return res.status(400).json({ error: 'Invalid variant ID' });
+      }
+
+      // orderId can be 0 or null (temporary reservation for POS cart)
+      const parsedOrderId = (orderId === null || orderId === undefined || orderId === '') 
+        ? 0 
+        : parseInt(orderId, 10);
+      console.log('parsedVariantId:', parsedVariantId, 'parsedOrderId:', parsedOrderId);
+
+      const result = await imeiService.autoAssignIMEI(parsedVariantId, parsedOrderId);
+      console.log('Service result:', result);
 
       if (!result) {
-        return res.status(400).json({ error: 'No available IMEIs for this variant' });
+        console.log('INFO: No available IMEIs for variant', parsedVariantId);
+        // Return 200 with null IMEI instead of 400 - this is not an error
+        return res.json({
+          message: 'No available IMEIs',
+          imei: null,
+          imeiId: null
+        });
       }
 
       res.json({

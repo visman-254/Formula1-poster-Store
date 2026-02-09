@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, X } from "lucide-react";
+import { toast } from 'sonner';
 import POSReceipt from './POSReceipt';
 import './POSPage.css';
 import API_BASE from '../config'; 
@@ -23,6 +24,7 @@ const POSPage = () => {
   const [showMpesaModal, setShowMpesaModal] = useState(false);
   const [mpesaPhone, setMpesaPhone] = useState('');
   const [mpesaModalError, setMpesaModalError] = useState('');
+  const [selectedVariants, setSelectedVariants] = useState({}); // { product_id: variant_id }
 
   // --- Polling State ---
   const [isPolling, setIsPolling] = useState(false);
@@ -185,10 +187,58 @@ const POSPage = () => {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      return { valid: response.data.valid, status: response.data.status, error: response.data.error };
+      
+      const { data } = response;
+      
+      // Check for cross-variant warning
+      if (data.warning) {
+        return { 
+          valid: true, 
+          status: data.status || 'available', 
+          warning: data.warning,
+          error: null 
+        };
+      }
+      
+      // Valid response - IMEI is valid
+      return { 
+        valid: true, 
+        status: data.status || 'new', 
+        error: null 
+      };
     } catch (err) {
-      console.error('IMEI validation error:', err);
-      return { valid: false, error: 'Validation failed' };
+      // Handle error responses from backend
+      const errorData = err.response?.data;
+      
+      if (errorData?.status === 'used') {
+        return { 
+          valid: false, 
+          status: 'used', 
+          error: 'IMEI has already been used in another order' 
+        };
+      }
+      if (errorData?.status === 'reserved') {
+        return { 
+          valid: false, 
+          status: 'reserved', 
+          error: 'IMEI is reserved for another order' 
+        };
+      }
+      if (errorData?.status === 'not_found') {
+        return { 
+          valid: false, 
+          status: 'not_found', 
+          error: errorData?.error || 'IMEI not found in database' 
+        };
+      }
+      
+      // For network errors, show error and don't allow
+      console.error('IMEI validation error:', errorData || err.message);
+      return { 
+        valid: false, 
+        status: 'error', 
+        error: 'Failed to validate IMEI. Please try again.' 
+      };
     }
   };
 
@@ -198,7 +248,8 @@ const POSPage = () => {
       ...i, 
       imei: imeiValue,
       imeiValid: null,
-      imeiError: null
+      imeiError: null,
+      imeiWarning: null
     } : i)));
 
     // Validate if we have enough characters
@@ -207,8 +258,20 @@ const POSPage = () => {
       setCart(cart.map((i) => (i.variant_id === variant_id ? { 
         ...i, 
         imeiValid: result.valid ? 'valid' : 'invalid',
-        imeiError: result.error || (result.valid && result.status === 'used' ? 'IMEI already used' : null)
+        imeiError: result.error || (result.valid && result.status === 'used' ? 'IMEI already used' : null),
+        imeiWarning: result.warning || null
       } : i)));
+      
+      // Show toast based on validation result
+      if (result.valid) {
+        if (result.warning) {
+          toast.warning(result.warning);
+        } else {
+          toast.success('IMEI is valid');
+        }
+      } else {
+        toast.error(result.error || 'Invalid IMEI');
+      }
     }
   };
 
@@ -225,19 +288,30 @@ const POSPage = () => {
         setCart(cart.map((i) => (i.variant_id === variant_id ? { 
           ...i, 
           imei: response.data.imei,
+          imeiId: response.data.imeiId,
           imeiValid: 'valid',
           imeiError: null
         } : i)));
-      } else {
-        setError('No available IMEIs for this product');
       }
+      // If no IMEI available, just continue - user can enter manually
     } catch (err) {
-      console.error('Auto-fill IMEI error:', err);
-      setError('Failed to auto-fill IMEI');
+      // Silently continue - IMEI is optional
     }
   };
-  const addToCart = (product) => {
-    const variant = product.variants[0];
+  const handleVariantSelect = (productId, variantId) => {
+    setSelectedVariants(prev => ({ ...prev, [productId]: variantId }));
+  };
+
+  const getSelectedVariant = (product) => {
+    const selectedId = selectedVariants[product.product_id];
+    if (selectedId) {
+      return product.variants.find(v => v.variant_id === selectedId) || product.variants[0];
+    }
+    return product.variants[0];
+  };
+
+  const addToCart = async (product) => {
+    const variant = getSelectedVariant(product);
     if (!variant || variant.stock <= 0) {
       setError('Product out of stock');
       return;
@@ -251,19 +325,30 @@ const POSPage = () => {
       }
       updateQuantity(variant.variant_id, existingItem.quantity + 1);
     } else {
+      // Add to cart without IMEI - user must scan/enter IMEI manually
       setCart([
         ...cart,
         {
           variant_id: variant.variant_id,
           product_id: product.product_id,
           title: product.title,
+          variantColor: variant.color || variant.name || null,
           price: variant.price,
-          image: getProductImage(product),
+          image: variant.image 
+            ? (variant.image.startsWith('http://') || variant.image.startsWith('https://') 
+                ? variant.image 
+                : `${API_BASE}/${variant.image.replace(/\\/g, '/')}`)
+            : getProductImage(product),
           quantity: 1,
           stock: variant.stock,
-          imei: '', // Initialize with empty IMEI
+          imei: '',
+          imeiId: null,
+          imeiValid: null,
+          imeiError: null,
+          imeiWarning: null
         },
       ]);
+      toast.info('Scan or enter IMEI for this product');
     }
     setError('');
   };
@@ -275,6 +360,10 @@ const POSPage = () => {
   };
   const removeFromCart = (variant_id) => setCart(cart.filter((i) => i.variant_id !== variant_id));
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  // Check if all cart items have valid IMEIs
+  const allImeisValid = cart.length > 0 && cart.every(item => item.imeiValid === 'valid');
+  const pendingImeis = cart.filter(item => !item.imei || item.imeiValid !== 'valid');
 
   // --- Checkout Functions ---
   const handleCheckout = async () => {
@@ -309,9 +398,12 @@ const POSPage = () => {
       setMpesaPhone('');
       setError('');
       setCheckoutLoading(false);
+      toast.success('Checkout successful!');
     } catch (err) {
       console.error('Checkout error:', err);
-      setError(err.response?.data?.message || 'Checkout failed');
+      const errorMsg = err.response?.data?.message || 'Checkout failed';
+      setError(errorMsg);
+      toast.error(errorMsg);
       setCheckoutLoading(false);
     }
   };
@@ -327,12 +419,15 @@ const POSPage = () => {
       if (response.data.success && response.data.checkoutRequestID) {
         setMpesaCheckoutId(response.data.checkoutRequestID);
         setIsPolling(true);
+        toast.success('M-Pesa payment initiated. Check your phone.');
       } else {
         throw new Error("M-Pesa initiation failed. No Checkout ID received.");
       }
     } catch (err) {
       console.error('M-Pesa initiation error:', err);
-      setError(err.response?.data?.message || 'M-Pesa initiation failed.');
+      const errorMsg = err.response?.data?.message || 'M-Pesa initiation failed.';
+      setError(errorMsg);
+      toast.error(errorMsg);
       setCheckoutLoading(false);
     }
   };
@@ -393,9 +488,23 @@ const POSPage = () => {
           {loading ? <div className="loading-container"><div className="spinner"></div><p>Loading products...</p></div> : (
             <div className="pos-products-grid">
               {filteredProducts.map((product) => {
-                const variant = product.variants?.[0];
-                const isOutOfStock = !variant || variant.stock <= 0;
-                const imageUrl = getProductImage(product);
+                const variants = product.variants || [];
+                const selectedVariant = getSelectedVariant(product);
+                const isOutOfStock = !selectedVariant || selectedVariant.stock <= 0;
+                const hasMultipleVariants = variants.length > 1;
+                
+                // Use selected variant's image if available
+                const selectedVariantImage = selectedVariant?.image;
+                const getImageUrl = (path) => {
+                  if (!path) return null;
+                  if (path.startsWith('http://') || path.startsWith('https://')) {
+                    return path;
+                  }
+                  return `${API_BASE}/${path.replace(/\\/g, '/')}`;
+                };
+                const imageUrl = selectedVariantImage 
+                  ? getImageUrl(selectedVariantImage) 
+                  : getProductImage(product);
 
                 return (
                   <Card key={product.product_id} className={`pos-product-card ${isOutOfStock ? 'out-of-stock' : ''}`}>
@@ -411,8 +520,44 @@ const POSPage = () => {
                       </div>
                       <div className="pos-product-info">
                         <p className="pos-product-title">{product.title}</p>
-                        <p className="pos-product-price">Ksh {variant?.price?.toLocaleString('en-KE') || 'N/A'}</p>
-                        <p className="pos-product-stock">Stock: {variant?.stock || 0}</p>
+                        
+                        {/* Variant Selector */}
+                        {hasMultipleVariants && (
+                          <div className="pos-variant-selector">
+                            <select
+                              value={selectedVariant?.variant_id || ''}
+                              onChange={(e) => handleVariantSelect(product.product_id, Number(e.target.value))}
+                              className="pos-variant-dropdown"
+                            >
+                              {variants.map((v) => (
+                                <option key={v.variant_id} value={v.variant_id} disabled={v.stock <= 0}>
+                                  {v.color || v.name || `Variant ${v.variant_id}`}
+                                  {' - Ksh '}{v.price?.toLocaleString('en-KE')}
+                                  {v.stock <= 0 ? ' (Out of Stock)' : ` (${v.stock} in stock)`}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        
+                        {/* Variant color chips for quick selection */}
+                        {hasMultipleVariants && (
+                          <div className="pos-variant-chips">
+                            {variants.map((v) => (
+                              <button
+                                key={v.variant_id}
+                                className={`pos-variant-chip ${selectedVariant?.variant_id === v.variant_id ? 'active' : ''} ${v.stock <= 0 ? 'disabled' : ''}`}
+                                onClick={() => v.stock > 0 && handleVariantSelect(product.product_id, v.variant_id)}
+                                title={`${v.color || v.name || 'Variant'} - Ksh ${v.price?.toLocaleString('en-KE')} (${v.stock} in stock)`}
+                              >
+                                {v.color || v.name || `V${v.variant_id}`}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        <p className="pos-product-price">Ksh {selectedVariant?.price?.toLocaleString('en-KE') || 'N/A'}</p>
+                        <p className="pos-product-stock">Stock: {selectedVariant?.stock || 0}</p>
                         <Button
                           onClick={() => addToCart(product)}
                           disabled={isOutOfStock || checkoutLoading || isPolling}
@@ -441,85 +586,81 @@ const POSPage = () => {
                       <div key={item.variant_id} className="pos-cart-item">
                         <div className="pos-cart-item-info">
                           <p className="pos-cart-item-name">{item.title}</p>
+                          {item.variantColor && (
+                            <p className="pos-cart-item-variant">Variant: {item.variantColor}</p>
+                          )}
                           <p className="pos-cart-item-price">Ksh {item.price.toLocaleString('en-KE')}</p>
                           <div className="flex gap-1">
                             <Input 
                               type='text'
-                              placeholder='IMEI/Serial Number'
+                              placeholder='Scan IMEI/Serial Number'
                               value={item.imei || ''}
                               onChange={(e) => updateImei(item.variant_id, e.target.value)}
-                              className={`w-full mt-1 text-sm ${item.imeiValid === 'valid' ? 'border-green-500' : item.imeiValid === 'invalid' ? 'border-red-500' : ''}`}
+                              className={`w-full mt-1 text-sm ${item.imeiValid === 'valid' ? 'border-green-500 bg-green-50' : item.imeiValid === 'invalid' ? 'border-red-500 bg-red-50' : ''}`}
                             />
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => autoFillImei(item.variant_id)}
-                              className="mt-1"
-                              title="Auto-fill available IMEI"
-                            >
-                              Auto
-                            </Button>
+                            {item.imeiValid === 'valid' && (
+                              <span className="mt-2 text-green-600" title="IMEI Valid">✓</span>
+                            )}
+                            {item.imeiValid === 'invalid' && (
+                              <span className="mt-2 text-red-600" title="IMEI Invalid">✗</span>
+                            )}
                           </div>
+                          {!item.imei && (
+                            <p className="text-xs text-amber-600 mt-1">⚠ Scan IMEI to enable checkout</p>
+                          )}
                           {item.imeiError && (
-                            <p className="text-red-500 text-xs mt-1">{item.imeiError}</p>
+                            <p className="text-xs text-red-500 mt-1">{item.imeiError}</p>
                           )}
-                          {item.imeiValid === 'valid' && (
-                            <p className="text-green-500 text-xs mt-1">✓ IMEI valid</p>
+                          {item.imeiWarning && (
+                            <p className="text-xs text-amber-500 mt-1">{item.imeiWarning}</p>
                           )}
                         </div>
-                        <div className="pos-cart-quantity">
-                          <button onClick={() => updateQuantity(item.variant_id, item.quantity - 1)} className="qty-btn">−</button>
-                          <input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) => updateQuantity(item.variant_id, parseInt(e.target.value) || 1)}
-                            className="qty-input"
-                          />
-                          <button onClick={() => updateQuantity(item.variant_id, item.quantity + 1)} className="qty-btn">+</button>
+                        <div className="pos-cart-item-actions">
+                          <div className="quantity-controls">
+                            <Button size="sm" variant="outline" onClick={() => updateQuantity(item.variant_id, item.quantity - 1)}>-</Button>
+                            <span className="quantity-display">{item.quantity}</span>
+                            <Button size="sm" variant="outline" onClick={() => updateQuantity(item.variant_id, item.quantity + 1)}>+</Button>
+                          </div>
+                          <Button size="sm" variant="destructive" onClick={() => removeFromCart(item.variant_id)}>Remove</Button>
                         </div>
-                        <p className="pos-cart-item-total">
-                          Ksh {(item.price * item.quantity).toLocaleString('en-KE')}
-                        </p>
-                        <button onClick={() => removeFromCart(item.variant_id)} className="pos-cart-remove">
-                          <X className="w-4 h-4" />
-                        </button>
                       </div>
                     ))}
                   </div>
-
-                  {/* Cart Total */}
-                  <div className="pos-cart-summary">
-                    <div className="summary-row total">
-                      <span className="font-bold">Total:</span>
-                      <span className="font-bold text-lg">Ksh {total.toLocaleString('en-KE', { maximumFractionDigits: 2 })}</span>
+                  <div className="cart-summary">
+                    <div className="cart-total">
+                      <span>Total:</span>
+                      <span>Ksh {total.toLocaleString('en-KE')}</span>
                     </div>
-                  </div>
-
-                  {/* Payment Method */}
-                  <div className="pos-payment-method">
-                    <label htmlFor="payment" className="text-sm font-semibold">Payment Method:</label>
-                    <select
-                      id="payment"
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      disabled={checkoutLoading || isPolling}
-                      className="w-full mt-2 p-2 border border-gray-300 rounded-md"
+                    <div className="payment-methods">
+                      <label className="flex items-center gap-2">
+                        <input 
+                          type="radio" 
+                          name="paymentMethod" 
+                          value="cash" 
+                          checked={paymentMethod === 'cash'} 
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                        />
+                        Cash
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input 
+                          type="radio" 
+                          name="paymentMethod" 
+                          value="mpesa" 
+                          checked={paymentMethod === 'mpesa'} 
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                        />
+                        M-Pesa
+                      </label>
+                    </div>
+                    <Button 
+                      onClick={handleCheckout} 
+                      disabled={checkoutLoading || isPolling || !allImeisValid}
+                      className={`w-full mt-4 font-bold ${!allImeisValid ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}`}
                     >
-                      <option value="cash">Cash</option>
-                      <option value="mpesa">M-Pesa</option>
-                      <option value="card">Card</option>
-                    </select>
+                      {checkoutLoading ? 'Processing...' : !allImeisValid ? `Scan IMEIs (${pendingImeis.length} pending)` : 'Checkout'}
+                    </Button>
                   </div>
-
-                  {/* Checkout Button */}
-                  <Button
-                    onClick={handleCheckout}
-                    disabled={checkoutLoading || cart.length === 0 || isPolling}
-                    className="w-full mt-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-2 rounded-lg"
-                  >
-                    {checkoutLoading ? (isPolling ? 'Awaiting Payment...' : 'Processing...') : '✓ Checkout & Print'}
-                  </Button>
                 </>
               )}
             </CardContent>
@@ -529,20 +670,22 @@ const POSPage = () => {
 
       {/* M-Pesa Modal */}
       {showMpesaModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-96">
-            <CardHeader><CardTitle>M-Pesa Payment</CardTitle></CardHeader>
-            <CardContent>
-              <p>Enter phone number to receive payment prompt.</p>
-              <Input id="mpesa-phone" type="tel" placeholder="e.g., 0712345678" value={mpesaPhone} onChange={(e) => { setMpesaPhone(e.target.value); setMpesaModalError(''); }} autoFocus />
-              {mpesaModalError && <p className="text-red-500 text-sm mt-2">{mpesaModalError}</p>}
-              <p>Amount: <strong>Ksh {total.toLocaleString('en-KE')}</strong></p>
-            </CardContent>
-            <CardFooter className="flex gap-2 justify-end">
-              <Button onClick={() => setShowMpesaModal(false)} variant="ghost">Cancel</Button>
-              <Button onClick={handleMpesaSubmit} disabled={!mpesaPhone.trim()}>✓ Proceed</Button>
-            </CardFooter>
-          </Card>
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Enter M-Pesa Phone Number</h3>
+            <p>Total: Ksh {total.toLocaleString('en-KE')}</p>
+            <Input 
+              type="tel" 
+              placeholder="254XXXXXXXXX" 
+              value={mpesaPhone} 
+              onChange={(e) => setMpesaPhone(e.target.value)}
+            />
+            {mpesaModalError && <p className="error-text">{mpesaModalError}</p>}
+            <div className="modal-actions">
+              <Button variant="outline" onClick={() => setShowMpesaModal(false)}>Cancel</Button>
+              <Button onClick={handleMpesaSubmit}>Pay with M-Pesa</Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
