@@ -148,13 +148,62 @@ export const getProducts = async () => {
 export const getProductsAdmin = async () => {
     try {
         const [rows] = await db.execute(`
-            SELECT p.*, c.category_name, pv.variant_id, pv.color, pv.price, pv.stock, pv.image, pv.buying_price, pv.profit_margin, pv.discount
+            SELECT 
+                p.*, 
+                c.category_name, 
+                pv.variant_id, 
+                pv.color, 
+                pv.price, 
+                pv.stock, 
+                pv.image, 
+                pv.buying_price, 
+                pv.profit_margin, 
+                pv.discount,
+                (SELECT COUNT(*) FROM imei_tracking it WHERE it.variant_id = pv.variant_id) as imei_count
             FROM products p
             LEFT JOIN product_variants pv ON p.product_id = pv.product_id
             LEFT JOIN categories c ON p.category_id = c.category_id
             WHERE p.is_deleted = FALSE
         `);
-        return groupProducts(rows);
+        
+        // Modify groupProducts to include imei_count in variants
+        const productMap = new Map();
+        
+        for (const row of rows) {
+            if (!productMap.has(row.product_id)) {
+                productMap.set(row.product_id, {
+                    product_id: row.product_id,
+                    title: row.title,
+                    description: row.description,
+                    category_id: row.category_id,
+                    category_name: row.category_name,
+                    is_visible: row.is_visible,
+                    is_bundle: row.is_bundle,
+                    bundle_of: row.bundle_of,
+                    variants: [],
+                    images: [],
+                    bundle_products: []
+                });
+            }
+            if (row.variant_id) {
+                const existing = productMap.get(row.product_id).variants.find(v => v.variant_id === row.variant_id);
+                if (!existing) {
+                    productMap.get(row.product_id).variants.push({
+                        variant_id: row.variant_id,
+                        color: row.color,
+                        price: row.price,
+                        stock: row.stock,
+                        image: row.image,
+                        buying_price: row.buying_price,
+                        profit_margin: row.profit_margin,
+                        discount: row.discount,
+                        imei_count: row.imei_count || 0
+                    });
+                }
+            }
+        }
+        
+        return Array.from(productMap.values());
     } catch (err) {
         console.error("Error fetching products for admin:", err);
         return [];

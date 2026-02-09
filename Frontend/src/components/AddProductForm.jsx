@@ -69,6 +69,7 @@ const AddProductForm = () => {
       image: null,
       imagePreview: null,
       final_price: "0",
+      imeis: "", // IMEI numbers for this variant (comma or newline separated)
     },
   ]);
   
@@ -172,6 +173,7 @@ const AddProductForm = () => {
         image: null,
         imagePreview: null,
         final_price: "0",
+        imeis: "",
       },
     ]);
   };
@@ -324,7 +326,7 @@ const AddProductForm = () => {
         setMessage(res.data.message || "Product added successfully");
         setProductData({ title: "", description: "" });
         setVariants([{
-            color: "#000000", buying_price: "", profit_margin: "", discount: "", stock: "", image: null, imagePreview: null, final_price: ""
+            color: "#000000", buying_price: "", profit_margin: "", discount: "", stock: "", image: null, imagePreview: null, final_price: "", imeis: ""
         }]);
         setCategoryName("");
         setSubcategoryName("");
@@ -498,6 +500,19 @@ const AddProductForm = () => {
                           <div className="space-y-2">
                             <Label>Final Selling Price</Label>
                             <Input type="number" name="final_price" value={variant.final_price} onChange={(e) => handleVariantChange(index, e)} className="font-bold" />
+                          </div>
+                          
+                          {/* IMEI Input Field */}
+                          <div className="col-span-2 space-y-2 mt-2">
+                            <Label htmlFor={'imeis-' + index}>IMEI Numbers (Optional)</Label>
+                            <Input 
+                              id={'imeis-' + index}
+                              name="imeis" 
+                              value={variant.imeis || ''} 
+                              onChange={(e) => handleVariantChange(index, e)}
+                              placeholder="Enter IMEIs, one per line or comma separated"
+                            />
+                            <p className="text-xs text-gray-500">Enter each IMEI on a new line or comma separated. Leave empty to add IMEIs later.</p>
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor={`image-${index}`}>Variant Image</Label>

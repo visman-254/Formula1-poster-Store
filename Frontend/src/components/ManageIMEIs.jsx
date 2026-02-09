@@ -137,9 +137,19 @@ const ManageIMEIs = () => {
                   <p className="text-sm text-gray-500">
                     Variant: {variant.color} | Stock: {variant.stock}
                   </p>
+                  {/* Show IMEI count if available */}
+                  {variant.imei_count !== undefined && (
+                    <p className="text-xs mt-1">
+                      {variant.imei_count > 0 ? (
+                        <span className="text-green-600">✓ {variant.imei_count} IMEIs registered</span>
+                      ) : (
+                        <span className="text-amber-600">⚠ No IMEIs registered</span>
+                      )}
+                    </p>
+                  )}
                 </div>
                 <Button className="text-white" onClick={() => openImeiModal(variant, product)} >
-                   Add IMEI Numbers
+                   {variant.imei_count !== undefined ? 'Manage IMEIs' : 'Add IMEI Numbers'}
                 </Button>
               </div>
             ))

@@ -190,6 +190,15 @@ const POSPage = () => {
       
       const { data } = response;
       
+      // Check if backend says valid or not
+      if (!data.valid) {
+        return {
+          valid: false,
+          status: data.status || 'error',
+          error: data.error || 'IMEI validation failed'
+        };
+      }
+      
       // Check for cross-variant warning
       if (data.warning) {
         return { 
@@ -229,6 +238,15 @@ const POSPage = () => {
           valid: false, 
           status: 'not_found', 
           error: errorData?.error || 'IMEI not found in database' 
+        };
+      }
+      if (errorData?.status === 'wrong_product') {
+        return { 
+          valid: false, 
+          status: 'wrong_product', 
+          error: errorData?.error || 'IMEI belongs to a different product',
+          found_product_title: errorData?.found_product_title,
+          found_variant_color: errorData?.found_variant_color
         };
       }
       
@@ -350,7 +368,6 @@ const POSPage = () => {
       ]);
       toast.info('Scan or enter IMEI for this product');
     }
-    setError('');
   };
   const updateQuantity = (variant_id, quantity) => {
     if (quantity <= 0) return removeFromCart(variant_id);
@@ -484,7 +501,7 @@ const POSPage = () => {
               </div>
             </div>
           </div>
-          
+           
           {loading ? <div className="loading-container"><div className="spinner"></div><p>Loading products...</p></div> : (
             <div className="pos-products-grid">
               {filteredProducts.map((product) => {
@@ -683,7 +700,7 @@ const POSPage = () => {
             {mpesaModalError && <p className="error-text">{mpesaModalError}</p>}
             <div className="modal-actions">
               <Button variant="outline" onClick={() => setShowMpesaModal(false)}>Cancel</Button>
-              <Button onClick={handleMpesaSubmit}>Pay with M-Pesa</Button>
+              <Button className="bg-green-600 text-white" onClick={handleMpesaSubmit}>Pay with M-Pesa</Button>
             </div>
           </div>
         </div>

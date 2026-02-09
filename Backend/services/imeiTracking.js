@@ -17,7 +17,7 @@ export const imeiService = {
     try {
       await connection.beginTransaction();
 
-      const addedCount = 0;
+      let addedCount = 0;
       const errors = [];
 
       for (const imei of imeiNumbers) {
@@ -110,7 +110,11 @@ export const imeiService = {
   validateIMEI: async (imeiNumber, variantId = null) => {
     try {
       // First, check if IMEI exists for ANY variant
-      let query = 'SELECT * FROM imei_tracking WHERE imei_number = ?';
+      let query = 'SELECT it.*, pv.color as variant_color, p.title as product_title ' +
+                  'FROM imei_tracking it ' +
+                  'LEFT JOIN product_variants pv ON it.variant_id = pv.variant_id ' +
+                  'LEFT JOIN products p ON pv.product_id = p.product_id ' +
+                  'WHERE it.imei_number = ?';
       const [anyImei] = await db.execute(query, [imeiNumber.trim()]);
 
       if (anyImei.length === 0) {
@@ -123,6 +127,19 @@ export const imeiService = {
       }
 
       const imei = anyImei[0];
+      
+      // If IMEI exists but for a different variant, return info about it
+      if (variantId && imei.variant_id !== variantId) {
+        return {
+          valid: false,
+          status: 'wrong_product',
+          error: `IMEI belongs to a different product: ${imei.product_title || 'Unknown'} (${imei.variant_color || 'Unknown variant'})`,
+          found_variant_id: imei.variant_id,
+          found_product_title: imei.product_title,
+          found_variant_color: imei.variant_color,
+          imei_status: imei.status
+        };
+      }
 
       // If the IMEI is used, reject it
       if (imei.status === 'used') {
@@ -154,20 +171,6 @@ export const imeiService = {
           error: 'IMEI is reserved for another order',
           variant_id: imei.variant_id,
           imei_id: imei.imei_id
-        };
-      }
-
-      // If IMEI is available and matches the requested variant, it's valid
-      if (variantId && imei.variant_id !== variantId) {
-        // IMEI is available but for a different variant
-        // Show a warning but still allow it (the user might be swapping products)
-        return {
-          valid: true,
-          status: 'available',
-          warning: 'IMEI belongs to a different product variant',
-          variant_id: imei.variant_id,
-          imei_id: imei.imei_id,
-          original_variant_id: variantId
         };
       }
 

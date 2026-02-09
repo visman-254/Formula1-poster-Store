@@ -21,6 +21,7 @@ import {
 } from "../services/product.js";
 
 import { addProductImages } from "../services/gallery.js";
+import { imeiService } from "../services/imeiTracking.js";
 
 
 import db from "../config/db.js";
@@ -223,9 +224,39 @@ export const addProduct = async (req, res) => {
       }
     }
 
+    // Save IMEIs for each variant if provided
+    let imeiSummary = { added: 0, variantsWithImeis: 0 };
+    if (!isBundleBool && newProduct.variants && processedVariants.length > 0) {
+      // Match variants by index since we know the order
+      for (let i = 0; i < Math.min(newProduct.variants.length, processedVariants.length); i++) {
+        const newVariant = newProduct.variants[i];
+        const originalVariant = processedVariants[i];
+        
+        if (originalVariant && originalVariant.imeis) {
+          // Parse IMEIs - split by comma or newline
+          const imeiList = originalVariant.imeis
+            .split(/[\n,]+/)
+            .map(imei => imei.trim())
+            .filter(imei => imei.length > 0);
+          
+          if (imeiList.length > 0) {
+            imeiSummary.variantsWithImeis++;
+            try {
+              const result = await imeiService.addIMEIs(newVariant.variant_id, imeiList);
+              imeiSummary.added += result.count;
+              console.log(`Added ${result.count} IMEIs for variant ${newVariant.variant_id} (${originalVariant.color})`);
+            } catch (imeiErr) {
+              console.error('Error saving IMEIs for variant:', newVariant.variant_id, imeiErr);
+            }
+          }
+        }
+      }
+    }
+
     res.status(201).json({
-      message: "Product added successfully",
+      message: "Product added successfully" + (imeiSummary.added > 0 ? `, ${imeiSummary.added} IMEIs added` : ''),
       product: formatProduct(req, newProduct),
+      imeiSummary: imeiSummary.added > 0 ? imeiSummary : undefined
     });
   } catch (err) {
     console.error("Error adding product:", err);
