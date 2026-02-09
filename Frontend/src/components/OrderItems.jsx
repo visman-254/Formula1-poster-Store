@@ -230,7 +230,7 @@ const OrderItems = () => {
                                   </TableCell>
                                   <TableCell>
                                     {item.imei_serial ? (
-                                      <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                                      <span className="font-mono text-sm bg-black px-2 py-1 rounded">
                                         {item.imei_serial}
                                       </span>
                                     ) : (

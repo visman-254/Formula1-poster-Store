@@ -176,10 +176,17 @@ const POSPage = () => {
   const filteredProducts = products.filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()));
 
   // --- Cart Functions ---
+  // Track the latest variant_id for IMEI validation to prevent race conditions
+  const latestValidationVariantRef = useRef(null);
+
   const validateImei = async (imeiValue, variantId) => {
     if (!imeiValue || imeiValue.trim().length < 5) {
       return { valid: false, error: 'IMEI too short' };
     }
+    
+    // Track this validation request
+    latestValidationVariantRef.current = variantId;
+    
     try {
       const response = await axios.post(`${API_URL}/imei/validate`, {
         imeiNumber: imeiValue.trim(),
@@ -189,6 +196,12 @@ const POSPage = () => {
       });
       
       const { data } = response;
+      
+      // Check if this is still the latest validation request
+      if (latestValidationVariantRef.current !== variantId) {
+        // This is a stale response, ignore it
+        return { valid: null, status: 'stale', error: null };
+      }
       
       // Check if backend says valid or not
       if (!data.valid) {
@@ -216,6 +229,11 @@ const POSPage = () => {
         error: null 
       };
     } catch (err) {
+      // If this is a stale request, ignore errors
+      if (latestValidationVariantRef.current !== variantId) {
+        return { valid: null, status: 'stale', error: null };
+      }
+      
       // Handle error responses from backend
       const errorData = err.response?.data;
       
@@ -273,6 +291,12 @@ const POSPage = () => {
     // Validate if we have enough characters
     if (imeiValue && imeiValue.trim().length >= 5) {
       const result = await validateImei(imeiValue, variant_id);
+      
+      // Skip stale results
+      if (result.status === 'stale') {
+        return;
+      }
+      
       setCart(cart.map((i) => (i.variant_id === variant_id ? { 
         ...i, 
         imeiValid: result.valid ? 'valid' : 'invalid',
@@ -344,28 +368,26 @@ const POSPage = () => {
       updateQuantity(variant.variant_id, existingItem.quantity + 1);
     } else {
       // Add to cart without IMEI - user must scan/enter IMEI manually
-      setCart([
-        ...cart,
-        {
-          variant_id: variant.variant_id,
-          product_id: product.product_id,
-          title: product.title,
-          variantColor: variant.color || variant.name || null,
-          price: variant.price,
-          image: variant.image 
-            ? (variant.image.startsWith('http://') || variant.image.startsWith('https://') 
-                ? variant.image 
-                : `${API_BASE}/${variant.image.replace(/\\/g, '/')}`)
-            : getProductImage(product),
-          quantity: 1,
-          stock: variant.stock,
-          imei: '',
-          imeiId: null,
-          imeiValid: null,
-          imeiError: null,
-          imeiWarning: null
-        },
-      ]);
+      const newItem = {
+        variant_id: variant.variant_id,
+        product_id: product.product_id,
+        title: product.title,
+        variantColor: variant.color || variant.name || null,
+        price: variant.price,
+        image: variant.image 
+          ? (variant.image.startsWith('http://') || variant.image.startsWith('https://') 
+              ? variant.image 
+              : `${API_BASE}/${variant.image.replace(/\\/g, '/')}`)
+          : getProductImage(product),
+        quantity: 1,
+        stock: variant.stock,
+        imei: '',
+        imeiId: null,
+        imeiValid: null,
+        imeiError: null,
+        imeiWarning: null
+      };
+      setCart([...cart, newItem]);
       toast.info('Scan or enter IMEI for this product');
     }
   };
