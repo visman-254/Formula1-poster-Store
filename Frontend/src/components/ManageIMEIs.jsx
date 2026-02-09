@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,10 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import API_BASE from "../config";
-import { UserContext } from "../context/UserContext";
 
 const ManageIMEIs = () => {
-  const { token } = useContext(UserContext);
   const [products, setProducts] = useState([]);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [imeiText, setImeiText] = useState("");
@@ -22,6 +20,9 @@ const ManageIMEIs = () => {
   const [imeiMessage, setImeiMessage] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [existingIMEIs, setExistingIMEIs] = useState([]);
+
+  // Get token from localStorage (like POSPage)
+  const token = localStorage.getItem('token');
 
   useEffect(() => {
     fetchProducts();
@@ -111,8 +112,8 @@ const ManageIMEIs = () => {
                   Variant: {variant.color} - {variant.storage} | Stock: {variant.stock}
                 </p>
               </div>
-              <Button onClick={() => openImeiModal(variant)}>
-                📱 Add IMEI Numbers
+              <Button className="text-white" onClick={() => openImeiModal(variant)} >
+                 Add IMEI Numbers
               </Button>
             </div>
           ))
@@ -126,7 +127,7 @@ const ManageIMEIs = () => {
             <DialogTitle>
               Add IMEIs - {selectedVariant?.product_title}
               <br />
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-white">
                 {selectedVariant?.color} - {selectedVariant?.storage}
               </span>
             </DialogTitle>
@@ -193,7 +194,7 @@ const ManageIMEIs = () => {
               <Button variant="outline" onClick={() => setShowModal(false)}>
                 Close
               </Button>
-              <Button onClick={saveImeis} disabled={imeiLoading}>
+              <Button className="text-white" onClick={saveImeis} disabled={imeiLoading}>
                 {imeiLoading ? "Saving..." : "Save IMEIs"}
               </Button>
             </div>
