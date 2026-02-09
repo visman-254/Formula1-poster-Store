@@ -32,6 +32,9 @@ function App() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Check if current route is admin
+  const isAdminRoute = location.pathname === "/admin";
+
 
   useEffect(() => {
     // Only set isNavigating if it's not a side menu hover event
@@ -51,9 +54,9 @@ function App() {
     <UserProvider>
       <CartProvider>
         <div className="app-container">
-          <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+          {!isAdminRoute && <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />}
           {isNavigating && <LoadingScreen />}
-          <main className="main-content">
+          <main className={`main-content ${isAdminRoute ? 'admin-main-content' : ''}`}>
             <Breadcrumbs />
             <Suspense fallback={<LoadingScreen />}>
               <Routes>

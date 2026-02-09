@@ -6,7 +6,7 @@
   min-height: 100vh;
   width: 100%;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 /* Fixed background */
@@ -31,115 +31,171 @@
 }
 
 /* =========================
-   LAYOUT SYSTEM (GRID)
+   LAYOUT SYSTEM (NEW - HORIZONTAL TOPBAR)
 ========================= */
 
 .admin-container {
   position: relative;
   z-index: 2;
-  display: grid;
-  grid-template-columns: minmax(220px, 280px) 1fr;
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   width: 100%;
 }
 
 /* =========================
-   SIDEBAR
+   TOP NAVIGATION BAR
 ========================= */
 
-.sidebar {
+.admin-topbar {
   position: sticky;
   top: 0;
-  height: 100vh;
-  max-height: 100vh;
+  z-index: 100;
   
-  padding: 1.5rem 1rem;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  
+  padding: 0.75rem 1.5rem;
+  
+  background: rgba(255,255,255,0.65);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+html.dark .admin-topbar {
+  background: rgba(10,10,10,0.65);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Horizontal tabs container */
+.topbar-tabs {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  padding: 0.25rem;
   
-  overflow-y: auto;
-  overflow-x: hidden;
-  
-  background: rgba(255,255,255,0.55);
-  backdrop-filter: blur(8px);
-  border-right: 1px solid rgba(255,255,255,0.15);
-  box-shadow: 2px 0 20px rgba(0,0,0,0.08);
+  /* Hide scrollbar but keep functionality */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148,163,184,0.4) transparent;
 }
 
-html.dark .sidebar {
-  background: rgba(10,10,10,0.45);
-  border-right: 1px solid rgba(255,255,255,0.06);
+.topbar-tabs::-webkit-scrollbar {
+  height: 4px;
 }
 
-/* Tabs */
-.tab {
+.topbar-tabs::-webkit-scrollbar-thumb {
+  background: rgba(148,163,184,0.4);
+  border-radius: 4px;
+}
+
+/* Topbar tab buttons */
+.topbar-tab {
   all: unset;
   cursor: pointer;
   
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   
-  height: 44px;
-  padding: 0 1rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 8px;
   
-  border-radius: 12px;
   font-weight: 500;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
   
   color: #475569;
-  background: rgba(255,255,255,0.5);
-  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.4);
+  border: 1px solid rgba(255,255,255,0.2);
   
-  white-space: nowrap;
-  flex-shrink: 0;
-  
-  position: relative;
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
 }
 
-.notification-dot {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 20px;
-  height: 20px;
-  background-color: red;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-html.dark .tab {
+html.dark .topbar-tab {
   color: #cbd5e1;
-  background: rgba(10,10,10,0.5);
+  background: rgba(10,10,10,0.4);
   border: 1px solid rgba(255,255,255,0.06);
 }
 
-.tab:hover {
-  transform: translateY(-2px);
-  background: rgba(255,255,255,0.75);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+.topbar-tab:hover {
+  background: rgba(255,255,255,0.65);
+  transform: translateY(-1px);
 }
 
-html.dark .tab:hover {
-  background: rgba(20,20,20,0.75);
+html.dark .topbar-tab:hover {
+  background: rgba(30,30,30,0.65);
 }
 
-.tab.active {
+.topbar-tab.active {
   background: rgba(0,0,0,0.85);
   color: #fff;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
-html.dark .tab.active {
-  background: rgba(255,255,255,0.85);
+html.dark .topbar-tab.active {
+  background: rgba(255,255,255,0.9);
   color: #000;
+}
+
+/* Notification badge */
+.notification-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  
+  background-color: #ef4444;
+  color: white;
+  border-radius: 9999px;
+  
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* =========================
+   LOGOUT BUTTON
+========================= */
+
+.logout-btn {
+  all: unset;
+  cursor: pointer;
+  
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  
+  font-weight: 600;
+  font-size: 0.85rem;
+  
+  color: #fff;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(239,68,68,0.3);
+}
+
+.logout-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239,68,68,0.4);
+}
+
+.logout-btn:active {
+  transform: translateY(0);
 }
 
 /* =========================
@@ -147,14 +203,12 @@ html.dark .tab.active {
 ========================= */
 
 .admin-main {
-  min-width: 0;
+  flex: 1;
+  width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   
-  height: 100vh;
-  max-height: 100vh;
-  
-  padding: 2rem;
+  padding: 1.5rem 2rem;
 }
 
 /* =========================
@@ -467,19 +521,16 @@ html.dark .glass {
    SCROLLBARS
 ========================= */
 
-.sidebar::-webkit-scrollbar,
 .admin-main::-webkit-scrollbar {
   width: 8px;
   height: 6px;
 }
 
-.sidebar::-webkit-scrollbar-thumb,
 .admin-main::-webkit-scrollbar-thumb {
   background: rgba(148,163,184,0.6);
   border-radius: 6px;
 }
 
-html.dark .sidebar::-webkit-scrollbar-thumb,
 html.dark .admin-main::-webkit-scrollbar-thumb {
   background: rgba(71,85,105,0.6);
 }
@@ -488,127 +539,49 @@ html.dark .admin-main::-webkit-scrollbar-thumb {
    RESPONSIVE FIXES
 ========================= */
 
-/* Split-screen safety */
-@media (max-width: 1200px) {
-  .admin-container {
-    grid-template-columns: 220px 1fr;
+@media (max-width: 1024px) {
+  .admin-topbar {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
   }
   
-  .pos-online-comparison-grid {
-    grid-template-columns: 1fr;
+  .topbar-tabs {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .logout-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 
-/* Tablet & Mobile Navigation Bar */
-@media (max-width: 900px) {
-  .admin-container {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-  }
-
-  .sidebar {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-
-    flex-direction: row;
-    align-items: center;
-
-    height: 64px;
-    min-height: 64px;
-    max-height: 64px;
-
-    padding: 0 0.75rem;
-    gap: 0.5rem;
-
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-
-  .tab {
-    height: 42px;
-    min-height: 42px;
-    padding: 0 0.9rem;
-    font-size: 0.9rem;
-  }
-
-  .admin-main {
-    height: calc(100vh - 64px);
-    max-height: calc(100vh - 64px);
-    padding: 1.2rem;
+@media (max-width: 768px) {
+  .topbar-tab {
+    padding: 0.4rem 0.65rem;
+    font-size: 0.8rem;
   }
   
+  .topbar-tab span {
+    display: none;
+  }
+  
+  .topbar-tab::after {
+    content: attr(data-label);
+    display: none;
+  }
+  
+  .admin-main {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .analytics-grid,
   .pos-online-comparison-grid,
   .daily-comparison-grid,
-  .monthly-comparison-grid,
-  .analytics-grid {
+  .monthly-comparison-grid {
     grid-template-columns: 1fr;
-  }
-  
-  .chart-container {
-    height: 250px;
-  }
-  
-  .chart-container-sm {
-    height: 200px;
-  }
-  
-  .analytics-section-header,
-  .product-analytics-header,
-  .pos-online-header {
-    font-size: 1.5rem;
-  }
-}
-
-/* Small Mobile */
-@media (max-width: 600px) {
-  .sidebar {
-    height: 58px;
-    min-height: 58px;
-    max-height: 58px;
-  }
-
-  .tab {
-    height: 38px;
-    min-height: 38px;
-    padding: 0 0.8rem;
-    font-size: 0.85rem;
-  }
-
-  .admin-main {
-    height: calc(100vh - 58px);
-    max-height: calc(100vh - 58px);
-  }
-  
-  .sales-metrics-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .order-type-legend {
-    flex-direction: column;
-    align-items: center;
-    gap: 0.75rem;
-  }
-  
-  .chart-container {
-    height: 220px;
-  }
-  
-  .chart-container-sm {
-    height: 180px;
-  }
-  
-  .metric-card .metric-value {
-    font-size: 1.5rem;
-  }
-  
-  .analytics-section-header,
-  .product-analytics-header,
-  .pos-online-header {
-    font-size: 1.3rem;
-  }
-  
-  .sub-section-header {
-    font-size: 1.2rem;
   }
 }

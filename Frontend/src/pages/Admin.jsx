@@ -10,6 +10,7 @@ import {
   BellElectric,
   Shuffle,
   Barcode,
+  LogOut,
 } from "lucide-react";
 import { useAdminNotification } from "../context/AdminNotificationContext";
 
@@ -42,10 +43,12 @@ import OnlineDailySales from "../components/OnlineDailySales";
 import POSMonthlySales from "../components/POSMonthlySales";
 import OnlineMonthlySales from "../components/OnlineMonthlySales";
 
+import { useNavigate } from "react-router-dom";
 import "./Admin.css";
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("products");
+  const navigate = useNavigate();
 
   // Admin notification context
   const {
@@ -64,21 +67,28 @@ export default function AdminPage() {
     if (tab === "preorders") resetNewPreordersCount();
   };
 
-  // Sidebar tabs
+  // Handle logout
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
+
+  // Top navigation tabs
   const tabs = [
-    { value: "products", label: "Products", icon: <PackageSearch /> },
-    { value: "add", label: "Add Product", icon: <BookmarkPlus /> },
-    { value: "delete", label: "Delete Category", icon: <Delete /> },
-    { value: "orders", label: "Orders", icon: <Forklift />, count: newOrdersCount },
-    { value: "backorders", label: "Backorders", icon: <Forklift /> },
-    { value: "users", label: "Users", icon: <User /> },
-    { value: "uncategorized", label: "Uncategorized", icon: <HeartCrack /> },
-    { value: "analytics", label: "Sales Analytics", icon: <ChartNoAxesCombined /> },
-    { value: "create-hero", label: "Create Hero Slide", icon: <PackageSearch /> },
-    { value: "create-promotion", label: "Create Promotion", icon: <PackageSearch /> },
-    { value: "low-stock", label: "Low Stock Alert", icon: <BellElectric />, count: lowStockCount },
-    { value: "preorders", label: "Preorders", icon: <Shuffle />, count: newPreordersCount },
-    { value: "imei", label: "IMEI Management", icon: <Barcode /> },
+    { value: "products", label: "Products", icon: <PackageSearch size={18} /> },
+    { value: "add", label: "Add Product", icon: <BookmarkPlus size={18} /> },
+    { value: "delete", label: "Delete Category", icon: <Delete size={18} /> },
+    { value: "orders", label: "Orders", icon: <Forklift size={18} />, count: newOrdersCount },
+    { value: "backorders", label: "Backorders", icon: <Forklift size={18} /> },
+    { value: "users", label: "Users", icon: <User size={18} /> },
+    { value: "uncategorized", label: "Uncategorized", icon: <HeartCrack size={18} /> },
+    { value: "analytics", label: "Analytics", icon: <ChartNoAxesCombined size={18} /> },
+    { value: "create-hero", label: "Hero Slides", icon: <PackageSearch size={18} /> },
+    { value: "create-promotion", label: "Promotions", icon: <PackageSearch size={18} /> },
+    { value: "low-stock", label: "Low Stock", icon: <BellElectric size={18} />, count: lowStockCount },
+    { value: "preorders", label: "Preorders", icon: <Shuffle size={18} />, count: newPreordersCount },
+    { value: "imei", label: "IMEI", icon: <Barcode size={18} /> },
   ];
 
   // Force dark mode for admin
@@ -106,24 +116,32 @@ export default function AdminPage() {
       </div>
 
       <div className="admin-container">
-        {/* Sidebar */}
-        <aside className="sidebar">
-          {tabs.map((tab) => (
-            <button
-              key={tab.value}
-              className={`tab ${activeTab === tab.value ? "active" : ""}`}
-              onClick={() => handleTabClick(tab.value)}
-              type="button"
-            >
-              {tab.icon}
-              <span>{tab.label}</span>
-              
-              {tab.count > 0 && (
-                <span className="notification-dot">{tab.count}</span>
-              )}
-            </button>
-          ))}
-        </aside>
+        {/* Top Navigation Bar */}
+        <header className="admin-topbar">
+          <div className="topbar-tabs">
+            {tabs.map((tab) => (
+              <button
+                key={tab.value}
+                className={`topbar-tab ${activeTab === tab.value ? "active" : ""}`}
+                onClick={() => handleTabClick(tab.value)}
+                type="button"
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+                
+                {tab.count > 0 && (
+                  <span className="notification-badge">{tab.count}</span>
+                )}
+              </button>
+            ))}
+          </div>
+          
+          {/* Logout Button */}
+          <button className="logout-btn" onClick={handleLogout} type="button">
+            <LogOut size={18} />
+            <span>Logout</span>
+          </button>
+        </header>
 
         {/* Main Content */}
         <main className="admin-main">
