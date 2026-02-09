@@ -4,6 +4,12 @@ import "./POSReceipt.css";
 import elegantwaterBg from "../assets/elegantwater.jpg";
 import logo from "../assets/pmc.png";
 
+// Helper function to mask IMEI for customer receipts (show only last 3 digits)
+const maskIMEI = (imei) => {
+  if (!imei || imei.length < 3) return '***';
+  return '***' + imei.slice(-3);
+};
+
 const POSReceipt = ({ receipt, onNewSale }) => {
   const [qrUrl, setQrUrl] = useState("");
   const [isGeneratingQR, setIsGeneratingQR] = useState(true);
@@ -213,7 +219,7 @@ ${receipt.items
     <span>Qty: ${item.quantity}</span>
     <span>Ksh ${item.total.toLocaleString("en-KE")}</span>
   </div>
-  ${item.imei ? `<div>IMEI: ${item.imei}</div>` : ""}
+  ${item.imei ? `<div>IMEI: ${maskIMEI(item.imei)}</div>` : ""}
 </div>`
   )
   .join("")}

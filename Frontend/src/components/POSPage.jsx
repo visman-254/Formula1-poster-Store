@@ -174,7 +174,68 @@ const POSPage = () => {
   const filteredProducts = products.filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()));
 
   // --- Cart Functions ---
-  const updateImei = (variant_id, imeiValue) => setCart(cart.map((i) => (i.variant_id === variant_id ? { ...i, imei: imeiValue } : i)));
+  const validateImei = async (imeiValue, variantId) => {
+    if (!imeiValue || imeiValue.trim().length < 5) {
+      return { valid: false, error: 'IMEI too short' };
+    }
+    try {
+      const response = await axios.post(`${API_URL}/imei/validate`, {
+        imeiNumber: imeiValue.trim(),
+        variantId
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return { valid: response.data.valid, status: response.data.status, error: response.data.error };
+    } catch (err) {
+      console.error('IMEI validation error:', err);
+      return { valid: false, error: 'Validation failed' };
+    }
+  };
+
+  const updateImei = async (variant_id, imeiValue) => {
+    // Store the full IMEI
+    setCart(cart.map((i) => (i.variant_id === variant_id ? { 
+      ...i, 
+      imei: imeiValue,
+      imeiValid: null,
+      imeiError: null
+    } : i)));
+
+    // Validate if we have enough characters
+    if (imeiValue && imeiValue.trim().length >= 5) {
+      const result = await validateImei(imeiValue, variant_id);
+      setCart(cart.map((i) => (i.variant_id === variant_id ? { 
+        ...i, 
+        imeiValid: result.valid ? 'valid' : 'invalid',
+        imeiError: result.error || (result.valid && result.status === 'used' ? 'IMEI already used' : null)
+      } : i)));
+    }
+  };
+
+  const autoFillImei = async (variant_id) => {
+    try {
+      const response = await axios.post(`${API_URL}/imei/auto-assign`, {
+        variantId: variant_id,
+        orderId: 0 // Temporary, will be updated with real order ID during checkout
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data.imei) {
+        setCart(cart.map((i) => (i.variant_id === variant_id ? { 
+          ...i, 
+          imei: response.data.imei,
+          imeiValid: 'valid',
+          imeiError: null
+        } : i)));
+      } else {
+        setError('No available IMEIs for this product');
+      }
+    } catch (err) {
+      console.error('Auto-fill IMEI error:', err);
+      setError('Failed to auto-fill IMEI');
+    }
+  };
   const addToCart = (product) => {
     const variant = product.variants[0];
     if (!variant || variant.stock <= 0) {
@@ -381,13 +442,30 @@ const POSPage = () => {
                         <div className="pos-cart-item-info">
                           <p className="pos-cart-item-name">{item.title}</p>
                           <p className="pos-cart-item-price">Ksh {item.price.toLocaleString('en-KE')}</p>
-                          <Input 
-                            type='text'
-                            placeholder='IMEI/Serial Number'
-                            value={item.imei || ''}
-                            onChange={(e) => updateImei(item.variant_id, e.target.value)}
-                            className="w-full mt-1 text-sm"
-                          />
+                          <div className="flex gap-1">
+                            <Input 
+                              type='text'
+                              placeholder='IMEI/Serial Number'
+                              value={item.imei || ''}
+                              onChange={(e) => updateImei(item.variant_id, e.target.value)}
+                              className={`w-full mt-1 text-sm ${item.imeiValid === 'valid' ? 'border-green-500' : item.imeiValid === 'invalid' ? 'border-red-500' : ''}`}
+                            />
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => autoFillImei(item.variant_id)}
+                              className="mt-1"
+                              title="Auto-fill available IMEI"
+                            >
+                              Auto
+                            </Button>
+                          </div>
+                          {item.imeiError && (
+                            <p className="text-red-500 text-xs mt-1">{item.imeiError}</p>
+                          )}
+                          {item.imeiValid === 'valid' && (
+                            <p className="text-green-500 text-xs mt-1">✓ IMEI valid</p>
+                          )}
                         </div>
                         <div className="pos-cart-quantity">
                           <button onClick={() => updateQuantity(item.variant_id, item.quantity - 1)} className="qty-btn">−</button>

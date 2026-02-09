@@ -1,7 +1,6 @@
 import { createPOSOrder, generateReceipt, getPOSOrders, getCashierSales } from "../services/pos.js";
 import { getProducts, reduceProductStock, getProductByVariantId } from "../services/product.js";
 import { createOrder } from "../services/orders.js";
-import { createOrderItem } from "../services/OrderItems.js";
 import { getAccessToken, initiateSTKPush } from "../services/mpesa.js";
 import db from "../config/db.js";
 
@@ -129,12 +128,24 @@ export const checkoutAsCashier = async (req, res) => {
         // Process items
         for (const item of cartItems) {
             const variantId = item.variant_id || item.product_id;
-            // Direct insert to avoid 'imei_serial' column error
+            // Direct insert with IMEI support
             const [itemResult] = await connection.execute(
-              `INSERT INTO order_items (order_id, variant_id, quantity, price, product_name, product_image) VALUES (?, ?, ?, ?, ?, ?)`,
-              [orderId, variantId, item.quantity, item.price, item.title, item.image]
+              `INSERT INTO order_items (order_id, variant_id, quantity, price, product_name, product_image, imei_serial) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [orderId, variantId, item.quantity, item.price, item.title, item.image, item.imei || null]
             );
             const orderItemId = itemResult.insertId;
+
+            // Handle IMEI if provided (mark as used in tracking)
+            if (item.imei) {
+              try {
+                await connection.execute(
+                  'UPDATE imei_tracking SET status = ?, used_at = CURRENT_TIMESTAMP WHERE imei_number = ?',
+                  ['used', item.imei]
+                );
+              } catch (imeiErr) {
+                console.error('Error marking IMEI as used:', imeiErr);
+              }
+            }
 
             // Stock Reduction
             const product = await getProductByVariantId(variantId);

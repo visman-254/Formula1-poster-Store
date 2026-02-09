@@ -429,6 +429,7 @@ useEffect(() => {
           price: ci.price,
           title: ci.title || null,
           image: ci.image || null,
+          // IMEI will be auto-assigned by backend after payment confirmation
         })),
         deliveryFee: deliveryFee,
         address: address,

@@ -3,7 +3,6 @@ import db from "../config/db.js";
 import { getAccessToken, initiateSTKPush } from "../services/mpesa.js";
 import { createOrder } from "../services/orders.js";
 import { createPOSOrder } from "../services/pos.js";
-import { createOrderItem } from "../services/OrderItems.js";
 import { reduceProductStock, getProductByVariantId } from "../services/product.js";
 import { sendOrderCreationNotification, sendUserOrderConfirmation } from "../services/whatsapp.js";
 
@@ -115,10 +114,39 @@ export const mpesaCallback = async (req, res) => {
 
           for (const item of cartItems) {
             const variantId = item.variant_id || item.product_id;
-            // Direct insert to avoid 'imei_serial' column error
+            
+            // Auto-assign available IMEI from stock
+            let assignedImei = null;
+            
+            // Try to auto-assign IMEI for this variant
+            try {
+              const [imeiRows] = await connection.execute(
+                `SELECT imei_id, imei_number FROM imei_tracking 
+                 WHERE variant_id = ? AND status = 'available' 
+                 LIMIT 1 FOR UPDATE`,
+                [variantId]
+              );
+              
+              if (imeiRows.length > 0) {
+                assignedImei = imeiRows[0].imei_number;
+                // Mark IMEI as used immediately
+                await connection.execute(
+                  `UPDATE imei_tracking SET status = 'used', order_id = ?, used_at = NOW() 
+                   WHERE imei_id = ?`,
+                  [orderId, imeiRows[0].imei_id]
+                );
+                console.log(`Auto-assigned IMEI ${assignedImei} to POS order item`);
+              } else {
+                console.log(`No available IMEI for variant ${variantId} - continuing without IMEI`);
+              }
+            } catch (imeiErr) {
+              console.error('Error auto-assigning IMEI:', imeiErr);
+            }
+
+            // Insert order item with assigned IMEI (null if not available)
             const [itemResult] = await connection.execute(
-              `INSERT INTO order_items (order_id, variant_id, quantity, price, product_name, product_image) VALUES (?, ?, ?, ?, ?, ?)`,
-              [orderId, variantId, item.quantity, item.price, item.title, item.image]
+              `INSERT INTO order_items (order_id, variant_id, quantity, price, product_name, product_image, imei_serial) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [orderId, variantId, item.quantity, item.price, item.title, item.image, assignedImei]
             );
             const orderItemId = itemResult.insertId;
 
@@ -181,10 +209,38 @@ export const mpesaCallback = async (req, res) => {
           const cartItems = JSON.parse(tx.cart_items);
 
           for (const item of cartItems) {
-            // Direct insert to avoid 'imei_serial' column error
+            // Auto-assign available IMEI from stock
+            let assignedImei = null;
+            
+            // Try to auto-assign IMEI for this variant
+            try {
+              const [imeiRows] = await connection.execute(
+                `SELECT imei_id, imei_number FROM imei_tracking 
+                 WHERE variant_id = ? AND status = 'available' 
+                 LIMIT 1 FOR UPDATE`,
+                [item.variant_id]
+              );
+              
+              if (imeiRows.length > 0) {
+                assignedImei = imeiRows[0].imei_number;
+                // Mark IMEI as used immediately
+                await connection.execute(
+                  `UPDATE imei_tracking SET status = 'used', order_id = ?, used_at = NOW() 
+                   WHERE imei_id = ?`,
+                  [orderId, imeiRows[0].imei_id]
+                );
+                console.log(`Auto-assigned IMEI ${assignedImei} to order item`);
+              } else {
+                console.log(`No available IMEI for variant ${item.variant_id} - continuing without IMEI`);
+              }
+            } catch (imeiErr) {
+              console.error('Error auto-assigning IMEI:', imeiErr);
+            }
+
+            // Insert order item with assigned IMEI (null if not available)
             const [itemResult] = await connection.execute(
-              `INSERT INTO order_items (order_id, variant_id, quantity, price, product_name, product_image) VALUES (?, ?, ?, ?, ?, ?)`,
-              [orderId, item.variant_id, item.quantity, item.price, item.title, item.image]
+              `INSERT INTO order_items (order_id, variant_id, quantity, price, product_name, product_image, imei_serial) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [orderId, item.variant_id, item.quantity, item.price, item.title, item.image, assignedImei]
             );
             const orderItemId = itemResult.insertId;
 

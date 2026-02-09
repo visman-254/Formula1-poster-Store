@@ -9,6 +9,7 @@ import {
   HeartCrack,
   BellElectric,
   Shuffle,
+  Barcode,
 } from "lucide-react";
 import { useAdminNotification } from "../context/AdminNotificationContext";
 
@@ -30,6 +31,7 @@ import Backorders from "../components/Backorders";
 import AdminPreorders from "../components/AdminPreorders";
 import CreatePromotion from "../components/CreatePromotion";
 import ProductAnalytics from "../components/ProductAnalytics";
+import ManageIMEIs from "../components/ManageIMEIs";
 import GlassmorphicContainer from "../components/GlassmorphicContainer";
 
 // Import the new POS vs Online analytics components
@@ -76,6 +78,7 @@ export default function AdminPage() {
     { value: "create-promotion", label: "Create Promotion", icon: <PackageSearch /> },
     { value: "low-stock", label: "Low Stock Alert", icon: <BellElectric />, count: lowStockCount },
     { value: "preorders", label: "Preorders", icon: <Shuffle />, count: newPreordersCount },
+    { value: "imei", label: "IMEI Management", icon: <Barcode /> },
   ];
 
   // Force dark mode for admin
@@ -156,6 +159,9 @@ export default function AdminPage() {
           )}
           {activeTab === "preorders" && (
             <GlassmorphicContainer><AdminPreorders /></GlassmorphicContainer>
+          )}
+          {activeTab === "imei" && (
+            <GlassmorphicContainer><ManageIMEIs /></GlassmorphicContainer>
           )}
           {activeTab === "analytics" && (
             <GlassmorphicContainer>

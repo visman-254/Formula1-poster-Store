@@ -46,6 +46,7 @@ export const getFullOrderDetails = async (order_id) => {
         oi.price,
         oi.unit_buying_price,
         oi.unit_discount,
+        oi.imei_serial,
         p.title AS product_name,
         pv.image AS product_image,
         pv.color,
@@ -107,6 +108,7 @@ export const getFullOrderDetails = async (order_id) => {
         price: r.price,
         unit_buying_price: r.unit_buying_price,
         unit_discount: r.unit_discount,
+        imei_serial: r.imei_serial,
       });
     }
   }

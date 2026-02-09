@@ -77,6 +77,13 @@ const AddProductForm = () => {
   const [bundleItems, setBundleItems] = useState([]);
   const [bundlePrice, setBundlePrice] = useState("");
   const [selectedVariantForBundle, setSelectedVariantForBundle] = useState("");
+  
+  // IMEI Management State
+  const [showImeiModal, setShowImeiModal] = useState(false);
+  const [selectedVariantId, setSelectedVariantId] = useState(null);
+  const [imeiText, setImeiText] = useState("");
+  const [imeiLoading, setImeiLoading] = useState(false);
+  const [imeiMessage, setImeiMessage] = useState("");
 
   const [categoryName, setCategoryName] = useState("");
   const [subcategoryName, setSubcategoryName] = useState("");
@@ -188,6 +195,53 @@ const AddProductForm = () => {
   
   const removeBundleItem = (variant_id) => {
     setBundleItems(bundleItems.filter(item => item.variant_id !== variant_id));
+  };
+
+  // --- IMEI Management Functions ---
+  const openImeiModal = (variantId) => {
+    setSelectedVariantId(variantId);
+    setImeiText("");
+    setImeiMessage("");
+    setShowImeiModal(true);
+  };
+
+  const closeImeiModal = () => {
+    setShowImeiModal(false);
+    setSelectedVariantId(null);
+    setImeiText("");
+    setImeiMessage("");
+  };
+
+  const saveImeis = async () => {
+    if (!imeiText.trim()) {
+      setImeiMessage("Please enter at least one IMEI number");
+      return;
+    }
+    
+    setImeiLoading(true);
+    setImeiMessage("");
+    
+    try {
+      const response = await axios.post(`${API_BASE}/api/imei/${selectedVariantId}/bulk`, {
+        imeiText: imeiText
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setImeiMessage(`✓ Successfully added ${response.data.added} IMEI(s)${response.data.duplicates?.length ? `, ${response.data.duplicates.length} duplicates skipped` : ''}`);
+      setImeiText("");
+      
+      // Refresh products to update IMEI counts
+      const res = await axios.get(`${API_BASE}/api/products/admin`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setAllProducts(res.data);
+      
+    } catch (err) {
+      setImeiMessage(`❌ Error: ${err.response?.data?.error || 'Failed to save IMEIs'}`);
+    } finally {
+      setImeiLoading(false);
+    }
   };
 
   const calculateFinalPrice = (variant) => {
@@ -465,6 +519,35 @@ const AddProductForm = () => {
           <Button type="submit" className="text-white">Add Product</Button>
         </form>
       </CardContent>
+
+      {/* IMEI Management Modal */}
+      {showImeiModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Add IMEI Numbers</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Enter IMEI numbers, one per line or comma-separated:
+            </p>
+            <textarea
+              value={imeiText}
+              onChange={(e) => setImeiText(e.target.value)}
+              placeholder="IMEI1&#10;IMEI2&#10;IMEI3&#10;..."
+              className="w-full h-40 p-3 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+            />
+            {imeiMessage && (
+              <p className={`mt-2 text-sm ${imeiMessage.includes('❌') ? 'text-red-500' : 'text-green-500'}`}>
+                {imeiMessage}
+              </p>
+            )}
+            <div className="flex gap-2 mt-4 justify-end">
+              <Button variant="outline" onClick={closeImeiModal}>Close</Button>
+              <Button onClick={saveImeis} disabled={imeiLoading}>
+                {imeiLoading ? 'Saving...' : 'Save IMEIs'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };

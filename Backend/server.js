@@ -21,6 +21,7 @@ import productPromotionApi from "./routes/productPromotionApi.js";
 import posRoutes from "./routes/posApi.js";
 import adminNotificationRoutes from "./routes/adminNotificationRoutes.js";
 import orderTypeAnalyticsRoutes from "./routes/orderTypeAnalytics.js";
+import imeiTrackingRoutes from "./routes/imeiTrackingApi.js";
 
 
 
@@ -33,15 +34,15 @@ const __dirname = path.dirname(__filename);
 
 db.getConnection()
  .then(connection => {
- console.log('Connected to database');
- connection.release();
- })
+  console.log('Connected to database');
+  connection.release();
+  })
 
  
- 
- .catch(err => {
- console.error('Error connecting to database:', err);
- });
+  
+  .catch(err => {
+  console.error('Error connecting to database:', err);
+  });
 
 app.use(cors());
 app.use(express.json());
@@ -67,20 +68,22 @@ app.use('/api', preorder);
 app.use('/api/pos', posRoutes);
 app.use("/api/admin", adminNotificationRoutes);
 app.use("/api/order-type-analytics", orderTypeAnalyticsRoutes);
+app.use('/api/imei', imeiTrackingRoutes);
 
 
 if(process.env.NODE_ENV === "production") {
     
     const frontendPath = path.join(__dirname, '..', 'Frontend', 'dist');
     
-  
+   
     app.use(express.static(frontendPath));
     
- 
+  
     app.get("*", (req, res) => {
         res.sendFile(path.resolve(frontendPath, 'index.html'));
     });
 }
+
 
 
 
@@ -98,6 +101,5 @@ if (process.env.NODE_ENV !== "production") {
 
 
 app.listen(PORT, () => {
- console.log(`Server is running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
-
