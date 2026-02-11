@@ -1,17 +1,36 @@
 /* ==========================================================================
-   ADMIN HOME DASHBOARD
+   ADMIN HOME DASHBOARD – CORRECTED GRID LAYOUT
    ========================================================================== */
 
-/* Base Styles & Animations
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   Base & Animations
+   -------------------------------------------------------------------------- */
 
 .admin-home {
   width: 100%;
   animation: fadeInUp 0.5s ease;
 }
 
-/* Loading States
-   ========================================================================== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Loading State
+   -------------------------------------------------------------------------- */
 
 .admin-home-loading {
   display: flex;
@@ -32,28 +51,9 @@
   margin-bottom: 1rem;
 }
 
-/* Animations
-   ========================================================================== */
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Header Section
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   Header
+   -------------------------------------------------------------------------- */
 
 .admin-home-header {
   margin-bottom: 1.5rem;
@@ -72,56 +72,33 @@
   line-height: 1.4;
 }
 
-/* Stats Grid Layout - Horizontal Row
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   STATS GRID – FIXED: Equal width, fills container, no right gap
+   -------------------------------------------------------------------------- */
 
 .admin-home-stats-grid {
-  display: flex;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
   margin-bottom: 2rem;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  padding-bottom: 0.5rem;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border-subtle) transparent;
 }
 
-/* Custom scrollbar for webkit browsers */
-.admin-home-stats-grid::-webkit-scrollbar {
-  height: 6px;
-}
-
-.admin-home-stats-grid::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.admin-home-stats-grid::-webkit-scrollbar-thumb {
-  background-color: var(--color-border-subtle);
-  border-radius: 3px;
-}
-
-/* On larger screens, keep them in a single row */
-@media (min-width: 1400px) {
-  .admin-home-stats-grid {
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-  }
-}
-
-/* Stat Card Component - Compact for horizontal layout
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   STAT CARD – Fluid width, no fixed min/max constraints
+   -------------------------------------------------------------------------- */
 
 .stat-card {
   background: var(--color-card-bg);
   backdrop-filter: blur(12px);
   border-radius: 12px;
-  padding: 1rem 1.25rem;
+  padding: 1.25rem 1.25rem;
   border: 1px solid var(--color-card-border);
   box-shadow: var(--shadow-card);
   transition: all 0.3s ease;
-  min-width: 160px;
-  max-width: 180px;
-  flex-shrink: 0;
+  width: 100%;               /* fill the grid cell */
+  min-width: 0;             /* override any previous min-width */
+  display: flex;
+  flex-direction: column;
 }
 
 .stat-card:hover {
@@ -146,32 +123,27 @@
   background: var(--color-icon-bg-base);
 }
 
-/* Stat Card Icon Variants */
+/* Icon variants */
 .stat-card-icon--revenue {
   background: rgba(34, 197, 94, 0.15);
   color: var(--color-success);
 }
-
 .stat-card-icon--orders {
   background: rgba(59, 130, 246, 0.15);
   color: var(--color-info);
 }
-
 .stat-card-icon--alert {
   background: rgba(239, 68, 68, 0.15);
   color: var(--color-error);
 }
-
 .stat-card-icon--preorder {
   background: rgba(168, 85, 247, 0.15);
   color: var(--color-warning);
 }
-
 .stat-card-icon--products {
   background: rgba(20, 184, 166, 0.15);
   color: var(--color-teal);
 }
-
 .stat-card-icon--users {
   background: rgba(249, 115, 22, 0.15);
   color: var(--color-orange);
@@ -188,7 +160,6 @@
 .stat-card-trend--up {
   color: var(--color-success);
 }
-
 .stat-card-trend--down {
   color: var(--color-error);
 }
@@ -204,6 +175,7 @@
   font-weight: 700;
   color: var(--color-text-primary);
   line-height: 1.2;
+  word-break: break-word;
 }
 
 .stat-card-title {
@@ -223,8 +195,9 @@
   font-weight: 400;
 }
 
-/* Footer & Quick Actions
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   Footer & Quick Actions
+   -------------------------------------------------------------------------- */
 
 .admin-home-footer {
   margin-top: 2rem;
@@ -251,8 +224,9 @@
   flex-wrap: wrap;
 }
 
-/* Button Component
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
 
 .action-button {
   all: unset;
@@ -276,7 +250,6 @@
   background: var(--color-btn-primary-bg);
   color: var(--color-btn-primary-text);
 }
-
 .action-button--primary:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -286,7 +259,6 @@
   color: var(--color-btn-secondary-text);
   border: 1px solid var(--color-btn-secondary-border);
 }
-
 .action-button--secondary:hover {
   background: var(--color-btn-secondary-hover);
 }
@@ -296,13 +268,13 @@
   color: var(--color-error);
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
-
 .action-button--tertiary:hover {
   background: rgba(239, 68, 68, 0.25);
 }
 
-/* CSS Custom Properties for Theme Support
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   CSS Custom Properties (Light / Dark)
+   -------------------------------------------------------------------------- */
 
 :root {
   /* Light Theme Colors */
@@ -313,18 +285,18 @@
   --color-warning: #a855f7;
   --color-teal: #14b8a6;
   --color-orange: #f97316;
-  
+
   /* Text Colors */
   --color-text-primary: #1e293b;
   --color-text-secondary: #64748b;
   --color-text-tertiary: #94a3b8;
-  
+
   /* Background Colors */
   --color-card-bg: rgba(255, 255, 255, 0.75);
   --color-card-bg-light: rgba(255, 255, 255, 0.5);
   --color-card-border: rgba(255, 255, 255, 0.2);
   --color-icon-bg-base: rgba(248, 250, 252, 0.8);
-  
+
   /* Button Colors */
   --color-btn-primary-bg: rgba(0, 0, 0, 0.85);
   --color-btn-primary-text: #fff;
@@ -332,28 +304,25 @@
   --color-btn-secondary-text: #1e293b;
   --color-btn-secondary-border: rgba(255, 255, 255, 0.3);
   --color-btn-secondary-hover: rgba(255, 255, 255, 0.7);
-  
+
   /* Shadows */
   --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.05);
   --shadow-card-hover: 0 12px 30px rgba(0, 0, 0, 0.1);
   --color-border-subtle: rgba(148, 163, 184, 0.2);
 }
 
-/* Dark Theme Overrides
-   ========================================================================== */
-
 html.dark {
   /* Text Colors */
   --color-text-primary: #f1f5f9;
   --color-text-secondary: #94a3b8;
   --color-text-tertiary: #94a3b8;
-  
+
   /* Background Colors */
   --color-card-bg: rgba(20, 20, 25, 0.75);
   --color-card-bg-light: rgba(20, 20, 25, 0.5);
   --color-card-border: rgba(255, 255, 255, 0.06);
   --color-icon-bg-base: rgba(30, 35, 45, 0.8);
-  
+
   /* Button Colors */
   --color-btn-primary-bg: rgba(255, 255, 255, 0.9);
   --color-btn-primary-text: #000;
@@ -361,14 +330,15 @@ html.dark {
   --color-btn-secondary-text: #f1f5f9;
   --color-btn-secondary-border: rgba(255, 255, 255, 0.1);
   --color-btn-secondary-hover: rgba(50, 55, 70, 0.7);
-  
+
   /* Shadows */
   --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.2);
   --color-border-subtle: rgba(148, 163, 184, 0.2);
 }
 
-/* Responsive Design
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   Responsive Adjustments
+   -------------------------------------------------------------------------- */
 
 @media (max-width: 768px) {
   .admin-home-stats-grid {
@@ -376,9 +346,7 @@ html.dark {
   }
 
   .stat-card {
-    min-width: 140px;
-    max-width: 160px;
-    padding: 0.875rem 1rem;
+    padding: 1rem 1rem;
   }
 
   .stat-card-value {
@@ -398,12 +366,6 @@ html.dark {
 @media (max-width: 480px) {
   .admin-home-title {
     font-size: 1.3rem;
-  }
-
-  .stat-card {
-    min-width: 130px;
-    max-width: 145px;
-    padding: 0.75rem 0.875rem;
   }
 
   .stat-card-icon {

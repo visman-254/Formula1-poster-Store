@@ -219,7 +219,7 @@ ${receipt.items
     <span>Qty: ${item.quantity}</span>
     <span>Ksh ${item.total.toLocaleString("en-KE")}</span>
   </div>
-  ${item.imei ? `<div>IMEI: ${maskIMEI(item.imei)}</div>` : ""}
+  ${item.imei ? `<div>IMEI/Serial: ${maskIMEI(item.imei)}</div>` : ""}
 </div>`
   )
   .join("")}
@@ -551,7 +551,8 @@ ${isMobile ? `
               <div key={index} className="receipt-row">
                 <div>
                   <strong>{item.name}</strong>
-                  {item.imei && <div className="imei">IMEI: {item.imei}</div>}
+                  {/* ONLY CHANGE HERE: IMEI: → IMEI/Serial: */}
+                  {item.imei && <div className="imei">IMEI/Serial: {maskIMEI(item.imei)}</div>}
                 </div>
                 <span>Ksh {item.total.toLocaleString("en-KE")}</span>
               </div>
