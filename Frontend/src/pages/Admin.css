@@ -7,6 +7,8 @@
   width: 100%;
   position: relative;
   overflow-x: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 /* Fixed background */
@@ -41,6 +43,8 @@
   flex-direction: column;
   min-height: 100vh;
   width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 /* =========================
@@ -48,9 +52,11 @@
 ========================= */
 
 .admin-topbar {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 100;
+  left: 0;
+  right: 0;
+  z-index: 1000;
   
   display: flex;
   align-items: center;
@@ -58,6 +64,7 @@
   gap: 1rem;
   
   padding: 0.75rem 1.5rem;
+  margin: 0;
   
   background: rgba(255,255,255,0.65);
   backdrop-filter: blur(12px);
@@ -208,7 +215,8 @@ html.dark .topbar-tab.active {
   overflow-y: auto;
   overflow-x: hidden;
   
-  padding: 1.5rem 2rem;
+  padding: 5rem 2rem 2rem; /* Top padding accounts for fixed header */
+  margin-top: 0;
 }
 
 /* =========================
@@ -555,6 +563,10 @@ html.dark .admin-main::-webkit-scrollbar-thumb {
     width: 100%;
     justify-content: center;
   }
+  
+  .admin-main {
+    padding-top: 8rem; /* Extra padding for stacked header */
+  }
 }
 
 @media (max-width: 768px) {
@@ -567,13 +579,8 @@ html.dark .admin-main::-webkit-scrollbar-thumb {
     display: none;
   }
   
-  .topbar-tab::after {
-    content: attr(data-label);
-    display: none;
-  }
-  
   .admin-main {
-    padding: 1rem;
+    padding: 7rem 1rem 1rem;
   }
 }
 
@@ -583,5 +590,9 @@ html.dark .admin-main::-webkit-scrollbar-thumb {
   .daily-comparison-grid,
   .monthly-comparison-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .admin-main {
+    padding-top: 6rem;
   }
 }
