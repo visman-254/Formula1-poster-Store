@@ -403,3 +403,120 @@ export const getOrderTypeDailyComparison = async () => {
     throw err;
   }
 };
+
+// Dashboard stats aggregation
+export const getDashboardStats = async () => {
+  try {
+    // Get total revenue (all time)
+    const [[{ total_revenue }]] = await db.execute(`
+      SELECT SUM(oi.quantity * oi.price) AS total_revenue
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+    `);
+
+    // Get today's date in local timezone (Africa/Nairobi UTC+3)
+    const now = new Date();
+    const timeOffset = 3 * 60 * 60 * 1000; // UTC+3 in milliseconds
+    const localDate = new Date(now.getTime() + timeOffset);
+    const today = localDate.toISOString().slice(0, 10);
+
+    // Get yesterday's date
+    const yesterdayDate = new Date(localDate.getTime() - 86400000);
+    const yesterday = yesterdayDate.toISOString().slice(0, 10);
+
+    // Get today's revenue - using Nairobi timezone (UTC+3)
+    const [[{ today_revenue }]] = await db.execute(`
+      SELECT COALESCE(SUM(oi.quantity * oi.price), 0) AS today_revenue
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      WHERE DATE(o.created_at + INTERVAL 3 HOUR) = CURDATE()
+    `);
+
+    // Get yesterday's revenue for trend calculation
+    const [[{ yesterday_revenue }]] = await db.execute(`
+      SELECT COALESCE(SUM(oi.quantity * oi.price), 0) AS yesterday_revenue
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      WHERE DATE(o.created_at + INTERVAL 3 HOUR) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+    `);
+
+    // Get total orders count
+    const [[{ total_orders }]] = await db.execute(`
+      SELECT COUNT(*) AS total_orders FROM orders
+    `);
+
+    // Get today's orders count - using Nairobi timezone (UTC+3)
+    const [[{ today_orders }]] = await db.execute(`
+      SELECT COUNT(*) AS today_orders FROM orders WHERE DATE(created_at + INTERVAL 3 HOUR) = CURDATE()
+    `);
+
+    // Get yesterday's orders for trend
+    const [[{ yesterday_orders }]] = await db.execute(`
+      SELECT COUNT(*) AS yesterday_orders FROM orders WHERE DATE(created_at + INTERVAL 3 HOUR) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+    `);
+
+    // Get low stock count (products with stock <= 5)
+    const [[{ low_stock_count }]] = await db.execute(`
+      SELECT COUNT(DISTINCT pv.variant_id) AS low_stock_count
+      FROM product_variants pv
+      WHERE pv.stock <= 5 AND pv.stock > 0
+    `);
+
+    // Get out of stock count
+    const [[{ out_of_stock_count }]] = await db.execute(`
+      SELECT COUNT(DISTINCT pv.variant_id) AS out_of_stock_count
+      FROM product_variants pv
+      WHERE pv.stock = 0
+    `);
+
+    // Get preorders count
+    const [[{ total_preorders }]] = await db.execute(`
+      SELECT COUNT(*) AS total_preorders FROM preorders WHERE status = 'pending'
+    `);
+
+    // Get today's preorders count - using Nairobi timezone (UTC+3)
+    const [[{ today_preorders }]] = await db.execute(`
+      SELECT COUNT(*) AS today_preorders FROM preorders p WHERE DATE(p.created_at + INTERVAL 3 HOUR) = CURDATE() AND status = 'pending'
+    `);
+
+    // Get total products count
+    const [[{ total_products }]] = await db.execute(`
+      SELECT COUNT(*) AS total_products FROM products WHERE is_deleted = 0
+    `);
+
+    // Get total users count (customers)
+    const [[{ total_users }]] = await db.execute(`
+      SELECT COUNT(*) AS total_users FROM users WHERE role = 'customer'
+    `);
+
+    return {
+      revenue: {
+        total: Number(total_revenue) || 0,
+        today: Number(today_revenue) || 0,
+        yesterday: Number(yesterday_revenue) || 0,
+      },
+      orders: {
+        total: Number(total_orders) || 0,
+        today: Number(today_orders) || 0,
+        yesterday: Number(yesterday_orders) || 0,
+      },
+      lowStock: {
+        low: Number(low_stock_count) || 0,
+        outOfStock: Number(out_of_stock_count) || 0,
+      },
+      preorders: {
+        total: Number(total_preorders) || 0,
+        today: Number(today_preorders) || 0,
+      },
+      products: {
+        total: Number(total_products) || 0,
+      },
+      users: {
+        total: Number(total_users) || 0,
+      },
+    };
+  } catch (err) {
+    console.error("Error fetching dashboard stats:", err);
+    throw err;
+  }
+};

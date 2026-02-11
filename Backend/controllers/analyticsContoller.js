@@ -1,4 +1,4 @@
-import { getTotalRevenue, getTotalMonthlySales, getTotalDailySales,getproductSalesVolume, getProductProfit, getProductRevenue, getProductPerformance } from "../services/analytics.js"; 
+import { getTotalRevenue, getTotalMonthlySales, getTotalDailySales,getproductSalesVolume, getProductProfit, getProductRevenue, getProductPerformance, getDashboardStats } from "../services/analytics.js"; 
 
 export const getTotalRevenueController = async (req, res) => {
     try {
@@ -56,6 +56,15 @@ export const getProductRevenueController = async (req, res) => {
 export const getProductPerformanceController = async (req, res) => {
   try {
     const data = await getProductPerformance();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const getDashboardStatsController = async (req, res) => {
+  try {
+    const data = await getDashboardStats();
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });

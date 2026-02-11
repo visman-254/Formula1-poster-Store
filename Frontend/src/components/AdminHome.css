@@ -1,0 +1,426 @@
+/* ==========================================================================
+   ADMIN HOME DASHBOARD
+   ========================================================================== */
+
+/* Base Styles & Animations
+   ========================================================================== */
+
+.admin-home {
+  width: 100%;
+  animation: fadeInUp 0.5s ease;
+}
+
+/* Loading States
+   ========================================================================== */
+
+.admin-home-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  color: var(--color-text-secondary);
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--color-border-subtle);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+/* Animations
+   ========================================================================== */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Header Section
+   ========================================================================== */
+
+.admin-home-header {
+  margin-bottom: 1.5rem;
+}
+
+.admin-home-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.admin-home-subtitle {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* Stats Grid Layout - Horizontal Row
+   ========================================================================== */
+
+.admin-home-stats-grid {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-subtle) transparent;
+}
+
+/* Custom scrollbar for webkit browsers */
+.admin-home-stats-grid::-webkit-scrollbar {
+  height: 6px;
+}
+
+.admin-home-stats-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-home-stats-grid::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-subtle);
+  border-radius: 3px;
+}
+
+/* On larger screens, keep them in a single row */
+@media (min-width: 1400px) {
+  .admin-home-stats-grid {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+}
+
+/* Stat Card Component - Compact for horizontal layout
+   ========================================================================== */
+
+.stat-card {
+  background: var(--color-card-bg);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+  transition: all 0.3s ease;
+  min-width: 160px;
+  max-width: 180px;
+  flex-shrink: 0;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.stat-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.stat-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--color-icon-bg-base);
+}
+
+/* Stat Card Icon Variants */
+.stat-card-icon--revenue {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--color-success);
+}
+
+.stat-card-icon--orders {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--color-info);
+}
+
+.stat-card-icon--alert {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-error);
+}
+
+.stat-card-icon--preorder {
+  background: rgba(168, 85, 247, 0.15);
+  color: var(--color-warning);
+}
+
+.stat-card-icon--products {
+  background: rgba(20, 184, 166, 0.15);
+  color: var(--color-teal);
+}
+
+.stat-card-icon--users {
+  background: rgba(249, 115, 22, 0.15);
+  color: var(--color-orange);
+}
+
+.stat-card-trend {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.stat-card-trend--up {
+  color: var(--color-success);
+}
+
+.stat-card-trend--down {
+  color: var(--color-error);
+}
+
+.stat-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.stat-card-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.stat-card-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.stat-card-label {
+  font-size: 0.7rem;
+  color: var(--color-text-tertiary);
+}
+
+.stat-card-subtitle {
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
+  font-weight: 400;
+}
+
+/* Footer & Quick Actions
+   ========================================================================== */
+
+.admin-home-footer {
+  margin-top: 2rem;
+}
+
+.quick-actions {
+  background: var(--color-card-bg-light);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 1px solid var(--color-card-border);
+}
+
+.quick-actions-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 1rem;
+}
+
+.quick-actions-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Button Component
+   ========================================================================== */
+
+.action-button {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.action-button:hover {
+  transform: translateY(-2px);
+}
+
+.action-button--primary {
+  background: var(--color-btn-primary-bg);
+  color: var(--color-btn-primary-text);
+}
+
+.action-button--primary:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.action-button--secondary {
+  background: var(--color-btn-secondary-bg);
+  color: var(--color-btn-secondary-text);
+  border: 1px solid var(--color-btn-secondary-border);
+}
+
+.action-button--secondary:hover {
+  background: var(--color-btn-secondary-hover);
+}
+
+.action-button--tertiary {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-error);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.action-button--tertiary:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+/* CSS Custom Properties for Theme Support
+   ========================================================================== */
+
+:root {
+  /* Light Theme Colors */
+  --color-primary: #8884d8;
+  --color-success: #22c55e;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+  --color-warning: #a855f7;
+  --color-teal: #14b8a6;
+  --color-orange: #f97316;
+  
+  /* Text Colors */
+  --color-text-primary: #1e293b;
+  --color-text-secondary: #64748b;
+  --color-text-tertiary: #94a3b8;
+  
+  /* Background Colors */
+  --color-card-bg: rgba(255, 255, 255, 0.75);
+  --color-card-bg-light: rgba(255, 255, 255, 0.5);
+  --color-card-border: rgba(255, 255, 255, 0.2);
+  --color-icon-bg-base: rgba(248, 250, 252, 0.8);
+  
+  /* Button Colors */
+  --color-btn-primary-bg: rgba(0, 0, 0, 0.85);
+  --color-btn-primary-text: #fff;
+  --color-btn-secondary-bg: rgba(255, 255, 255, 0.5);
+  --color-btn-secondary-text: #1e293b;
+  --color-btn-secondary-border: rgba(255, 255, 255, 0.3);
+  --color-btn-secondary-hover: rgba(255, 255, 255, 0.7);
+  
+  /* Shadows */
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.05);
+  --shadow-card-hover: 0 12px 30px rgba(0, 0, 0, 0.1);
+  --color-border-subtle: rgba(148, 163, 184, 0.2);
+}
+
+/* Dark Theme Overrides
+   ========================================================================== */
+
+html.dark {
+  /* Text Colors */
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-tertiary: #94a3b8;
+  
+  /* Background Colors */
+  --color-card-bg: rgba(20, 20, 25, 0.75);
+  --color-card-bg-light: rgba(20, 20, 25, 0.5);
+  --color-card-border: rgba(255, 255, 255, 0.06);
+  --color-icon-bg-base: rgba(30, 35, 45, 0.8);
+  
+  /* Button Colors */
+  --color-btn-primary-bg: rgba(255, 255, 255, 0.9);
+  --color-btn-primary-text: #000;
+  --color-btn-secondary-bg: rgba(30, 35, 45, 0.6);
+  --color-btn-secondary-text: #f1f5f9;
+  --color-btn-secondary-border: rgba(255, 255, 255, 0.1);
+  --color-btn-secondary-hover: rgba(50, 55, 70, 0.7);
+  
+  /* Shadows */
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.2);
+  --color-border-subtle: rgba(148, 163, 184, 0.2);
+}
+
+/* Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .admin-home-stats-grid {
+    gap: 0.75rem;
+  }
+
+  .stat-card {
+    min-width: 140px;
+    max-width: 160px;
+    padding: 0.875rem 1rem;
+  }
+
+  .stat-card-value {
+    font-size: 1.2rem;
+  }
+
+  .quick-actions-buttons {
+    flex-direction: column;
+  }
+
+  .action-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-home-title {
+    font-size: 1.3rem;
+  }
+
+  .stat-card {
+    min-width: 130px;
+    max-width: 145px;
+    padding: 0.75rem 0.875rem;
+  }
+
+  .stat-card-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .stat-card-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .stat-card-value {
+    font-size: 1.1rem;
+  }
+
+  .stat-card-title {
+    font-size: 0.8rem;
+  }
+}

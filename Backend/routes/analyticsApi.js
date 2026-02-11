@@ -1,8 +1,9 @@
 import express from "express";
-import { getProductSalesVolumeController, getProductProfitController, getProductRevenueController, getProductPerformanceController, getTotalRevenueController, getTotalMonthlySalesController, getTotalDailySalesController } from "../controllers/analyticsContoller.js";
+import { getProductSalesVolumeController, getProductProfitController, getProductRevenueController, getProductPerformanceController, getTotalRevenueController, getTotalMonthlySalesController, getTotalDailySalesController, getDashboardStatsController } from "../controllers/analyticsContoller.js";
 
 const router = express.Router();
 
+router.get("/dashboard-stats", getDashboardStatsController);
 router.get("/total-revenue", getTotalRevenueController);
 router.get("/daily-sales", getTotalDailySalesController);
 router.get("/monthly-sales", getTotalMonthlySalesController);

@@ -61,43 +61,151 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 1.5rem;
   
-  padding: 0.75rem 1.5rem;
+  padding: 0.5rem 1.5rem;
   margin: 0;
   
-  background: rgba(255,255,255,0.65);
+  background: rgba(255,255,255,0.7);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255,255,255,0.15);
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);
 }
 
 html.dark .admin-topbar {
-  background: rgba(10,10,10,0.65);
+  background: rgba(15,15,20,0.75);
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
-/* Horizontal tabs container */
-.topbar-tabs {
+/* Logo section */
+.topbar-left {
+  flex-shrink: 0;
+}
+
+.admin-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  
+  padding: 0.5rem 0.875rem;
+  
+  background: rgba(0,0,0,0.85);
+  border-radius: 10px;
+  
+  font-weight: 700;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+html.dark .admin-logo {
+  background: rgba(255,255,255,0.9);
+  color: #000;
+}
+
+.logo-icon {
+  font-size: 1.25rem;
+}
+
+/* Main navigation with segments */
+.topbar-nav {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  
+  flex: 1;
   overflow-x: auto;
-  flex-wrap: nowrap;
   padding: 0.25rem;
   
-  /* Hide scrollbar but keep functionality */
   scrollbar-width: thin;
   scrollbar-color: rgba(148,163,184,0.4) transparent;
 }
 
-.topbar-tabs::-webkit-scrollbar {
+.topbar-nav::-webkit-scrollbar {
   height: 4px;
 }
 
-.topbar-tabs::-webkit-scrollbar-thumb {
+.topbar-nav::-webkit-scrollbar-thumb {
   background: rgba(148,163,184,0.4);
   border-radius: 4px;
+}
+
+/* Navigation segment */
+.nav-segment {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  
+  padding: 0.25rem;
+  
+  background: rgba(248,250,252,0.6);
+  border-radius: 10px;
+  
+  border: 1px solid rgba(255,255,255,0.3);
+}
+
+html.dark .nav-segment {
+  background: rgba(30,35,45,0.6);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Segment header (category label) */
+.segment-header {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  
+  padding: 0.375rem 0.625rem;
+  
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  
+  color: #64748b;
+  background: rgba(255,255,255,0.5);
+  border-radius: 6px;
+}
+
+html.dark .segment-header {
+  color: #94a3b8;
+  background: rgba(0,0,0,0.3);
+}
+
+/* Tabs within a segment */
+.segment-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Segment divider */
+.segment-divider {
+  width: 1px;
+  height: 32px;
+  
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(148,163,184,0.3) 20%,
+    rgba(148,163,184,0.3) 80%,
+    transparent 100%
+  );
+  
+  margin: 0 0.25rem;
+}
+
+html.dark .segment-divider {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255,255,255,0.1) 20%,
+    rgba(255,255,255,0.1) 80%,
+    transparent 100%
+  );
 }
 
 /* Topbar tab buttons */
@@ -107,13 +215,13 @@ html.dark .admin-topbar {
   
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   
-  padding: 0.5rem 0.875rem;
-  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
   
   font-weight: 500;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   white-space: nowrap;
   
   color: #475569;
@@ -130,12 +238,12 @@ html.dark .topbar-tab {
 }
 
 .topbar-tab:hover {
-  background: rgba(255,255,255,0.65);
+  background: rgba(255,255,255,0.7);
   transform: translateY(-1px);
 }
 
 html.dark .topbar-tab:hover {
-  background: rgba(30,30,30,0.65);
+  background: rgba(30,30,30,0.7);
 }
 
 .topbar-tab.active {
@@ -146,7 +254,7 @@ html.dark .topbar-tab:hover {
 }
 
 html.dark .topbar-tab.active {
-  background: rgba(255,255,255,0.9);
+  background: rgba(255,255,255,0.92);
   color: #000;
 }
 
@@ -157,15 +265,15 @@ html.dark .topbar-tab.active {
   align-items: center;
   justify-content: center;
   
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
   
   background-color: #ef4444;
   color: white;
   border-radius: 9999px;
   
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1;
 }
@@ -547,52 +655,142 @@ html.dark .admin-main::-webkit-scrollbar-thumb {
    RESPONSIVE FIXES
 ========================= */
 
-@media (max-width: 1024px) {
+@media (max-width: 1280px) {
   .admin-topbar {
-    flex-direction: column;
+    padding: 0.5rem 1rem;
     gap: 1rem;
-    padding: 1rem;
   }
   
-  .topbar-tabs {
+  .admin-logo {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.85rem;
+  }
+  
+  .topbar-tab {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.75rem;
+  }
+  
+  .segment-header {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .admin-topbar {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+  
+  .topbar-left {
+    width: 100%;
+  }
+  
+  .admin-logo {
+    width: fit-content;
+  }
+  
+  .topbar-nav {
     width: 100%;
     justify-content: flex-start;
   }
   
   .logout-btn {
-    width: 100%;
-    justify-content: center;
+    width: auto;
+    margin-left: auto;
   }
   
   .admin-main {
-    padding-top: 8rem; /* Extra padding for stacked header */
+    padding-top: 7rem;
   }
 }
 
 @media (max-width: 768px) {
+  .admin-topbar {
+    padding: 0.75rem;
+  }
+  
+  .topbar-nav {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .nav-segment {
+    padding: 0.2rem;
+    gap: 0.35rem;
+  }
+  
+  .segment-header {
+    display: none;
+  }
+  
+  .segment-tabs {
+    gap: 0.25rem;
+  }
+  
   .topbar-tab {
-    padding: 0.4rem 0.65rem;
-    font-size: 0.8rem;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.7rem;
   }
   
   .topbar-tab span {
     display: none;
   }
   
+  .topbar-tab::after {
+    content: attr(data-label);
+    display: none;
+  }
+  
+  .segment-divider {
+    display: none;
+  }
+  
   .admin-main {
-    padding: 7rem 1rem 1rem;
+    padding: 6rem 0.75rem 0.75rem;
   }
 }
 
 @media (max-width: 480px) {
+  .admin-topbar {
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+  
+  .admin-logo .logo-text {
+    display: none;
+  }
+  
+  .topbar-tab {
+    padding: 0.3rem 0.4rem;
+  }
+  
+  .topbar-nav {
+    gap: 0.25rem;
+  }
+  
+  .nav-segment {
+    border-radius: 8px;
+  }
+  
+  .logout-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
+  
+  .logout-btn span {
+    display: none;
+  }
+  
+  .admin-main {
+    padding: 5.5rem 0.5rem 0.5rem;
+  }
+  
   .analytics-grid,
   .pos-online-comparison-grid,
   .daily-comparison-grid,
   .monthly-comparison-grid {
     grid-template-columns: 1fr;
-  }
-  
-  .admin-main {
-    padding-top: 6rem;
   }
 }

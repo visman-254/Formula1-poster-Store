@@ -11,12 +11,14 @@ import {
   Shuffle,
   Barcode,
   LogOut,
+  Home,
 } from "lucide-react";
 import { useAdminNotification } from "../context/AdminNotificationContext";
 
 import elegantwaterBg from "../assets/elegantwater.jpg";
 
 import AddProductForm from "../components/AddProductForm";
+import AdminHome from "../components/AdminHome";
 import ProductsGrids from "../components/ProductGrids";
 import DeleteCategory from "../components/DeleteCategory";
 import OrderItems from "../components/OrderItems";
@@ -47,7 +49,7 @@ import { useNavigate } from "react-router-dom";
 import "./Admin.css";
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState("products");
+  const [activeTab, setActiveTab] = useState("home");
   const navigate = useNavigate();
 
   // Admin notification context
@@ -74,21 +76,52 @@ export default function AdminPage() {
     navigate("/login");
   };
 
-  // Top navigation tabs
-  const tabs = [
-    { value: "products", label: "Products", icon: <PackageSearch size={18} /> },
-    { value: "add", label: "Add Product", icon: <BookmarkPlus size={18} /> },
-    { value: "delete", label: "Delete Category", icon: <Delete size={18} /> },
-    { value: "orders", label: "Orders", icon: <Forklift size={18} />, count: newOrdersCount },
-    { value: "backorders", label: "Backorders", icon: <Forklift size={18} /> },
-    { value: "users", label: "Users", icon: <User size={18} /> },
-    { value: "uncategorized", label: "Uncategorized", icon: <HeartCrack size={18} /> },
-    { value: "analytics", label: "Analytics", icon: <ChartNoAxesCombined size={18} /> },
-    { value: "create-hero", label: "Hero Slides", icon: <PackageSearch size={18} /> },
-    { value: "create-promotion", label: "Promotions", icon: <PackageSearch size={18} /> },
-    { value: "low-stock", label: "Low Stock", icon: <BellElectric size={18} />, count: lowStockCount },
-    { value: "preorders", label: "Preorders", icon: <Shuffle size={18} />, count: newPreordersCount },
-    { value: "imei", label: "IMEI", icon: <Barcode size={18} /> },
+  // Top navigation tabs grouped by category
+  const tabGroups = [
+    {
+      category: "Dashboard",
+      icon: <Home size={16} />,
+      tabs: [
+        { value: "home", label: "Dashboard", icon: <Home size={16} /> },
+      ]
+    },
+    {
+      category: "Products & Inventory",
+      icon: <PackageSearch size={16} />,
+      tabs: [
+        { value: "products", label: "All Products", icon: <PackageSearch size={16} /> },
+        { value: "add", label: "Add Product", icon: <BookmarkPlus size={16} /> },
+        { value: "delete", label: "Categories", icon: <Delete size={16} /> },
+        { value: "uncategorized", label: "Uncategorized", icon: <HeartCrack size={16} /> },
+        { value: "imei", label: "IMEI Tracking", icon: <Barcode size={16} /> },
+      ]
+    },
+    {
+      category: "Orders & Sales",
+      icon: <Forklift size={16} />,
+      tabs: [
+        { value: "orders", label: "Orders", icon: <Forklift size={16} />, count: newOrdersCount },
+        { value: "backorders", label: "Backorders", icon: <Forklift size={16} /> },
+        { value: "preorders", label: "Preorders", icon: <Shuffle size={16} />, count: newPreordersCount },
+      ]
+    },
+    {
+      category: "Website",
+      icon: <ChartNoAxesCombined size={16} />,
+      tabs: [
+        { value: "create-hero", label: "Hero Slides", icon: <PackageSearch size={16} /> },
+        { value: "create-promotion", label: "Promotions", icon: <PackageSearch size={16} /> },
+      ]
+    },
+    {
+      category: "System",
+      icon: <User size={16} />,
+      tabs: [
+        { value: "analytics", label: "Analytics", icon: <ChartNoAxesCombined size={16} /> },
+        { value: "low-stock", label: "Low Stock", icon: <BellElectric size={16} />, count: lowStockCount },
+        { value: "users", label: "Users", icon: <User size={16} /> },
+      ]
+    },
   ];
 
   // Force dark mode for admin
@@ -118,33 +151,52 @@ export default function AdminPage() {
       <div className="admin-container">
         {/* Top Navigation Bar */}
         <header className="admin-topbar">
-          <div className="topbar-tabs">
-            {tabs.map((tab) => (
-              <button
-                key={tab.value}
-                className={`topbar-tab ${activeTab === tab.value ? "active" : ""}`}
-                onClick={() => handleTabClick(tab.value)}
-                type="button"
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-                
-                {tab.count > 0 && (
-                  <span className="notification-badge">{tab.count}</span>
-                )}
-              </button>
-            ))}
+          <div className="topbar-left">
+           
           </div>
+          
+          <nav className="topbar-nav">
+            {tabGroups.map((group, groupIndex) => (
+              <div key={group.category} className="nav-segment">
+                <div className="segment-header">
+                  {group.icon}
+                  <span>{group.category}</span>
+                </div>
+                <div className="segment-tabs">
+                  {group.tabs.map((tab) => (
+                    <button
+                      key={tab.value}
+                      className={`topbar-tab ${activeTab === tab.value ? "active" : ""}`}
+                      onClick={() => handleTabClick(tab.value)}
+                      type="button"
+                      data-label={tab.label}
+                    >
+                      {tab.icon}
+                      <span>{tab.label}</span>
+                      
+                      {tab.count > 0 && (
+                        <span className="notification-badge">{tab.count}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {groupIndex < tabGroups.length - 1 && <div className="segment-divider" />}
+              </div>
+            ))}
+          </nav>
           
           {/* Logout Button */}
           <button className="logout-btn" onClick={handleLogout} type="button">
-            <LogOut size={18} />
+            <LogOut size={16} />
             <span>Logout</span>
           </button>
         </header>
 
         {/* Main Content */}
         <main className="admin-main">
+          {activeTab === "home" && (
+            <GlassmorphicContainer><AdminHome /></GlassmorphicContainer>
+          )}
           {activeTab === "products" && (
             <GlassmorphicContainer><ProductsGrids /></GlassmorphicContainer>
           )}
