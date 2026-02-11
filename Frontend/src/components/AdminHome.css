@@ -99,11 +99,68 @@
   min-width: 0;             /* override any previous min-width */
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Glare effect - constant animation */
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  animation: glareShimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes glareShimmer {
+  0% {
+    left: -100%;
+  }
+  50% {
+    left: 100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Subtle inner glow - constant */
+.stat-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.02) 50%,
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-card-hover);
+}
+
+.stat-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .stat-card-header {
@@ -193,6 +250,33 @@
   font-size: 0.75rem;
   color: var(--color-text-tertiary);
   font-weight: 400;
+}
+
+.stat-card-button {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--color-button-bg);
+  color: var(--color-button-text);
+  border: 1px solid var(--color-button-border);
+  transition: all 0.2s ease;
+}
+
+.stat-card-button:hover {
+  background: var(--color-button-hover);
+  transform: translateY(-1px);
+}
+
+.stat-card-button span {
+  white-space: nowrap;
 }
 
 /* --------------------------------------------------------------------------
@@ -309,6 +393,12 @@
   --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.05);
   --shadow-card-hover: 0 12px 30px rgba(0, 0, 0, 0.1);
   --color-border-subtle: rgba(148, 163, 184, 0.2);
+
+  /* Button Colors */
+  --color-button-bg: rgba(0, 0, 0, 0.06);
+  --color-button-text: var(--color-text-primary);
+  --color-button-border: rgba(0, 0, 0, 0.1);
+  --color-button-hover: rgba(0, 0, 0, 0.1);
 }
 
 html.dark {
@@ -334,6 +424,12 @@ html.dark {
   /* Shadows */
   --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.2);
   --color-border-subtle: rgba(148, 163, 184, 0.2);
+
+  /* Button Colors */
+  --color-button-bg: rgba(255, 255, 255, 0.08);
+  --color-button-text: var(--color-text-primary);
+  --color-button-border: rgba(255, 255, 255, 0.1);
+  --color-button-hover: rgba(255, 255, 255, 0.15);
 }
 
 /* --------------------------------------------------------------------------

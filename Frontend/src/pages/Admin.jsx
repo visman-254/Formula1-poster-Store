@@ -195,7 +195,7 @@ export default function AdminPage() {
         {/* Main Content */}
         <main className="admin-main">
           {activeTab === "home" && (
-            <GlassmorphicContainer><AdminHome /></GlassmorphicContainer>
+            <GlassmorphicContainer><AdminHome onNavigate={handleTabClick} /></GlassmorphicContainer>
           )}
           {activeTab === "products" && (
             <GlassmorphicContainer><ProductsGrids /></GlassmorphicContainer>

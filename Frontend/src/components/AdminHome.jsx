@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   DollarSign,
   TrendingUp,
@@ -8,10 +8,11 @@ import {
   Package,
   ArrowUpRight,
   ArrowDownRight,
+  ArrowRight,
 } from "lucide-react";
 import "./AdminHome.css";
 
-export default function AdminHome() {
+export default function AdminHome({ onNavigate }) {
   const [stats, setStats] = useState({
     totalRevenue: 0,
     todayRevenue: 0,
@@ -106,6 +107,8 @@ export default function AdminHome() {
       trend: stats.revenueGrowth,
       trendLabel: "vs yesterday",
       color: "revenue",
+      navigateTo: "analytics",
+      buttonLabel: "View Analytics",
     },
     {
       title: "Today's Orders",
@@ -114,6 +117,8 @@ export default function AdminHome() {
       trend: stats.ordersGrowth,
       trendLabel: "vs yesterday",
       color: "orders",
+      navigateTo: "orders",
+      buttonLabel: "View Orders",
     },
     {
       title: "Low Stock Alerts",
@@ -121,6 +126,8 @@ export default function AdminHome() {
       icon: <AlertTriangle size={24} />,
       subtitle: `${stats.outOfStockCount} out of stock`,
       color: "alert",
+      navigateTo: "low-stock",
+      buttonLabel: "Manage Stock",
     },
     {
       title: "Pending Preorders",
@@ -128,6 +135,8 @@ export default function AdminHome() {
       icon: <Package size={24} />,
       subtitle: "Awaiting fulfillment",
       color: "preorder",
+      navigateTo: "preorders",
+      buttonLabel: "Fulfill Preorders",
     },
     {
       title: "Total Products",
@@ -135,6 +144,8 @@ export default function AdminHome() {
       icon: <Package size={24} />,
       subtitle: "In catalog",
       color: "products",
+      navigateTo: "products",
+      buttonLabel: "View Products",
     },
     {
       title: "Total Users",
@@ -142,6 +153,8 @@ export default function AdminHome() {
       icon: <Users size={24} />,
       subtitle: "Registered customers",
       color: "users",
+      navigateTo: "users",
+      buttonLabel: "View Users",
     },
   ];
 
@@ -186,6 +199,15 @@ export default function AdminHome() {
               <p className="stat-card-title">{card.title}</p>
               {card.trendLabel && <span className="stat-card-label">{card.trendLabel}</span>}
               {card.subtitle && <span className="stat-card-subtitle">{card.subtitle}</span>}
+              {card.navigateTo && onNavigate && (
+                <button 
+                  className="stat-card-button"
+                  onClick={() => onNavigate(card.navigateTo)}
+                >
+                  <span>{card.buttonLabel}</span>
+                  <ArrowRight size={14} />
+                </button>
+              )}
             </div>
           </div>
         ))}
