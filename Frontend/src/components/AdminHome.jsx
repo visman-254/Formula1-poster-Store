@@ -17,6 +17,8 @@ import { FaBoxOpen } from "react-icons/fa6";
 import { HiUsers } from "react-icons/hi2";
 import { GiArrowed } from "react-icons/gi";
 import { GiArrowWings } from "react-icons/gi";
+import AnalyticsDay from "./AnalyticsDay";
+import GlassmorphicContainer from "./GlassmorphicContainer";
 export default function AdminHome({ onNavigate }) {
   const [stats, setStats] = useState({
     totalRevenue: 0,
@@ -218,23 +220,28 @@ export default function AdminHome({ onNavigate }) {
         ))}
       </div>
 
+      {/* Daily Sales Chart - Full Width Card */}
+      <div className="dashboard-chart-section">
+        <GlassmorphicContainer>
+          <div className="chart-section-header">
+            <h2 className="chart-title">Daily Sales Overview</h2>
+            <button 
+              className="chart-view-all"
+              onClick={() => onNavigate && onNavigate("analytics")}
+            >
+              View Full Analytics <ArrowRight size={14} />
+            </button>
+          </div>
+          <div className="chart-container">
+            <AnalyticsDay />
+          </div>
+        </GlassmorphicContainer>
+      </div>
+
       <div className="admin-home-footer">
         <div className="quick-actions">
           <h3 className="quick-actions-title">Quick Actions</h3>
-          <div className="quick-actions-buttons">
-            <button className="action-button action-button--primary">
-              <Package size={18} />
-              <span>Add Product</span>
-            </button>
-            <button className="action-button action-button--secondary">
-              <ShoppingCart size={18} />
-              <span>View Orders</span>
-            </button>
-            <button className="action-button action-button--tertiary">
-              <AlertTriangle size={18} />
-              <span>Restock Items</span>
-            </button>
-          </div>
+         
         </div>
       </div>
     </div>

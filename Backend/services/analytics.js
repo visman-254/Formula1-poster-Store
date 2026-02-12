@@ -19,16 +19,18 @@ export const getTotalRevenue = async () => {
 export const getTotalDailySales = async () => {
   try {
     const [rows] = await db.execute(`
-      SELECT DATE(o.created_at) AS order_date, 
+      SELECT DATE(o.created_at + INTERVAL 3 HOUR) AS order_date, 
              SUM(oi.quantity * oi.price) AS total_revenue
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
-      GROUP BY DATE(o.created_at)
+      GROUP BY DATE(o.created_at + INTERVAL 3 HOUR)
       ORDER BY order_date DESC
     `);
 
     const now = new Date();
-    const currentDate = now.toISOString().slice(0, 10);
+    const timeOffset = 3 * 60 * 60 * 1000; // UTC+3 in milliseconds
+    const localDate = new Date(now.getTime() + timeOffset);
+    const currentDate = localDate.toISOString().slice(0, 10);
 
     // normalize rows to YYYY-MM-DD
     const normalizedRows = rows.map(row => ({
@@ -224,17 +226,19 @@ export const getProductCostHistory = async (productId) => {
 export const getPOSDailySales = async () => {
   try {
     const [rows] = await db.execute(`
-      SELECT DATE(o.created_at) AS order_date, 
+      SELECT DATE(o.created_at + INTERVAL 3 HOUR) AS order_date, 
              SUM(oi.quantity * oi.price) AS total_revenue
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       WHERE o.order_type = 'pos'
-      GROUP BY DATE(o.created_at)
+      GROUP BY DATE(o.created_at + INTERVAL 3 HOUR)
       ORDER BY order_date DESC
     `);
 
     const now = new Date();
-    const currentDate = now.toISOString().slice(0, 10);
+    const timeOffset = 3 * 60 * 60 * 1000; // UTC+3 in milliseconds
+    const localDate = new Date(now.getTime() + timeOffset);
+    const currentDate = localDate.toISOString().slice(0, 10);
 
     // normalize rows to YYYY-MM-DD
     const normalizedRows = rows.map(row => ({
@@ -260,17 +264,19 @@ export const getPOSDailySales = async () => {
 export const getOnlineDailySales = async () => {
   try {
     const [rows] = await db.execute(`
-      SELECT DATE(o.created_at) AS order_date, 
+      SELECT DATE(o.created_at + INTERVAL 3 HOUR) AS order_date, 
              SUM(oi.quantity * oi.price) AS total_revenue
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       WHERE o.order_type = 'online'
-      GROUP BY DATE(o.created_at)
+      GROUP BY DATE(o.created_at + INTERVAL 3 HOUR)
       ORDER BY order_date DESC
     `);
 
     const now = new Date();
-    const currentDate = now.toISOString().slice(0, 10);
+    const timeOffset = 3 * 60 * 60 * 1000; // UTC+3 in milliseconds
+    const localDate = new Date(now.getTime() + timeOffset);
+    const currentDate = localDate.toISOString().slice(0, 10);
 
     // normalize rows to YYYY-MM-DD
     const normalizedRows = rows.map(row => ({
