@@ -12,6 +12,8 @@ import {
   Barcode,
   LogOut,
   Home,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useAdminNotification } from "../context/AdminNotificationContext";
 
@@ -50,6 +52,7 @@ import "./Admin.css";
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("home");
+  const [expandedGroups, setExpandedGroups] = useState({});
   const navigate = useNavigate();
 
   // Admin notification context
@@ -69,6 +72,14 @@ export default function AdminPage() {
     if (tab === "preorders") resetNewPreordersCount();
   };
 
+  // Toggle group expansion
+  const toggleGroup = (category) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
+
   // Handle logout
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -81,6 +92,7 @@ export default function AdminPage() {
     {
       category: "Dashboard",
       icon: <Home size={16} />,
+      defaultOpen: true,
       tabs: [
         { value: "home", label: "Dashboard", icon: <Home size={16} /> },
       ]
@@ -156,33 +168,59 @@ export default function AdminPage() {
           </div>
           
           <nav className="topbar-nav">
-            {tabGroups.map((group, groupIndex) => (
-              <div key={group.category} className="nav-segment">
-                <div className="segment-header">
-                  {group.icon}
-                  <span>{group.category}</span>
-                </div>
-                <div className="segment-tabs">
-                  {group.tabs.map((tab) => (
+            {tabGroups.map((group) => {
+              const isExpanded = expandedGroups[group.category] ?? group.defaultOpen ?? false;
+              const hasSubmenu = group.tabs.length > 1;
+              
+              return (
+                <div key={group.category} className={`nav-segment ${isExpanded ? 'expanded' : ''}`}>
+                  {hasSubmenu ? (
+                    <>
+                      <button
+                        className={`segment-header clickable`}
+                        onClick={() => toggleGroup(group.category)}
+                        type="button"
+                      >
+                        {group.icon}
+                        <span>{group.category}</span>
+                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      </button>
+                      <div className={`segment-tabs ${isExpanded ? 'show' : ''}`}>
+                        {group.tabs.map((tab) => (
+                          <button
+                            key={tab.value}
+                            className={`topbar-tab ${activeTab === tab.value ? 'active' : ''}`}
+                            onClick={() => handleTabClick(tab.value)}
+                            type="button"
+                            data-label={tab.label}
+                          >
+                            {tab.icon}
+                            <span>{tab.label}</span>
+                            
+                            {tab.count > 0 && (
+                              <span className="notification-badge">{tab.count}</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
                     <button
-                      key={tab.value}
-                      className={`topbar-tab ${activeTab === tab.value ? "active" : ""}`}
-                      onClick={() => handleTabClick(tab.value)}
+                      className={`segment-header ${activeTab === group.tabs[0].value ? 'active' : ''}`}
+                      onClick={() => handleTabClick(group.tabs[0].value)}
                       type="button"
-                      data-label={tab.label}
                     >
-                      {tab.icon}
-                      <span>{tab.label}</span>
+                      {group.icon}
+                      <span>{group.tabs[0].label}</span>
                       
-                      {tab.count > 0 && (
-                        <span className="notification-badge">{tab.count}</span>
+                      {group.tabs[0].count > 0 && (
+                        <span className="notification-badge">{group.tabs[0].count}</span>
                       )}
                     </button>
-                  ))}
+                  )}
                 </div>
-                {groupIndex < tabGroups.length - 1 && <div className="segment-divider" />}
-              </div>
-            ))}
+              );
+            })}
           </nav>
           
           {/* Logout Button */}

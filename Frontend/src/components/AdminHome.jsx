@@ -11,7 +11,12 @@ import {
   ArrowRight,
 } from "lucide-react";
 import "./AdminHome.css";
-
+import { FaSackDollar } from "react-icons/fa6";
+import { FaOpencart } from "react-icons/fa6";
+import { FaBoxOpen } from "react-icons/fa6";
+import { HiUsers } from "react-icons/hi2";
+import { GiArrowed } from "react-icons/gi";
+import { GiArrowWings } from "react-icons/gi";
 export default function AdminHome({ onNavigate }) {
   const [stats, setStats] = useState({
     totalRevenue: 0,
@@ -103,7 +108,7 @@ export default function AdminHome({ onNavigate }) {
     {
       title: "Today's Revenue",
       value: formatCurrency(stats.todayRevenue),
-      icon: <DollarSign size={24} />,
+      icon: <FaSackDollar size={24} />,
       trend: stats.revenueGrowth,
       trendLabel: "vs yesterday",
       color: "revenue",
@@ -113,7 +118,7 @@ export default function AdminHome({ onNavigate }) {
     {
       title: "Today's Orders",
       value: stats.todayOrders,
-      icon: <ShoppingCart size={24} />,
+      icon: <FaOpencart size={24} />,
       trend: stats.ordersGrowth,
       trendLabel: "vs yesterday",
       color: "orders",
@@ -132,7 +137,7 @@ export default function AdminHome({ onNavigate }) {
     {
       title: "Pending Preorders",
       value: stats.pendingPreorders,
-      icon: <Package size={24} />,
+      icon: <FaBoxOpen size={24} />,
       subtitle: "Awaiting fulfillment",
       color: "preorder",
       navigateTo: "preorders",
@@ -150,7 +155,7 @@ export default function AdminHome({ onNavigate }) {
     {
       title: "Total Users",
       value: stats.totalUsers,
-      icon: <Users size={24} />,
+      icon: <HiUsers size={24} />,
       subtitle: "Registered customers",
       color: "users",
       navigateTo: "users",
@@ -183,9 +188,9 @@ export default function AdminHome({ onNavigate }) {
                 {card.trend !== undefined && (
                   <>
                     {card.trend >= 0 ? (
-                      <ArrowUpRight size={14} className="stat-card-trend--up" />
+                      <GiArrowWings size={14} className="stat-card-trend--up" />
                     ) : (
-                      <ArrowDownRight size={14} className="stat-card-trend--down" />
+                      <GiArrowed size={14} className="stat-card-trend--down" />
                     )}
                     <span className={card.trend >= 0 ? "stat-card-trend--up" : "stat-card-trend--down"}>
                       {Math.abs(card.trend)}%

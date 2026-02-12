@@ -151,6 +151,15 @@ html.dark .nav-segment {
   border: 1px solid rgba(255,255,255,0.06);
 }
 
+/* Expanded state */
+.nav-segment.expanded {
+  background: rgba(248,250,252,0.8);
+}
+
+html.dark .nav-segment.expanded {
+  background: rgba(40,45,55,0.8);
+}
+
 /* Segment header (category label) */
 .segment-header {
   display: flex;
@@ -175,37 +184,64 @@ html.dark .segment-header {
   background: rgba(0,0,0,0.3);
 }
 
+/* Active state for single-item segment header */
+.segment-header.active {
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+}
+
+html.dark .segment-header.active {
+  background: rgba(255,255,255,0.92);
+  color: #000;
+}
+
+/* Clickable segment header with chevron */
+.segment-header.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.segment-header.clickable:hover {
+  background: rgba(255,255,255,0.7);
+}
+
+html.dark .segment-header.clickable:hover {
+  background: rgba(50,50,50,0.7);
+}
+
+/* Chevron icon rotation */
+.segment-header svg.chevron {
+  transition: transform 0.2s ease;
+}
+
+.nav-segment.expanded .segment-header.clickable svg:last-child:not(.segment-header svg:first-child) {
+  transform: rotate(180deg);
+}
+
 /* Tabs within a segment */
 .segment-tabs {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  padding: 0;
+  margin: 0;
+  
+  transition: max-width 0.3s ease, opacity 0.3s ease, margin 0.3s ease, padding 0.3s ease;
 }
 
-/* Segment divider */
+.segment-tabs.show {
+  max-width: 500px;
+  opacity: 1;
+  padding: 0 0.35rem;
+}
+
+/* Segment divider - hide when expanded */
 .segment-divider {
-  width: 1px;
-  height: 32px;
-  
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(148,163,184,0.3) 20%,
-    rgba(148,163,184,0.3) 80%,
-    transparent 100%
-  );
-  
-  margin: 0 0.25rem;
-}
-
-html.dark .segment-divider {
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(255,255,255,0.1) 20%,
-    rgba(255,255,255,0.1) 80%,
-    transparent 100%
-  );
+  display: none;
 }
 
 /* Topbar tab buttons */
