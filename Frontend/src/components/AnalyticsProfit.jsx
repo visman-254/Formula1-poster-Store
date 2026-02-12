@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { fetchDailySales, fetchMonthlySales } from "../api/analytics";
-import { fetchPOSDailySales, fetchOnlineDailySales, fetchPOSMonthlySales, fetchOnlineMonthlySales } from "../api/orderTypeAnalytics";
+import { fetchDailyProfit, fetchMonthlyProfit, fetchPOSDailyProfit, fetchOnlineDailyProfit, fetchPOSMonthlyProfit, fetchOnlineMonthlyProfit } from "../api/analyticsProfit";
 import {
   Card,
   CardHeader,
@@ -19,14 +18,14 @@ import {
 import { Calendar, CalendarRange } from "lucide-react"; 
 import { CiFilter } from "react-icons/ci";
 
-const AnalyticsDay = () => {
-  const [dailySales, setDailySales] = useState([]);
-  const [monthlySales, setMonthlySales] = useState([]);
-  const [posSales, setPOSSales] = useState([]);
-  const [onlineSales, setOnlineSales] = useState([]);
-  const [posMonthlySales, setPOSMonthlySales] = useState([]);
-  const [onlineMonthlySales, setOnlineMonthlySales] = useState([]);
-  const [salesType, setSalesType] = useState("all"); // 'all', 'pos', 'online'
+const AnalyticsProfit = () => {
+  const [dailyProfit, setDailyProfit] = useState([]);
+  const [monthlyProfit, setMonthlyProfit] = useState([]);
+  const [posDailyProfit, setPOSDailyProfit] = useState([]);
+  const [onlineDailyProfit, setOnlineDailyProfit] = useState([]);
+  const [posMonthlyProfit, setPOSMonthlyProfit] = useState([]);
+  const [onlineMonthlyProfit, setOnlineMonthlyProfit] = useState([]);
+  const [profitType, setProfitType] = useState("all"); // 'all', 'pos', 'online'
   const [timePeriod, setTimePeriod] = useState("day"); // 'day', 'monthly'
   const [loading, setLoading] = useState(true);
 
@@ -35,21 +34,24 @@ const AnalyticsDay = () => {
       setLoading(true);
       try {
         const [allDaily, allMonthly, posDaily, onlineDaily, posMonthly, onlineMonthly] = await Promise.all([
-          fetchDailySales(),
-          fetchMonthlySales(),
-          fetchPOSDailySales(),
-          fetchOnlineDailySales(),
-          fetchPOSMonthlySales(),
-          fetchOnlineMonthlySales()
+          fetchDailyProfit(),
+          fetchMonthlyProfit(),
+          fetchPOSDailyProfit(),
+          fetchOnlineDailyProfit(),
+          fetchPOSMonthlyProfit(),
+          fetchOnlineMonthlyProfit()
         ]);
-        setDailySales(allDaily);
-        setMonthlySales(allMonthly);
-        setPOSSales(posDaily);
-        setOnlineSales(onlineDaily);
-        setPOSMonthlySales(posMonthly);
-        setOnlineMonthlySales(onlineMonthly);
+        console.log("DEBUG: Daily Profit Data:", JSON.stringify(allDaily, null, 2));
+        console.log("DEBUG: POS Daily Profit:", JSON.stringify(posDaily, null, 2));
+        console.log("DEBUG: Online Daily Profit:", JSON.stringify(onlineDaily, null, 2));
+        setDailyProfit(allDaily);
+        setMonthlyProfit(allMonthly);
+        setPOSDailyProfit(posDaily);
+        setOnlineDailyProfit(onlineDaily);
+        setPOSMonthlyProfit(posMonthly);
+        setOnlineMonthlyProfit(onlineMonthly);
       } catch (error) {
-        console.error("Error fetching sales data:", error);
+        console.error("Error fetching profit data:", error);
       } finally {
         setLoading(false);
       }
@@ -57,65 +59,65 @@ const AnalyticsDay = () => {
     fetchAllData();
   }, []);
 
-  const sortedSales = [...dailySales].sort(
+  const sortedDailyProfit = [...dailyProfit].sort(
     (a, b) => new Date(a.order_date) - new Date(b.order_date)
   );
 
-  const sortedPOSSales = [...posSales].sort(
+  const sortedMonthlyProfit = [...monthlyProfit].sort(
     (a, b) => new Date(a.order_date) - new Date(b.order_date)
   );
 
-  const sortedOnlineSales = [...onlineSales].sort(
+  const sortedPOSDailyProfit = [...posDailyProfit].sort(
     (a, b) => new Date(a.order_date) - new Date(b.order_date)
   );
 
-  const sortedMonthlySales = [...monthlySales].sort(
+  const sortedOnlineDailyProfit = [...onlineDailyProfit].sort(
     (a, b) => new Date(a.order_date) - new Date(b.order_date)
   );
 
-  const sortedPOSMonthlySales = [...posMonthlySales].sort(
+  const sortedPOSMonthlyProfit = [...posMonthlyProfit].sort(
     (a, b) => new Date(a.order_date) - new Date(b.order_date)
   );
 
-  const sortedOnlineMonthlySales = [...onlineMonthlySales].sort(
+  const sortedOnlineMonthlyProfit = [...onlineMonthlyProfit].sort(
     (a, b) => new Date(a.order_date) - new Date(b.order_date)
   );
 
   const getCurrentData = () => {
     if (timePeriod === "day") {
-      switch (salesType) {
+      switch (profitType) {
         case "pos":
-          return sortedPOSSales;
+          return sortedPOSDailyProfit;
         case "online":
-          return sortedOnlineSales;
+          return sortedOnlineDailyProfit;
         default:
-          return sortedSales;
+          return sortedDailyProfit;
       }
     } else {
-      switch (salesType) {
+      switch (profitType) {
         case "pos":
-          return sortedPOSMonthlySales;
+          return sortedPOSMonthlyProfit;
         case "online":
-          return sortedOnlineMonthlySales;
+          return sortedOnlineMonthlyProfit;
         default:
-          return sortedMonthlySales;
+          return sortedMonthlyProfit;
       }
     }
   };
 
-  const getTotalRevenue = () => {
+  const getTotalProfit = () => {
     const data = getCurrentData();
-    return data.length > 0 ? data[data.length - 1]?.total_revenue || 0 : 0;
+    return data.length > 0 ? data[data.length - 1]?.total_profit || 0 : 0;
   };
 
   const getTypeLabel = () => {
-    switch (salesType) {
+    switch (profitType) {
       case "pos":
         return "POS";
       case "online":
         return "Online";
       default:
-        return "All";
+        return "Total";
     }
   };
 
@@ -142,7 +144,7 @@ const AnalyticsDay = () => {
       <CardHeader data-radix-card-header="" className="flex flex-row items-center justify-between">
         {/* Dynamic title based on time period */}
         <CardTitle data-radix-card-title="">
-          {timePeriod === "day" ? "Daily Sales" : "Monthly Sales"}
+          {timePeriod === "day" ? "Daily Profit" : "Monthly Profit"}
         </CardTitle>
         <div className="flex gap-2">
           {/* Time Period Filters */}
@@ -158,13 +160,13 @@ const AnalyticsDay = () => {
             onClick={() => setTimePeriod("monthly")}
             title="Monthly View"
           >
-            <CalendarRange size={16} /> {/* Replaced BarChart3 with CalendarRange */}
+            <CalendarRange size={16} />
           </button>
           {/* Filter between All/POS/Online */}
           <div className="relative group ml-2 border-l border-gray-700 pl-2">
             <button
               className={iconButtonClass(true)}
-              title="Filter Sales Type"
+              title="Filter Profit Type"
             >
               <CiFilter size={18} />
             </button>
@@ -172,25 +174,25 @@ const AnalyticsDay = () => {
             <div className="absolute right-0 mt-2 w-32 bg-gray-800 rounded-md shadow-lg hidden group-hover:block z-10">
               <button
                 className={`block w-full text-left px-4 py-2 text-sm rounded-t-md ${
-                  salesType === "all" ? "bg-gray-600 text-white" : "text-gray-300 hover:bg-gray-700"
+                  profitType === "all" ? "bg-gray-600 text-white" : "text-gray-300 hover:bg-gray-700"
                 }`}
-                onClick={() => setSalesType("all")}
+                onClick={() => setProfitType("all")}
               >
-                All Sales
+                All Profit
               </button>
               <button
                 className={`block w-full text-left px-4 py-2 text-sm ${
-                  salesType === "pos" ? "bg-gray-600 text-white" : "text-gray-300 hover:bg-gray-700"
+                  profitType === "pos" ? "bg-gray-600 text-white" : "text-gray-300 hover:bg-gray-700"
                 }`}
-                onClick={() => setSalesType("pos")}
+                onClick={() => setProfitType("pos")}
               >
                 POS
               </button>
               <button
                 className={`block w-full text-left px-4 py-2 text-sm rounded-b-md ${
-                  salesType === "online" ? "bg-gray-600 text-white" : "text-gray-300 hover:bg-gray-700"
+                  profitType === "online" ? "bg-gray-600 text-white" : "text-gray-300 hover:bg-gray-700"
                 }`}
-                onClick={() => setSalesType("online")}
+                onClick={() => setProfitType("online")}
               >
                 Online
               </button>
@@ -199,8 +201,8 @@ const AnalyticsDay = () => {
         </div>
       </CardHeader>
       <CardContent data-radix-card-content="">
-        <p className="text-3xl font-bold">Kshs {getTotalRevenue().toLocaleString()}</p>
-        <p className="text-sm text-gray-400 mt-1">{getTypeLabel()} Sales</p>
+        <p className="text-3xl font-bold text-white">Kshs {getTotalProfit().toLocaleString()}</p>
+        <p className="text-sm text-gray-400 mt-1">{getTypeLabel()} Profit</p>
         <div className="h-[200px] w-full mt-4">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={currentData}>
@@ -226,12 +228,13 @@ const AnalyticsDay = () => {
                   border: '1px solid #4b5563',
                   color: '#f1f5f9'
                 }}
+                formatter={(value) => [`Kshs ${value.toLocaleString()}`, 'Profit']}
               />
               <Area 
                 type="monotone" 
-                dataKey="total_revenue" 
-                stroke="#9ca3af" 
-                fill="#9ca3af" 
+                dataKey="total_profit" 
+                stroke="#ffffff" 
+                fill="#ffffff" 
                 fillOpacity={0.15} 
               />
             </AreaChart>
@@ -242,4 +245,4 @@ const AnalyticsDay = () => {
   );
 };
 
-export default AnalyticsDay;
+export default AnalyticsProfit;

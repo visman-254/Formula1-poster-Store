@@ -18,12 +18,16 @@ import { HiUsers } from "react-icons/hi2";
 import { GiArrowed } from "react-icons/gi";
 import { GiArrowWings } from "react-icons/gi";
 import AnalyticsDay from "./AnalyticsDay";
+import AnalyticsProfit from "./AnalyticsProfit";
 import GlassmorphicContainer from "./GlassmorphicContainer";
 export default function AdminHome({ onNavigate }) {
   const [stats, setStats] = useState({
     totalRevenue: 0,
     todayRevenue: 0,
     yesterdayRevenue: 0,
+    totalProfit: 0,
+    todayProfit: 0,
+    yesterdayProfit: 0,
     totalOrders: 0,
     todayOrders: 0,
     yesterdayOrders: 0,
@@ -49,10 +53,10 @@ export default function AdminHome({ onNavigate }) {
       });
       const data = await res.json();
 
-      // Calculate revenue growth percentage
-      const revenueGrowth = data.revenue?.yesterday > 0 
-        ? ((data.revenue?.today - data.revenue?.yesterday) / data.revenue?.yesterday * 100)
-        : data.revenue?.today > 0 ? 100 : 0;
+      // Calculate profit growth percentage
+      const profitGrowth = data.profit?.yesterday > 0 
+        ? ((data.profit?.today - data.profit?.yesterday) / data.profit?.yesterday * 100)
+        : data.profit?.today > 0 ? 100 : 0;
 
       // Calculate orders growth percentage
       const ordersGrowth = data.orders?.yesterday > 0 
@@ -63,7 +67,10 @@ export default function AdminHome({ onNavigate }) {
         totalRevenue: data.revenue?.total || 0,
         todayRevenue: data.revenue?.today || 0,
         yesterdayRevenue: data.revenue?.yesterday || 0,
-        revenueGrowth: parseFloat(revenueGrowth.toFixed(1)),
+        totalProfit: data.profit?.total || 0,
+        todayProfit: data.profit?.today || 0,
+        yesterdayProfit: data.profit?.yesterday || 0,
+        revenueGrowth: parseFloat(profitGrowth.toFixed(1)),
         totalOrders: data.orders?.total || 0,
         todayOrders: data.orders?.today || 0,
         yesterdayOrders: data.orders?.yesterday || 0,
@@ -81,6 +88,9 @@ export default function AdminHome({ onNavigate }) {
         totalRevenue: 125000,
         todayRevenue: 5200,
         yesterdayRevenue: 4800,
+        totalProfit: 25000,
+        todayProfit: 1040,
+        yesterdayProfit: 960,
         revenueGrowth: 8.3,
         totalOrders: 89,
         todayOrders: 12,
@@ -108,8 +118,8 @@ export default function AdminHome({ onNavigate }) {
 
   const statCards = [
     {
-      title: "Today's Revenue",
-      value: formatCurrency(stats.todayRevenue),
+      title: "Today's Profit",
+      value: formatCurrency(stats.todayProfit),
       icon: <FaSackDollar size={24} />,
       trend: stats.revenueGrowth,
       trendLabel: "vs yesterday",
@@ -220,29 +230,47 @@ export default function AdminHome({ onNavigate }) {
         ))}
       </div>
 
-      {/* Daily Sales Chart - Full Width Card */}
-      <div className="dashboard-chart-section">
-        <GlassmorphicContainer>
-          <div className="chart-section-header">
-            <h2 className="chart-title">Daily Sales Overview</h2>
-            <button 
-              className="chart-view-all"
-              onClick={() => onNavigate && onNavigate("analytics")}
-            >
-              View Full Analytics <ArrowRight size={14} />
-            </button>
-          </div>
-          <div className="chart-container">
-            <AnalyticsDay />
-          </div>
-        </GlassmorphicContainer>
+      {/* Charts Section - Side by Side Grid */}
+      <div className="dashboard-charts-grid">
+        {/* Daily Sales Chart */}
+        <div className="dashboard-chart-section">
+          <GlassmorphicContainer>
+            <div className="chart-section-header">
+              <h2 className="chart-title">Daily Sales Overview</h2>
+              <button 
+                className="chart-view-all"
+                onClick={() => onNavigate && onNavigate("analytics")}
+              >
+                View Full Analytics <ArrowRight size={14} />
+              </button>
+            </div>
+            <div className="chart-container">
+              <AnalyticsDay />
+            </div>
+          </GlassmorphicContainer>
+        </div>
+
+        {/* Daily Profit Chart */}
+        <div className="dashboard-chart-section">
+          <GlassmorphicContainer>
+            <div className="chart-section-header">
+              <h2 className="chart-title">Daily Profit Overview</h2>
+              <button 
+                className="chart-view-all"
+                onClick={() => onNavigate && onNavigate("analytics")}
+              >
+                View Full Analytics <ArrowRight size={14} />
+              </button>
+            </div>
+            <div className="chart-container">
+              <AnalyticsProfit />
+            </div>
+          </GlassmorphicContainer>
+        </div>
       </div>
 
       <div className="admin-home-footer">
-        <div className="quick-actions">
-          <h3 className="quick-actions-title">Quick Actions</h3>
-         
-        </div>
+        
       </div>
     </div>
   );

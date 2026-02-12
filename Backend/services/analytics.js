@@ -1,3 +1,4 @@
+
 import db from "../config/db.js";
 
 
@@ -7,6 +8,7 @@ export const getTotalRevenue = async () => {
       SELECT SUM(oi.quantity * oi.price) AS total_revenue
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
+      WHERE o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
     `);
 
     return rows[0].total_revenue || 0;
@@ -23,6 +25,7 @@ export const getTotalDailySales = async () => {
              SUM(oi.quantity * oi.price) AS total_revenue
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
+      WHERE o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
       GROUP BY DATE(o.created_at + INTERVAL 3 HOUR)
       ORDER BY order_date DESC
     `);
@@ -60,6 +63,7 @@ export const getTotalMonthlySales = async () => {
              SUM(oi.quantity * oi.price) AS total_revenue
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
+      WHERE o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
       GROUP BY DATE_FORMAT(o.created_at, '%Y-%m')
       ORDER BY order_date DESC
     `);
@@ -90,7 +94,7 @@ export const getproductSalesVolume = async () => {
       JOIN orders o ON oi.order_id = o.id
       JOIN product_variants pv ON oi.variant_id = pv.variant_id
       JOIN products p ON pv.product_id = p.product_id
-      WHERE o.status IN ('paid', 'delivered', 'shipped')
+      WHERE o.status IN ('paid', 'delivered', 'shipped', 'pos_completed')
       GROUP BY p.product_id, p.title
       ORDER BY total_quantity_sold DESC
     `);
@@ -107,22 +111,21 @@ export const getProductProfit = async () => {
   try{
     const [rows] = await db.execute(`
       SELECT p.product_id, p.title AS product_name,
-              SUM((oi.price - oi.unit_buying_price - oi.unit_discount) * oi.quantity) AS total_profit
+              SUM((oi.price - CASE WHEN oi.unit_buying_price > 0 THEN oi.unit_buying_price ELSE pv.buying_price END - oi.unit_discount) * oi.quantity) AS total_profit
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       JOIN product_variants pv ON oi.variant_id = pv.variant_id
       JOIN products p ON pv.product_id = p.product_id
-      WHERE o.status = 'delivered'
+      WHERE o.status IN ('paid', 'delivered', 'shipped', 'pos_completed')
       GROUP BY p.product_id, p.title
       ORDER BY total_profit DESC
-    `);     
-
+    `);      
       
     return rows;
   } catch (err) {
     console.error("Error fetching product profit:", err);
     throw err;
-  
+   
   }
 
 
@@ -138,7 +141,7 @@ export const getProductRevenue = async () => {
       JOIN orders o ON oi.order_id = o.id
       JOIN product_variants pv ON oi.variant_id = pv.variant_id
       JOIN products p ON pv.product_id = p.product_id
-      WHERE o.status IN ('shipped', 'delivered')
+      WHERE o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
       GROUP BY p.product_id, p.title
       ORDER BY total_revenue DESC
     `);
@@ -156,13 +159,13 @@ export const getProductPerformance = async () => {
       SELECT p.product_id, p.title AS product_name, 
              SUM(oi.quantity) AS total_quantity_sold,
              SUM(oi.quantity * oi.price) AS total_revenue,
-             SUM((oi.price - oi.unit_buying_price - oi.unit_discount) * oi.quantity) AS total_profit,
+             SUM((oi.price - CASE WHEN oi.unit_buying_price > 0 THEN oi.unit_buying_price ELSE pv.buying_price END - oi.unit_discount) * oi.quantity) AS total_profit,
              AVG(oi.price) AS average_price
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       JOIN product_variants pv ON oi.variant_id = pv.variant_id
       JOIN products p ON pv.product_id = p.product_id
-      WHERE o.status IN ('shipped', 'delivered')
+      WHERE o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
       GROUP BY p.product_id, p.title
       ORDER BY total_revenue DESC
     `);
@@ -180,13 +183,14 @@ export const getBatchProfitTrajectory = async (variantId) => {
         pb.date_received,
         pb.buying_price,
         pb.quantity_received,
-        SUM(CASE WHEN o.status IN ('shipped', 'delivered') THEN oi.quantity ELSE 0 END) as sold_quantity,
-        SUM(CASE WHEN o.status IN ('shipped', 'delivered') THEN oi.quantity * oi.price ELSE 0 END) as revenue,
-        SUM(CASE WHEN o.status IN ('shipped', 'delivered') THEN oi.quantity * (oi.price - oi.unit_buying_price - oi.unit_discount) ELSE 0 END) as profit
+        SUM(CASE WHEN o.status IN ('paid', 'shipped', 'delivered', 'pos_completed') THEN oi.quantity ELSE 0 END) as sold_quantity,
+        SUM(CASE WHEN o.status IN ('paid', 'shipped', 'delivered', 'pos_completed') THEN oi.quantity * oi.price ELSE 0 END) as revenue,
+        SUM(CASE WHEN o.status IN ('paid', 'shipped', 'delivered', 'pos_completed') THEN oi.quantity * (oi.price - CASE WHEN oi.unit_buying_price > 0 THEN oi.unit_buying_price ELSE pv.buying_price END - oi.unit_discount) ELSE 0 END) as profit
       FROM product_batches pb
       LEFT JOIN order_items oi ON oi.variant_id = pb.variant_id 
         AND oi.created_at >= pb.date_received
       LEFT JOIN orders o ON oi.order_id = o.id
+      LEFT JOIN product_variants pv ON oi.variant_id = pv.variant_id
       WHERE pb.variant_id = ?
       GROUP BY pb.batch_id
       ORDER BY pb.date_received
@@ -231,6 +235,7 @@ export const getPOSDailySales = async () => {
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       WHERE o.order_type = 'pos'
+        AND o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
       GROUP BY DATE(o.created_at + INTERVAL 3 HOUR)
       ORDER BY order_date DESC
     `);
@@ -269,6 +274,7 @@ export const getOnlineDailySales = async () => {
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       WHERE o.order_type = 'online'
+        AND o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
       GROUP BY DATE(o.created_at + INTERVAL 3 HOUR)
       ORDER BY order_date DESC
     `);
@@ -307,6 +313,7 @@ export const getPOSMonthlySales = async () => {
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       WHERE o.order_type = 'pos'
+        AND o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
       GROUP BY DATE_FORMAT(o.created_at, '%Y-%m')
       ORDER BY order_date DESC
     `);
@@ -335,6 +342,7 @@ export const getOnlineMonthlySales = async () => {
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       WHERE o.order_type = 'online'
+        AND o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
       GROUP BY DATE_FORMAT(o.created_at, '%Y-%m')
       ORDER BY order_date DESC
     `);
@@ -365,6 +373,7 @@ export const getSalesByOrderType = async () => {
         SUM(oi.quantity) AS total_quantity
       FROM orders o
       JOIN order_items oi ON o.id = oi.order_id
+      WHERE o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
       GROUP BY o.order_type
       ORDER BY total_revenue DESC
     `);
@@ -386,6 +395,7 @@ export const getOrderTypeDailyComparison = async () => {
       FROM orders o
       JOIN order_items oi ON o.id = oi.order_id
       WHERE o.order_type IN ('pos', 'online')
+        AND o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
       GROUP BY DATE(o.created_at), o.order_type
       ORDER BY order_date DESC
       LIMIT 30
@@ -413,11 +423,21 @@ export const getOrderTypeDailyComparison = async () => {
 // Dashboard stats aggregation
 export const getDashboardStats = async () => {
   try {
-    // Get total revenue (all time)
+    // Get total revenue (all time) - SALES amount
     const [[{ total_revenue }]] = await db.execute(`
       SELECT SUM(oi.quantity * oi.price) AS total_revenue
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
+      WHERE o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
+    `);
+
+    // Get total profit (all time) - actual profit (using variant buying_price as fallback)
+    const [[{ total_profit }]] = await db.execute(`
+      SELECT SUM((oi.price - CASE WHEN oi.unit_buying_price > 0 THEN oi.unit_buying_price ELSE pv.buying_price END - oi.unit_discount) * oi.quantity) AS total_profit
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      JOIN product_variants pv ON oi.variant_id = pv.variant_id
+      WHERE o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
     `);
 
     // Get today's date in local timezone (Africa/Nairobi UTC+3)
@@ -430,12 +450,23 @@ export const getDashboardStats = async () => {
     const yesterdayDate = new Date(localDate.getTime() - 86400000);
     const yesterday = yesterdayDate.toISOString().slice(0, 10);
 
-    // Get today's revenue - using Nairobi timezone (UTC+3)
+    // Get today's revenue (sales) - using Nairobi timezone (UTC+3)
     const [[{ today_revenue }]] = await db.execute(`
       SELECT COALESCE(SUM(oi.quantity * oi.price), 0) AS today_revenue
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       WHERE DATE(o.created_at + INTERVAL 3 HOUR) = CURDATE()
+        AND o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
+    `);
+
+    // Get today's profit - using Nairobi timezone (UTC+3) and variant buying_price as fallback
+    const [[{ today_profit }]] = await db.execute(`
+      SELECT COALESCE(SUM((oi.price - CASE WHEN oi.unit_buying_price > 0 THEN oi.unit_buying_price ELSE pv.buying_price END - oi.unit_discount) * oi.quantity), 0) AS today_profit
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      JOIN product_variants pv ON oi.variant_id = pv.variant_id
+      WHERE DATE(o.created_at + INTERVAL 3 HOUR) = CURDATE()
+        AND o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
     `);
 
     // Get yesterday's revenue for trend calculation
@@ -444,21 +475,37 @@ export const getDashboardStats = async () => {
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       WHERE DATE(o.created_at + INTERVAL 3 HOUR) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+        AND o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
+    `);
+
+    // Get yesterday's profit for trend calculation - using variant buying_price as fallback
+    const [[{ yesterday_profit }]] = await db.execute(`
+      SELECT COALESCE(SUM((oi.price - CASE WHEN oi.unit_buying_price > 0 THEN oi.unit_buying_price ELSE pv.buying_price END - oi.unit_discount) * oi.quantity), 0) AS yesterday_profit
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      JOIN product_variants pv ON oi.variant_id = pv.variant_id
+      WHERE DATE(o.created_at + INTERVAL 3 HOUR) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+        AND o.status IN ('paid', 'shipped', 'delivered', 'pos_completed')
     `);
 
     // Get total orders count
     const [[{ total_orders }]] = await db.execute(`
-      SELECT COUNT(*) AS total_orders FROM orders
+      SELECT COUNT(*) AS total_orders FROM orders 
+      WHERE status IN ('paid', 'shipped', 'delivered', 'pos_completed')
     `);
 
     // Get today's orders count - using Nairobi timezone (UTC+3)
     const [[{ today_orders }]] = await db.execute(`
-      SELECT COUNT(*) AS today_orders FROM orders WHERE DATE(created_at + INTERVAL 3 HOUR) = CURDATE()
+      SELECT COUNT(*) AS today_orders FROM orders 
+      WHERE DATE(created_at + INTERVAL 3 HOUR) = CURDATE()
+        AND status IN ('paid', 'shipped', 'delivered', 'pos_completed')
     `);
 
     // Get yesterday's orders for trend
     const [[{ yesterday_orders }]] = await db.execute(`
-      SELECT COUNT(*) AS yesterday_orders FROM orders WHERE DATE(created_at + INTERVAL 3 HOUR) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+      SELECT COUNT(*) AS yesterday_orders FROM orders 
+      WHERE DATE(created_at + INTERVAL 3 HOUR) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+        AND status IN ('paid', 'shipped', 'delivered', 'pos_completed')
     `);
 
     // Get low stock count (products with stock <= 5)
@@ -482,7 +529,8 @@ export const getDashboardStats = async () => {
 
     // Get today's preorders count - using Nairobi timezone (UTC+3)
     const [[{ today_preorders }]] = await db.execute(`
-      SELECT COUNT(*) AS today_preorders FROM preorders p WHERE DATE(p.created_at + INTERVAL 3 HOUR) = CURDATE() AND status = 'pending'
+      SELECT COUNT(*) AS today_preorders FROM preorders p 
+      WHERE DATE(p.created_at + INTERVAL 3 HOUR) = CURDATE() AND status = 'pending'
     `);
 
     // Get total products count
@@ -500,6 +548,11 @@ export const getDashboardStats = async () => {
         total: Number(total_revenue) || 0,
         today: Number(today_revenue) || 0,
         yesterday: Number(yesterday_revenue) || 0,
+      },
+      profit: {
+        total: Number(total_profit) || 0,
+        today: Number(today_profit) || 0,
+        yesterday: Number(yesterday_profit) || 0,
       },
       orders: {
         total: Number(total_orders) || 0,

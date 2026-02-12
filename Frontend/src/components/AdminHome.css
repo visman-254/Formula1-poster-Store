@@ -484,12 +484,29 @@ html.dark {
 }
 
 /* ==========================================================================
+   DASHBOARD CHARTS GRID - Side by Side Layout
+   ========================================================================== */
+
+.dashboard-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+/* Responsive: Stack on mobile */
+@media (max-width: 1200px) {
+  .dashboard-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
    DASHBOARD CHART SECTION - Full Width Card
    ========================================================================== */
 
 .dashboard-chart-section {
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
+  /* margin handled by grid */
 }
 
 .chart-section-header {
