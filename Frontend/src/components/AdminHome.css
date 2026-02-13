@@ -551,3 +551,133 @@ html.dark {
   background: rgba(30, 35, 45, 0.3);
   border-radius: 8px;
 }
+
+/* ==========================================================================
+   ADMIN PRODUCT ANALYTICS - Pie Charts for AdminHome
+   ========================================================================== */
+
+.admin-product-analytics {
+  margin-top: 1.5rem;
+}
+
+.admin-product-analytics-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: var(--color-text-secondary);
+}
+
+.admin-product-analytics-error {
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-error);
+}
+
+.analytics-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.analytics-header-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.analytics-view-all {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: var(--color-button-bg);
+  color: var(--color-button-text);
+  border: 1px solid var(--color-button-border);
+  transition: all 0.2s ease;
+}
+
+.analytics-view-all:hover {
+  background: var(--color-button-hover);
+}
+
+.analytics-pies-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+.analytics-pie-card {
+  background: rgba(30, 35, 45, 0.3);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid var(--color-border-subtle);
+}
+
+.analytics-pie-header {
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+.analytics-pie-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 0.35rem 0;
+}
+
+.analytics-pie-total {
+  font-size: 0.8rem;
+  color: #e5e7eb;
+  margin: 0;
+}
+
+.analytics-pie-container {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.analytics-pie-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #e5e7eb;
+  font-size: 0.85rem;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .analytics-pies-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .analytics-pies-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-section-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .analytics-view-all {
+    width: 100%;
+    justify-content: center;
+  }
+}

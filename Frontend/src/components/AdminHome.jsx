@@ -19,6 +19,8 @@ import { GiArrowed } from "react-icons/gi";
 import { GiArrowWings } from "react-icons/gi";
 import AnalyticsDay from "./AnalyticsDay";
 import AnalyticsProfit from "./AnalyticsProfit";
+import AdminProductAnalytics from "./AdminProductAnalytics";
+import AddProductModal from "./AddProductModal";
 import GlassmorphicContainer from "./GlassmorphicContainer";
 export default function AdminHome({ onNavigate }) {
   const [stats, setStats] = useState({
@@ -38,6 +40,7 @@ export default function AdminHome({ onNavigate }) {
     totalUsers: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
 
   useEffect(() => {
     fetchDashboardStats();
@@ -161,8 +164,8 @@ export default function AdminHome({ onNavigate }) {
       icon: <Package size={24} />,
       subtitle: "In catalog",
       color: "products",
-      navigateTo: "products",
-      buttonLabel: "View Products",
+      isAddProduct: true,
+      buttonLabel: "Add New Product",
     },
     {
       title: "Total Users",
@@ -225,6 +228,15 @@ export default function AdminHome({ onNavigate }) {
                   <ArrowRight size={14} />
                 </button>
               )}
+              {card.isAddProduct && (
+                <button 
+                  className="stat-card-button"
+                  onClick={() => setIsAddProductModalOpen(true)}
+                >
+                  <span>{card.buttonLabel}</span>
+                  <ArrowRight size={14} />
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -268,6 +280,15 @@ export default function AdminHome({ onNavigate }) {
           </GlassmorphicContainer>
         </div>
       </div>
+
+      {/* Product Performance Pie Charts */}
+      <AdminProductAnalytics onNavigate={onNavigate} />
+
+      {/* Add Product Modal */}
+      <AddProductModal 
+        isOpen={isAddProductModalOpen} 
+        onClose={() => setIsAddProductModalOpen(false)} 
+      />
 
       <div className="admin-home-footer">
         

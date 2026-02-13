@@ -12,8 +12,8 @@ import {
   Barcode,
   LogOut,
   Home,
-  ChevronDown,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { useAdminNotification } from "../context/AdminNotificationContext";
 
@@ -51,8 +51,9 @@ import { useNavigate } from "react-router-dom";
 import "./Admin.css";
 
 export default function AdminPage() {
+  const [activeCategory, setActiveCategory] = useState("Dashboard");
   const [activeTab, setActiveTab] = useState("home");
-  const [expandedGroups, setExpandedGroups] = useState({});
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
 
   // Admin notification context
@@ -64,20 +65,18 @@ export default function AdminPage() {
     resetNewPreordersCount,
   } = useAdminNotification();
 
+  // Handle category selection from top nav
+  const handleCategoryClick = (category) => {
+    setActiveCategory(category);
+    setSidebarOpen(true);
+  };
+
   // Handle tab clicks
   const handleTabClick = (tab) => {
     setActiveTab(tab);
 
     if (tab === "orders") resetNewOrdersCount();
     if (tab === "preorders") resetNewPreordersCount();
-  };
-
-  // Toggle group expansion
-  const toggleGroup = (category) => {
-    setExpandedGroups(prev => ({
-      ...prev,
-      [category]: !prev[category]
-    }));
   };
 
   // Handle logout
@@ -87,54 +86,53 @@ export default function AdminPage() {
     navigate("/login");
   };
 
-  // Top navigation tabs grouped by category
-  const tabGroups = [
-    {
-      category: "Dashboard",
-      icon: <Home size={16} />,
-      defaultOpen: true,
-      tabs: [
-        { value: "home", label: "Dashboard", icon: <Home size={16} /> },
-      ]
-    },
-    {
-      category: "Products & Inventory",
-      icon: <PackageSearch size={16} />,
-      tabs: [
-        { value: "products", label: "All Products", icon: <PackageSearch size={16} /> },
-        { value: "add", label: "Add Product", icon: <BookmarkPlus size={16} /> },
-        { value: "delete", label: "Categories", icon: <Delete size={16} /> },
-        { value: "uncategorized", label: "Uncategorized", icon: <HeartCrack size={16} /> },
-        { value: "imei", label: "IMEI Tracking", icon: <Barcode size={16} /> },
-      ]
-    },
-    {
-      category: "Orders & Sales",
-      icon: <Forklift size={16} />,
-      tabs: [
-        { value: "orders", label: "Orders", icon: <Forklift size={16} />, count: newOrdersCount },
-        { value: "backorders", label: "Backorders", icon: <Forklift size={16} /> },
-        { value: "preorders", label: "Preorders", icon: <Shuffle size={16} />, count: newPreordersCount },
-      ]
-    },
-    {
-      category: "Website",
-      icon: <ChartNoAxesCombined size={16} />,
-      tabs: [
-        { value: "create-hero", label: "Hero Slides", icon: <PackageSearch size={16} /> },
-        { value: "create-promotion", label: "Promotions", icon: <PackageSearch size={16} /> },
-      ]
-    },
-    {
-      category: "System",
-      icon: <User size={16} />,
-      tabs: [
-        { value: "analytics", label: "Analytics", icon: <ChartNoAxesCombined size={16} /> },
-        { value: "low-stock", label: "Low Stock", icon: <BellElectric size={16} />, count: lowStockCount },
-        { value: "users", label: "Users", icon: <User size={16} /> },
-      ]
-    },
+  // Top navigation categories
+  const categories = [
+    { name: "Dashboard", icon: <Home size={18} /> },
+    { name: "Products & Inventory", icon: <PackageSearch size={18} /> },
+    { name: "Orders & Sales", icon: <Forklift size={18} />, badge: newOrdersCount + newPreordersCount },
+    { name: "Website", icon: <ChartNoAxesCombined size={18} /> },
+    { name: "System", icon: <User size={18} />, badge: lowStockCount },
   ];
+
+  // Get tabs for current category
+  const getCurrentTabs = () => {
+    switch (activeCategory) {
+      case "Dashboard":
+        return [
+          { value: "home", label: "Dashboard", icon: <Home size={16} /> },
+        ];
+      case "Products & Inventory":
+        return [
+          { value: "products", label: "All Products", icon: <PackageSearch size={16} /> },
+          { value: "add", label: "Add Product", icon: <BookmarkPlus size={16} /> },
+          { value: "delete", label: "Categories", icon: <Delete size={16} /> },
+          { value: "uncategorized", label: "Uncategorized", icon: <HeartCrack size={16} /> },
+          { value: "imei", label: "IMEI Tracking", icon: <Barcode size={16} /> },
+        ];
+      case "Orders & Sales":
+        return [
+          { value: "orders", label: "Orders", icon: <Forklift size={16} />, count: newOrdersCount },
+          { value: "backorders", label: "Backorders", icon: <Forklift size={16} /> },
+          { value: "preorders", label: "Preorders", icon: <Shuffle size={16} />, count: newPreordersCount },
+        ];
+      case "Website":
+        return [
+          { value: "create-hero", label: "Hero Slides", icon: <PackageSearch size={16} /> },
+          { value: "create-promotion", label: "Promotions", icon: <PackageSearch size={16} /> },
+        ];
+      case "System":
+        return [
+          { value: "analytics", label: "Analytics", icon: <ChartNoAxesCombined size={16} /> },
+          { value: "low-stock", label: "Low Stock", icon: <BellElectric size={16} />, count: lowStockCount },
+          { value: "users", label: "Users", icon: <User size={16} /> },
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const currentTabs = getCurrentTabs();
 
   // Force dark mode for admin
   useEffect(() => {
@@ -163,176 +161,164 @@ export default function AdminPage() {
       <div className="admin-container">
         {/* Top Navigation Bar */}
         <header className="admin-topbar">
-          <div className="topbar-left">
-           
-          </div>
-          
           <nav className="topbar-nav">
-            {tabGroups.map((group) => {
-              const isExpanded = expandedGroups[group.category] ?? group.defaultOpen ?? false;
-              const hasSubmenu = group.tabs.length > 1;
-              
-              return (
-                <div key={group.category} className={`nav-segment ${isExpanded ? 'expanded' : ''}`}>
-                  {hasSubmenu ? (
-                    <>
-                      <button
-                        className={`segment-header clickable`}
-                        onClick={() => toggleGroup(group.category)}
-                        type="button"
-                      >
-                        {group.icon}
-                        <span>{group.category}</span>
-                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                      </button>
-                      <div className={`segment-tabs ${isExpanded ? 'show' : ''}`}>
-                        {group.tabs.map((tab) => (
-                          <button
-                            key={tab.value}
-                            className={`topbar-tab ${activeTab === tab.value ? 'active' : ''}`}
-                            onClick={() => handleTabClick(tab.value)}
-                            type="button"
-                            data-label={tab.label}
-                          >
-                            {tab.icon}
-                            <span>{tab.label}</span>
-                            
-                            {tab.count > 0 && (
-                              <span className="notification-badge">{tab.count}</span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <button
-                      className={`segment-header ${activeTab === group.tabs[0].value ? 'active' : ''}`}
-                      onClick={() => handleTabClick(group.tabs[0].value)}
-                      type="button"
-                    >
-                      {group.icon}
-                      <span>{group.tabs[0].label}</span>
-                      
-                      {group.tabs[0].count > 0 && (
-                        <span className="notification-badge">{group.tabs[0].count}</span>
-                      )}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+            {categories.map((cat) => (
+              <button
+                key={cat.name}
+                className={`topbar-category ${activeCategory === cat.name ? 'active' : ''}`}
+                onClick={() => handleCategoryClick(cat.name)}
+              >
+                {cat.icon}
+                <span>{cat.name}</span>
+                {cat.badge > 0 && (
+                  <span className="notification-badge">{cat.badge}</span>
+                )}
+              </button>
+            ))}
           </nav>
           
           {/* Logout Button */}
-          <button className="logout-btn" onClick={handleLogout} type="button">
-            <LogOut size={16} />
+          <button className="logout-btn" onClick={handleLogout}>
+            <LogOut size={18} />
             <span>Logout</span>
           </button>
         </header>
 
-        {/* Main Content */}
-        <main className="admin-main">
-          {activeTab === "home" && (
-            <GlassmorphicContainer><AdminHome onNavigate={handleTabClick} /></GlassmorphicContainer>
-          )}
-          {activeTab === "products" && (
-            <GlassmorphicContainer><ProductsGrids /></GlassmorphicContainer>
-          )}
-          {activeTab === "add" && (
-            <GlassmorphicContainer><AddProductForm /></GlassmorphicContainer>
-          )}
-          {activeTab === "delete" && (
-            <GlassmorphicContainer><DeleteCategory /></GlassmorphicContainer>
-          )}
-          {activeTab === "orders" && (
-            <GlassmorphicContainer><OrderItems /></GlassmorphicContainer>
-          )}
-          {activeTab === "users" && (
-            <GlassmorphicContainer><Users /></GlassmorphicContainer>
-          )}
-          {activeTab === "uncategorized" && (
-            <GlassmorphicContainer><UncategorizedProducts /></GlassmorphicContainer>
-          )}
-          {activeTab === "create-hero" && (
-            <GlassmorphicContainer><CreateHero /></GlassmorphicContainer>
-          )}
-          {activeTab === "create-promotion" && (
-            <GlassmorphicContainer><CreatePromotion /></GlassmorphicContainer>
-          )}
-          {activeTab === "low-stock" && (
-            <GlassmorphicContainer><LowStockAlert /></GlassmorphicContainer>
-          )}
-          {activeTab === "backorders" && (
-            <GlassmorphicContainer><Backorders /></GlassmorphicContainer>
-          )}
-          {activeTab === "preorders" && (
-            <GlassmorphicContainer><AdminPreorders /></GlassmorphicContainer>
-          )}
-          {activeTab === "imei" && (
-            <GlassmorphicContainer><ManageIMEIs /></GlassmorphicContainer>
-          )}
-          {activeTab === "analytics" && (
-            <GlassmorphicContainer>
-              <div className="analytics-container">
-                
-                {/* Overall Sales Analytics */}
-                <h2 className="analytics-section-header">Overall Sales Analytics</h2>
-                <div className="analytics-grid">
-                  <div className="analytics-section"><AnalyticsDay /></div>
-                  <div className="analytics-section"><AnalyticsMonthly /></div>
-                  <div className="analytics-section"><ProfitAnalyticsDay /></div>
-                  <div className="analytics-section"><ProfitMonthly /></div>
-                </div>
-                
-                <hr className="analytics-divider" />
-                
-                {/* Product Performance Analytics */}
-                <h2 className="product-analytics-header">Product Performance Analytics</h2>
-                <div className="product-analytics-section">
-                  <ProductAnalytics />
-                </div>
-                
-                <hr className="analytics-divider" />
-                
-                {/* POS/Online Analytics Section */}
-                <h2 className="pos-online-header">POS vs Online Sales Analytics</h2>
-                
-                {/* Main comparison charts */}
-                <div className="pos-online-comparison-grid">
-                  <div className="comparison-section">
-                    <OrderTypeDailyComparison />
-                  </div>
-                  <div className="comparison-section">
-                    <SalesByOrderType />
-                  </div>
-                </div>
-                
-                {/* Daily Sales Comparison */}
-                <h3 className="sub-section-header">Daily Sales Comparison</h3>
-                <div className="daily-comparison-grid">
-                  <div className="comparison-section">
-                    <POSDailySales />
-                  </div>
-                  <div className="comparison-section">
-                    <OnlineDailySales />
-                  </div>
-                </div>
-                
-                {/* Monthly Sales Comparison */}
-                <h3 className="sub-section-header">Monthly Sales Comparison</h3>
-                <div className="monthly-comparison-grid">
-                  <div className="comparison-section">
-                    <POSMonthlySales />
-                  </div>
-                  <div className="comparison-section">
-                    <OnlineMonthlySales />
-                  </div>
-                </div>
-                
+        <div className="admin-body">
+          {/* Sidebar - Submenus */}
+          {sidebarOpen && (
+            <aside className="admin-sidebar">
+              <div className="sidebar-header">
+                <span>{activeCategory}</span>
+                <button 
+                  className="sidebar-close"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <X size={20} />
+                </button>
               </div>
-            </GlassmorphicContainer>
+              <nav className="sidebar-nav">
+                {currentTabs.map((tab) => (
+                  <button
+                    key={tab.value}
+                    className={`sidebar-tab ${activeTab === tab.value ? 'active' : ''}`}
+                    onClick={() => handleTabClick(tab.value)}
+                  >
+                    {tab.icon}
+                    <span>{tab.label}</span>
+                    {tab.count > 0 && (
+                      <span className="sidebar-badge">{tab.count}</span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+            </aside>
           )}
-        </main>
+
+          {/* Main Content */}
+          <main className={`admin-main ${!sidebarOpen ? 'full-width' : ''}`}>
+            {activeTab === "home" && (
+              <GlassmorphicContainer><AdminHome onNavigate={handleTabClick} /></GlassmorphicContainer>
+            )}
+            {activeTab === "products" && (
+              <GlassmorphicContainer><ProductsGrids /></GlassmorphicContainer>
+            )}
+            {activeTab === "add" && (
+              <GlassmorphicContainer><AddProductForm /></GlassmorphicContainer>
+            )}
+            {activeTab === "delete" && (
+              <GlassmorphicContainer><DeleteCategory /></GlassmorphicContainer>
+            )}
+            {activeTab === "orders" && (
+              <GlassmorphicContainer><OrderItems /></GlassmorphicContainer>
+            )}
+            {activeTab === "users" && (
+              <GlassmorphicContainer><Users /></GlassmorphicContainer>
+            )}
+            {activeTab === "uncategorized" && (
+              <GlassmorphicContainer><UncategorizedProducts /></GlassmorphicContainer>
+            )}
+            {activeTab === "create-hero" && (
+              <GlassmorphicContainer><CreateHero /></GlassmorphicContainer>
+            )}
+            {activeTab === "create-promotion" && (
+              <GlassmorphicContainer><CreatePromotion /></GlassmorphicContainer>
+            )}
+            {activeTab === "low-stock" && (
+              <GlassmorphicContainer><LowStockAlert /></GlassmorphicContainer>
+            )}
+            {activeTab === "backorders" && (
+              <GlassmorphicContainer><Backorders /></GlassmorphicContainer>
+            )}
+            {activeTab === "preorders" && (
+              <GlassmorphicContainer><AdminPreorders /></GlassmorphicContainer>
+            )}
+            {activeTab === "imei" && (
+              <GlassmorphicContainer><ManageIMEIs /></GlassmorphicContainer>
+            )}
+            {activeTab === "analytics" && (
+              <GlassmorphicContainer>
+                <div className="analytics-container">
+                  
+                  {/* Overall Sales Analytics */}
+                  <h2 className="analytics-section-header">Overall Sales Analytics</h2>
+                  <div className="analytics-grid">
+                    <div className="analytics-section"><AnalyticsDay /></div>
+                    <div className="analytics-section"><AnalyticsMonthly /></div>
+                    <div className="analytics-section"><ProfitAnalyticsDay /></div>
+                    <div className="analytics-section"><ProfitMonthly /></div>
+                  </div>
+                  
+                  <hr className="analytics-divider" />
+                  
+                  {/* Product Performance Analytics */}
+                  <h2 className="product-analytics-header">Product Performance Analytics</h2>
+                  <div className="product-analytics-section">
+                    <ProductAnalytics />
+                  </div>
+                  
+                  <hr className="analytics-divider" />
+                  
+                  {/* POS/Online Analytics Section */}
+                  <h2 className="pos-online-header">POS vs Online Sales Analytics</h2>
+                  
+                  {/* Main comparison charts */}
+                  <div className="pos-online-comparison-grid">
+                    <div className="comparison-section">
+                      <OrderTypeDailyComparison />
+                    </div>
+                    <div className="comparison-section">
+                      <SalesByOrderType />
+                    </div>
+                  </div>
+                  
+                  {/* Daily Sales Comparison */}
+                  <h3 className="sub-section-header">Daily Sales Comparison</h3>
+                  <div className="daily-comparison-grid">
+                    <div className="comparison-section">
+                      <POSDailySales />
+                    </div>
+                    <div className="comparison-section">
+                      <OnlineDailySales />
+                    </div>
+                  </div>
+                  
+                  {/* Monthly Sales Comparison */}
+                  <h3 className="sub-section-header">Monthly Sales Comparison</h3>
+                  <div className="monthly-comparison-grid">
+                    <div className="comparison-section">
+                      <POSMonthlySales />
+                    </div>
+                    <div className="comparison-section">
+                      <OnlineMonthlySales />
+                    </div>
+                  </div>
+                  
+                </div>
+              </GlassmorphicContainer>
+            )}
+          </main>
+        </div>
       </div>
     </div>
   );
