@@ -1,0 +1,224 @@
+/* Add Product Modal Styles */
+.add-product-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  padding: 0;
+}
+
+.add-product-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.add-product-modal-content {
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  height: auto;
+  transform: translateY(100%);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
+  margin: 0;
+  border-radius: 1.5rem 1.5rem 0 0;
+}
+
+@media (min-width: 640px) {
+  .add-product-modal-content {
+    transform: scale(0.95) translateY(20px);
+    border-radius: 1.5rem;
+    margin: auto;
+    height: auto;
+    max-height: 85vh;
+  }
+}
+
+.add-product-modal-content.active {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (min-width: 640px) {
+  .add-product-modal-content.active {
+    transform: scale(1) translateY(0);
+  }
+}
+
+.add-product-modal-container {
+  backdrop-filter: blur(24px);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 1.5rem 1.5rem 0 0;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
+  position: relative;
+  padding: 1.5rem;
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .add-product-modal-container {
+    border-radius: 1.5rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    max-height: 85vh;
+  }
+}
+
+.add-product-modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #ffffff;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.add-product-modal-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+}
+
+.add-product-modal-header {
+  margin-bottom: 1.5rem;
+  padding-right: 2.5rem;
+  flex-shrink: 0;
+}
+
+.add-product-modal-header h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.5rem 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.add-product-modal-header p {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.add-product-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  margin: 0 -1.5rem;
+  padding: 0 1.5rem;
+}
+
+/* Scrollbar styling */
+.add-product-modal-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.add-product-modal-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.add-product-modal-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.add-product-modal-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Mobile bottom sheet indicator */
+.add-product-modal-container::before {
+  content: '';
+  position: absolute;
+  top: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+@media (min-width: 640px) {
+  .add-product-modal-container::before {
+    display: none;
+  }
+}
+
+/* Glare effect animation */
+@keyframes modalShimmer {
+  0% {
+    left: -100%;
+  }
+  50% {
+    left: 100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.add-product-modal-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.03),
+    transparent
+  );
+  animation: modalShimmer 4s ease-in-out infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .add-product-modal-container {
+    padding: 1rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  
+  .add-product-modal-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .add-product-modal-header p {
+    font-size: 0.85rem;
+  }
+  
+  .add-product-modal-close {
+    width: 36px;
+    height: 36px;
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+}

@@ -21,6 +21,7 @@ import AnalyticsDay from "./AnalyticsDay";
 import AnalyticsProfit from "./AnalyticsProfit";
 import AdminProductAnalytics from "./AdminProductAnalytics";
 import AddProductModal from "./AddProductModal";
+import ViewUsersModal from "./ViewUsersModal";
 import GlassmorphicContainer from "./GlassmorphicContainer";
 export default function AdminHome({ onNavigate }) {
   const [stats, setStats] = useState({
@@ -41,6 +42,7 @@ export default function AdminHome({ onNavigate }) {
   });
   const [loading, setLoading] = useState(true);
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+  const [isViewUsersModalOpen, setIsViewUsersModalOpen] = useState(false);
 
   useEffect(() => {
     fetchDashboardStats();
@@ -173,7 +175,7 @@ export default function AdminHome({ onNavigate }) {
       icon: <HiUsers size={24} />,
       subtitle: "Registered customers",
       color: "users",
-      navigateTo: "users",
+      isViewUsers: true,
       buttonLabel: "View Users",
     },
   ];
@@ -237,6 +239,15 @@ export default function AdminHome({ onNavigate }) {
                   <ArrowRight size={14} />
                 </button>
               )}
+              {card.isViewUsers && (
+                <button 
+                  className="stat-card-button"
+                  onClick={() => setIsViewUsersModalOpen(true)}
+                >
+                  <span>{card.buttonLabel}</span>
+                  <ArrowRight size={14} />
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -288,6 +299,12 @@ export default function AdminHome({ onNavigate }) {
       <AddProductModal 
         isOpen={isAddProductModalOpen} 
         onClose={() => setIsAddProductModalOpen(false)} 
+      />
+
+      {/* View Users Modal */}
+      <ViewUsersModal 
+        isOpen={isViewUsersModalOpen} 
+        onClose={() => setIsViewUsersModalOpen(false)} 
       />
 
       <div className="admin-home-footer">
