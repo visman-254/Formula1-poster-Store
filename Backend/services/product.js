@@ -539,7 +539,7 @@ export const updateProduct = async (id, updates = {}) => {
           bundle_of = COALESCE(?, bundle_of)
         WHERE product_id = ?
         `,
-        [safe(title), safe(description), safe(category_id), safe(is_bundle), JSON.stringify(bundle_of), id]
+        [safe(title), safe(description), safe(category_id), safe(is_bundle), bundle_of === undefined ? null : JSON.stringify(bundle_of), id]
       );
     }
     
@@ -560,7 +560,7 @@ export const updateProduct = async (id, updates = {}) => {
                     [
                         bundleVariant.color || 'Bundle', bundleVariant.price || 0, bundleVariant.buying_price || 0,
                         bundleVariant.profit_margin || 0, bundleVariant.discount || 0, bundleVariant.stock === undefined ? 1 : bundleVariant.stock,
-                        bundleVariant.image || null, bundleVariant.variant_id
+                        bundleVariant.image === undefined ? null : bundleVariant.image, bundleVariant.variant_id
                     ]
                 );
             } else {
@@ -569,7 +569,7 @@ export const updateProduct = async (id, updates = {}) => {
                     [
                         id, bundleVariant.color || 'Bundle', bundleVariant.price || 0, bundleVariant.buying_price || 0,
                         bundleVariant.profit_margin || 0, bundleVariant.discount || 0, bundleVariant.stock === undefined ? 1 : bundleVariant.stock,
-                        bundleVariant.image || null
+                        bundleVariant.image === undefined ? null : bundleVariant.image
                     ]
                 );
             }
