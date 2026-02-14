@@ -91,6 +91,23 @@ export const getAllUsers = async () => {
   }
 };
 
+// Update user role (admin only)
+export const updateUserRole = async (userId, newRole) => {
+  try {
+    // Validate role
+    const validRoles = ['admin', 'cashier', 'customer', 'user'];
+    if (!validRoles.includes(newRole)) {
+      throw new Error('Invalid role specified');
+    }
+    
+    await db.execute('UPDATE users SET role = ? WHERE id = ?', [newRole, userId]);
+    return { message: 'User role updated successfully' };
+  } catch (err) {
+    console.error('Error updating user role:', err);
+    throw err;
+  }
+};
+
 const generateResetToken = () => crypto.randomBytes(32).toString('hex');
 
 const transporter = nodemailer.createTransport({

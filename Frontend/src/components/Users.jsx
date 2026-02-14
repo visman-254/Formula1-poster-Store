@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getUsers } from "../api/users";
+import { getUsers, updateUserRole } from "../api/users";
 import { useUser } from "../context/UserContext";
 import {
   Card,
@@ -19,18 +19,29 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { Crown, User, ShoppingBag, ChevronDown } from "lucide-react";
 import "./Users.css";
 
 const roleColors = {
   admin: "bg-red-500 text-white",
+  cashier: "bg-amber-500 text-white",
   customer: "bg-blue-500 text-white",
   user: "bg-gray-500 text-white",
 };
+
+const roleOptions = [
+  { value: "admin", label: "Admin", icon: <Crown size={14} /> },
+  { value: "cashier", label: "Cashier", icon: <ShoppingBag size={14} /> },
+  { value: "customer", label: "Customer", icon: <User size={14} /> },
+  { value: "user", label: "User", icon: <User size={14} /> },
+];
 
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [editingUser, setEditingUser] = useState(null);
+  const [updatingRole, setUpdatingRole] = useState(false);
 
   // UI states
   const [search, setSearch] = useState("");
@@ -57,6 +68,32 @@ const Users = () => {
 
     fetchUsers();
   }, []);
+
+  const handleRoleChange = async (userId, newRole) => {
+    try {
+      setUpdatingRole(true);
+      await updateUserRole(userId, newRole);
+      setUsers(users.map(u => 
+        u.id === userId ? { ...u, role: newRole } : u
+      ));
+      setEditingUser(null);
+    } catch (err) {
+      console.error("Error updating user role:", err);
+      alert("Failed to update user role");
+    } finally {
+      setUpdatingRole(false);
+    }
+  };
+
+  // Start editing a user's role
+  const startEditing = (userId) => {
+    setEditingUser(userId);
+  };
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditingUser(null);
+  };
 
   // Filtered & searched users
   const filteredUsers = users.filter((u) => {
@@ -96,6 +133,9 @@ const Users = () => {
               </SelectItem>
               <SelectItem value="admin" className="text-gray-900 dark:text-white focus:bg-gray-100 dark:focus:bg-black">
                 Admin
+              </SelectItem>
+              <SelectItem value="cashier" className="text-gray-900 dark:text-white focus:bg-gray-100 dark:focus:bg-black">
+                Cashier
               </SelectItem>
               <SelectItem value="customer" className="text-gray-900 dark:text-white focus:bg-gray-100 dark:focus:bg-black">
                 Customer
@@ -145,9 +185,55 @@ const Users = () => {
                           {u.email}
                         </TableCell>
                         <TableCell>
-                          <Badge className={`${roleColors[u.role] || "bg-gray-400 text-white"}`}>
-                            {u.role || "user"}
-                          </Badge>
+                          {editingUser === u.id ? (
+                            <div className="flex items-center gap-2">
+                              <Select 
+                                value={u.role} 
+                                onValueChange={(newRole) => handleRoleChange(u.id, newRole)}
+                                disabled={updatingRole}
+                              >
+                                <SelectTrigger className="w-[130px] bg-white dark:bg-gray-800 text-white dark:text-white border-gray-300 dark:border-gray-600">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 z-50">
+                                  {roleOptions.map((option) => (
+                                    <SelectItem 
+                                      key={option.value} 
+                                      value={option.value}
+                                      className="text-gray-900 dark:text-white focus:bg-gray-100 dark:focus:bg-gray-700"
+                                    >
+                                      <span className="flex items-center gap-2">
+                                        {option.icon}
+                                        {option.label}
+                                      </span>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <button
+                                onClick={cancelEditing}
+                                disabled={updatingRole}
+                                className="p-1.5 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
+                                title="Cancel"
+                              >
+                                <ChevronDown size={16} className="rotate-45" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div 
+                              className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity w-fit"
+                              onClick={() => startEditing(u.id)}
+                              title="Click to change role"
+                            >
+                              <Badge className={`${roleColors[u.role] || "bg-gray-400 text-white"} cursor-pointer flex items-center gap-1`}>
+                                {u.role === 'admin' && <Crown size={12} />}
+                                {u.role === 'cashier' && <ShoppingBag size={12} />}
+                                {u.role !== 'admin' && u.role !== 'cashier' && <User size={12} />}
+                                <span className="ml-1">{u.role || "user"}</span>
+                                <ChevronDown size={10} className="ml-1 opacity-60" />
+                              </Badge>
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="text-gray-700 dark:text-gray-300">
                           {new Date(u.created_at).toLocaleDateString()}

@@ -14,6 +14,8 @@ import {
   Home,
   ChevronRight,
   X,
+  FileDown,
+  Upload,
 } from "lucide-react";
 import { useAdminNotification } from "../context/AdminNotificationContext";
 
@@ -36,7 +38,7 @@ import Backorders from "../components/Backorders";
 import AdminPreorders from "../components/AdminPreorders";
 import CreatePromotion from "../components/CreatePromotion";
 import ProductAnalytics from "../components/ProductAnalytics";
-import ManageIMEIs from "../components/ManageIMEIs";
+import ImportData from "../components/ImportData";
 import GlassmorphicContainer from "../components/GlassmorphicContainer";
 
 // Import the new POS vs Online analytics components
@@ -48,13 +50,64 @@ import POSMonthlySales from "../components/POSMonthlySales";
 import OnlineMonthlySales from "../components/OnlineMonthlySales";
 
 import { useNavigate } from "react-router-dom";
+import { exportOrders, exportProducts, exportInventory, exportUsers } from "../api/exportApi";
 import "./Admin.css";
 
 export default function AdminPage() {
   const [activeCategory, setActiveCategory] = useState("Dashboard");
   const [activeTab, setActiveTab] = useState("home");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [exportLoading, setExportLoading] = useState(null);
   const navigate = useNavigate();
+
+  // Export handlers
+  const handleExportOrders = async () => {
+    setExportLoading('orders');
+    try {
+      await exportOrders();
+    } catch (error) {
+      console.error('Export orders error:', error);
+      alert('Failed to export orders');
+    } finally {
+      setExportLoading(null);
+    }
+  };
+
+  const handleExportProducts = async () => {
+    setExportLoading('products');
+    try {
+      await exportProducts();
+    } catch (error) {
+      console.error('Export products error:', error);
+      alert('Failed to export products');
+    } finally {
+      setExportLoading(null);
+    }
+  };
+
+  const handleExportInventory = async () => {
+    setExportLoading('inventory');
+    try {
+      await exportInventory();
+    } catch (error) {
+      console.error('Export inventory error:', error);
+      alert('Failed to export inventory');
+    } finally {
+      setExportLoading(null);
+    }
+  };
+
+  const handleExportUsers = async () => {
+    setExportLoading('users');
+    try {
+      await exportUsers();
+    } catch (error) {
+      console.error('Export users error:', error);
+      alert('Failed to export users');
+    } finally {
+      setExportLoading(null);
+    }
+  };
 
   // Admin notification context
   const {
@@ -92,6 +145,7 @@ export default function AdminPage() {
     { name: "Products & Inventory", icon: <PackageSearch size={18} /> },
     { name: "Orders & Sales", icon: <Forklift size={18} />, badge: newOrdersCount + newPreordersCount },
     { name: "Website", icon: <ChartNoAxesCombined size={18} /> },
+    { name: "Export Data", icon: <FileDown size={18} /> },
     { name: "System", icon: <User size={18} />, badge: lowStockCount },
   ];
 
@@ -120,6 +174,14 @@ export default function AdminPage() {
         return [
           { value: "create-hero", label: "Hero Slides", icon: <PackageSearch size={16} /> },
           { value: "create-promotion", label: "Promotions", icon: <PackageSearch size={16} /> },
+        ];
+      case "Export Data":
+        return [
+          { value: "export-orders", label: "Export Orders", icon: <FileDown size={16} /> },
+          { value: "export-products", label: "Export Products", icon: <FileDown size={16} /> },
+          { value: "export-inventory", label: "Export Inventory", icon: <FileDown size={16} /> },
+          { value: "export-users", label: "Export Users", icon: <FileDown size={16} /> },
+          { value: "import-data", label: "Import Data", icon: <Upload size={16} /> },
         ];
       case "System":
         return [
@@ -243,6 +305,70 @@ export default function AdminPage() {
             )}
             {activeTab === "create-promotion" && (
               <GlassmorphicContainer><CreatePromotion /></GlassmorphicContainer>
+            )}
+            {/* Export Data Tabs */}
+            {activeTab === "export-orders" && (
+              <GlassmorphicContainer>
+                <div className="export-section">
+                  <h2>Export Orders to Excel</h2>
+                  <p>Download all orders with customer details, totals, and status.</p>
+                  <button 
+                    className="export-btn"
+                    onClick={handleExportOrders}
+                    disabled={exportLoading === 'orders'}
+                  >
+                    {exportLoading === 'orders' ? 'Exporting...' : 'Download Orders Excel'}
+                  </button>
+                </div>
+              </GlassmorphicContainer>
+            )}
+            {activeTab === "export-products" && (
+              <GlassmorphicContainer>
+                <div className="export-section">
+                  <h2>Export Products to Excel</h2>
+                  <p>Download all products with variants, prices, and categories.</p>
+                  <button 
+                    className="export-btn"
+                    onClick={handleExportProducts}
+                    disabled={exportLoading === 'products'}
+                  >
+                    {exportLoading === 'products' ? 'Exporting...' : 'Download Products Excel'}
+                  </button>
+                </div>
+              </GlassmorphicContainer>
+            )}
+            {activeTab === "export-inventory" && (
+              <GlassmorphicContainer>
+                <div className="export-section">
+                  <h2>Export Inventory to Excel</h2>
+                  <p>Download stock levels with buying prices and stock values.</p>
+                  <button 
+                    className="export-btn"
+                    onClick={handleExportInventory}
+                    disabled={exportLoading === 'inventory'}
+                  >
+                    {exportLoading === 'inventory' ? 'Exporting...' : 'Download Inventory Excel'}
+                  </button>
+                </div>
+              </GlassmorphicContainer>
+            )}
+            {activeTab === "export-users" && (
+              <GlassmorphicContainer>
+                <div className="export-section">
+                  <h2>Export Users to Excel</h2>
+                  <p>Download all registered users with their roles and details.</p>
+                  <button 
+                    className="export-btn"
+                    onClick={handleExportUsers}
+                    disabled={exportLoading === 'users'}
+                  >
+                    {exportLoading === 'users' ? 'Exporting...' : 'Download Users Excel'}
+                  </button>
+                </div>
+              </GlassmorphicContainer>
+            )}
+            {activeTab === "import-data" && (
+              <GlassmorphicContainer><ImportData /></GlassmorphicContainer>
             )}
             {activeTab === "low-stock" && (
               <GlassmorphicContainer><LowStockAlert /></GlassmorphicContainer>

@@ -14,7 +14,7 @@ const AddProductModal = ({ isOpen, onClose }) => {
     } else {
       document.body.style.overflow = "unset";
     }
-    
+
     return () => {
       document.body.style.overflow = "unset";
     };
@@ -28,27 +28,24 @@ const AddProductModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div 
-      className={`add-product-modal-overlay ${isOpen && isVisible ? 'active' : ''}`}
+    <div
+      className={`add-product-modal-overlay ${isOpen && isVisible ? "active" : ""}`}
       onClick={handleClose}
     >
-      <div 
-        className={`add-product-modal-content ${isOpen && isVisible ? 'active' : ''}`}
+      <div
+        className={`add-product-modal-content ${isOpen && isVisible ? "active" : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
         <GlassmorphicContainer className="add-product-modal-container">
-          <button 
-            className="add-product-modal-close"
-            onClick={handleClose}
-          >
+          <button className="add-product-modal-close" onClick={handleClose}>
             <X size={24} />
           </button>
-          
+
           <div className="add-product-modal-header">
             <h2>Add New Product</h2>
             <p>Fill in the details below to add a new product to your store</p>
           </div>
-          
+
           <div className="add-product-modal-body">
             <AddProductForm onSuccess={handleClose} />
           </div>

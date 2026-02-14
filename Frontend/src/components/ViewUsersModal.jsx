@@ -1,14 +1,29 @@
 import React, { useState, useEffect } from "react";
-import { X, Search, Users as UsersIcon } from "lucide-react";
-import { getUsers } from "../api/users";
+import { X, Search, Users as UsersIcon, Crown, User, ShoppingBag, ChevronDown } from "lucide-react";
+import { getUsers, updateUserRole } from "../api/users";
 import { Badge } from "@/components/ui/badge";
 import "./ViewUsersModal.css";
 
 const roleColors = {
   admin: "bg-red-500 text-white",
+  cashier: "bg-amber-500 text-white",
   customer: "bg-blue-500 text-white",
   user: "bg-gray-500 text-white",
 };
+
+const roleIcons = {
+  admin: <Crown size={14} />,
+  cashier: <ShoppingBag size={14} />,
+  customer: <User size={14} />,
+  user: <User size={14} />,
+};
+
+const roleOptions = [
+  { value: "admin", label: "Admin", icon: <Crown size={14} /> },
+  { value: "cashier", label: "Cashier", icon: <ShoppingBag size={14} /> },
+  { value: "customer", label: "Customer", icon: <User size={14} /> },
+  { value: "user", label: "User", icon: <User size={14} /> },
+];
 
 const ViewUsersModal = ({ isOpen, onClose }) => {
   const [users, setUsers] = useState([]);
@@ -16,6 +31,8 @@ const ViewUsersModal = ({ isOpen, onClose }) => {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [isVisible, setIsVisible] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [updatingRole, setUpdatingRole] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -47,6 +64,31 @@ const ViewUsersModal = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleRoleChange = async (userId, newRole) => {
+    try {
+      setUpdatingRole(true);
+      await updateUserRole(userId, newRole);
+      // Update local state
+      setUsers(users.map(u => 
+        u.id === userId ? { ...u, role: newRole } : u
+      ));
+      setEditingUser(null);
+    } catch (err) {
+      console.error("Error updating user role:", err);
+      alert("Failed to update user role");
+    } finally {
+      setUpdatingRole(false);
+    }
+  };
+
+  const startEditing = (userId) => {
+    setEditingUser(userId);
+  };
+
+  const cancelEditing = () => {
+    setEditingUser(null);
+  };
+
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
       u.username?.toLowerCase().includes(search.toLowerCase()) ||
@@ -56,6 +98,7 @@ const ViewUsersModal = ({ isOpen, onClose }) => {
 
   const handleClose = () => {
     setIsVisible(false);
+    setEditingUser(null);
     setTimeout(onClose, 150);
   };
 
@@ -120,9 +163,43 @@ const ViewUsersModal = ({ isOpen, onClose }) => {
                     <div className="view-user-name">{u.username}</div>
                     <div className="view-user-email">{u.email}</div>
                   </div>
-                  <Badge className={`${roleColors[u.role] || "bg-gray-400 text-white"}`}>
-                    {u.role || "user"}
-                  </Badge>
+                  
+                  {editingUser === u.id ? (
+                    <div className="view-user-role-edit">
+                      <select
+                        value={u.role}
+                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                        disabled={updatingRole}
+                        className="role-select"
+                      >
+                        {roleOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        className="role-cancel-btn"
+                        onClick={cancelEditing}
+                        disabled={updatingRole}
+                        title="Cancel"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div 
+                      className="view-user-role-badge"
+                      onClick={() => startEditing(u.id)}
+                      title="Click to change role"
+                    >
+                      <Badge className={`${roleColors[u.role] || "bg-gray-400 text-white"}`}>
+                        {roleIcons[u.role] || roleIcons.user}
+                        <span style={{ marginLeft: 4 }}>{u.role || "user"}</span>
+                        <ChevronDown size={10} style={{ marginLeft: 4, opacity: 0.6 }} />
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               ))
             )}

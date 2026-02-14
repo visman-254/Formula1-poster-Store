@@ -1,5 +1,5 @@
 // authController.js
-import { authenticateUser, createUser,getAllUsers,requestPasswordReset , resetPassword  } from '../services/auth.js';
+import { authenticateUser, createUser,getAllUsers,requestPasswordReset , resetPassword, updateUserRole  } from '../services/auth.js';
 
 const login = async (req, res) => {
   try {
@@ -111,4 +111,25 @@ export const resetPasswordController = async (req, res) => {
     console.error('Error in reset password controller:', err);
     res.status(500).send({ message: 'Failed to reset password.' });
   }
-}
+};
+
+// Update user role (admin only)
+export const updateUserRoleController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!id || !role) {
+      return res.status(400).send({ message: 'User ID and role are required' });
+    }
+
+    const result = await updateUserRole(id, role);
+    res.status(200).send(result);
+  } catch (err) {
+    console.error('Error updating user role:', err);
+    if (err.message === 'Invalid role specified') {
+      return res.status(400).send({ message: err.message });
+    }
+    res.status(500).send({ message: 'Failed to update user role' });
+  }
+};

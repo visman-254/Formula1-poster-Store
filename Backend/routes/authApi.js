@@ -1,6 +1,6 @@
 // authApi.js
 import express from 'express';
-import { login, signup,fetchAllUsers,forgotPassword, resetPasswordController } from '../controllers/authController.js'; // import named exports
+import { login, signup,fetchAllUsers,forgotPassword, resetPasswordController, updateUserRoleController } from '../controllers/authController.js'; // import named exports
 import cors from 'cors';
 import { verifyToken, verifyAdmin } from "../middleware/authMiddleware.js";
 
@@ -17,4 +17,5 @@ router.post('/signup', signup);
 router.get('/users', verifyToken, verifyAdmin, fetchAllUsers);
 router.post('/forgot-password',forgotPassword);
 router.post('/reset-password', resetPasswordController);
+router.put('/users/:id/role', verifyToken, verifyAdmin, updateUserRoleController);
 export default router;

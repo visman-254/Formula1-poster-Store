@@ -22,6 +22,9 @@ import posRoutes from "./routes/posApi.js";
 import adminNotificationRoutes from "./routes/adminNotificationRoutes.js";
 import orderTypeAnalyticsRoutes from "./routes/orderTypeAnalytics.js";
 import imeiTrackingRoutes from "./routes/imeiTrackingApi.js";
+import exportRoutes from "./routes/exportApi.js";
+import importRoutes from "./routes/importApi.js";
+import imageUploadRoutes from "./routes/imageUploadApi.js";
 
 
 
@@ -69,6 +72,9 @@ app.use('/api/pos', posRoutes);
 app.use("/api/admin", adminNotificationRoutes);
 app.use("/api/order-type-analytics", orderTypeAnalyticsRoutes);
 app.use('/api/imei', imeiTrackingRoutes);
+app.use('/api', exportRoutes);
+app.use('/api', importRoutes);
+app.use('/api', imageUploadRoutes);
 
 
 if(process.env.NODE_ENV === "production") {

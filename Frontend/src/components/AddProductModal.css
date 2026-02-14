@@ -5,13 +5,14 @@
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(12px);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   z-index: 9999;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.3s ease, visibility 0.3s ease;
-  padding: 0;
+  padding: 2rem 1rem;
+  overflow-y: auto;
 }
 
 .add-product-modal-overlay.active {
@@ -22,60 +23,32 @@
 .add-product-modal-content {
   width: 100%;
   max-width: 900px;
-  max-height: 90vh;
-  height: auto;
-  transform: translateY(100%);
+  margin: auto;
+  transform: scale(0.95);
   opacity: 0;
   visibility: hidden;
   transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
-  margin: 0;
-  border-radius: 1.5rem 1.5rem 0 0;
-}
-
-@media (min-width: 640px) {
-  .add-product-modal-content {
-    transform: scale(0.95) translateY(20px);
-    border-radius: 1.5rem;
-    margin: auto;
-    height: auto;
-    max-height: 85vh;
-  }
 }
 
 .add-product-modal-content.active {
-  transform: translateY(0);
+  transform: scale(1);
   opacity: 1;
   visibility: visible;
-}
-
-@media (min-width: 640px) {
-  .add-product-modal-content.active {
-    transform: scale(1) translateY(0);
-  }
 }
 
 .add-product-modal-container {
   backdrop-filter: blur(24px);
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 1.5rem 1.5rem 0 0;
-  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   position: relative;
   padding: 1.5rem;
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-  max-height: 90vh;
   display: flex;
   flex-direction: column;
-  height: auto;
+  max-height: 80vh;
   overflow: hidden;
-}
-
-@media (min-width: 640px) {
-  .add-product-modal-container {
-    border-radius: 1.5rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    max-height: 85vh;
-  }
 }
 
 .add-product-modal-close {
@@ -127,46 +100,27 @@
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  margin: 0 -1.5rem;
-  padding: 0 1.5rem;
+  margin: 0 -0.5rem;
+  padding: 0 0.5rem;
 }
 
 /* Scrollbar styling */
-.add-product-modal-container::-webkit-scrollbar {
-  width: 8px;
+.add-product-modal-body::-webkit-scrollbar {
+  width: 6px;
 }
 
-.add-product-modal-container::-webkit-scrollbar-track {
+.add-product-modal-body::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
-.add-product-modal-container::-webkit-scrollbar-thumb {
+.add-product-modal-body::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
-.add-product-modal-container::-webkit-scrollbar-thumb:hover {
+.add-product-modal-body::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
-}
-
-/* Mobile bottom sheet indicator */
-.add-product-modal-container::before {
-  content: '';
-  position: absolute;
-  top: 0.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 2px;
-}
-
-@media (min-width: 640px) {
-  .add-product-modal-container::before {
-    display: none;
-  }
 }
 
 /* Glare effect animation */
@@ -202,9 +156,14 @@
 
 /* Responsive adjustments */
 @media (max-width: 640px) {
+  .add-product-modal-overlay {
+    padding: 1rem;
+  }
+  
   .add-product-modal-container {
     padding: 1rem;
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    max-height: 85vh;
   }
   
   .add-product-modal-header h2 {

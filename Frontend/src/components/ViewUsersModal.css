@@ -1,17 +1,17 @@
-/* View Users Modal Styles */
 .view-users-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(12px);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   z-index: 9999;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.3s ease, visibility 0.3s ease;
-  padding: 0;
+  padding: 2rem 1rem;
+  overflow-y: auto;
 }
 
 .view-users-modal-overlay.active {
@@ -22,60 +22,32 @@
 .view-users-modal-content {
   width: 100%;
   max-width: 500px;
-  max-height: 90vh;
-  height: auto;
-  transform: translateY(100%);
+  margin: auto;
+  transform: scale(0.95);
   opacity: 0;
   visibility: hidden;
   transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
-  margin: 0;
-  border-radius: 1.5rem 1.5rem 0 0;
-}
-
-@media (min-width: 640px) {
-  .view-users-modal-content {
-    transform: scale(0.95) translateY(20px);
-    border-radius: 1.5rem;
-    margin: auto;
-    height: auto;
-    max-height: 85vh;
-  }
 }
 
 .view-users-modal-content.active {
-  transform: translateY(0);
+  transform: scale(1);
   opacity: 1;
   visibility: visible;
-}
-
-@media (min-width: 640px) {
-  .view-users-modal-content.active {
-    transform: scale(1) translateY(0);
-  }
 }
 
 .view-users-modal-container {
   backdrop-filter: blur(24px);
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 1.5rem 1.5rem 0 0;
-  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   position: relative;
   padding: 1.5rem;
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-  max-height: 90vh;
   display: flex;
   flex-direction: column;
-  height: auto;
+  max-height: 80vh;
   overflow: hidden;
-}
-
-@media (min-width: 640px) {
-  .view-users-modal-container {
-    border-radius: 1.5rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    max-height: 85vh;
-  }
 }
 
 .view-users-modal-close {
@@ -176,9 +148,9 @@
 .view-users-list {
   flex: 1;
   overflow-y: auto;
-  margin: 0 -1.5rem;
-  padding: 0 1.5rem;
   min-height: 0;
+  margin: 0 -0.5rem;
+  padding: 0 0.5rem;
 }
 
 .view-users-loading,
@@ -261,6 +233,91 @@
   text-overflow: ellipsis;
 }
 
+/* Role Badge with Edit */
+.view-user-role-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.view-user-role-badge:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.view-user-role-badge .role-edit-hint {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.view-user-role-badge:hover .role-edit-hint {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Role Select Dropdown */
+.view-user-role-select {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.view-user-role-select .role-select {
+  padding: 0.4rem 0.6rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0.5rem;
+  color: #ffffff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+.view-user-role-select .role-select:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.view-user-role-select .role-select:focus {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.view-user-role-select .role-select option {
+  background: #374151;
+  color: #ffffff;
+  padding: 0.5rem;
+}
+
+.role-cancel-btn {
+  padding: 0.4rem 0.6rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.role-cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+.role-cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Scrollbar styling */
 .view-users-list::-webkit-scrollbar {
   width: 6px;
@@ -278,25 +335,6 @@
 
 .view-users-list::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
-}
-
-/* Mobile bottom sheet indicator */
-.view-users-modal-container::before {
-  content: '';
-  position: absolute;
-  top: 0.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 2px;
-}
-
-@media (min-width: 640px) {
-  .view-users-modal-container::before {
-    display: none;
-  }
 }
 
 /* Glare effect animation */
@@ -332,9 +370,14 @@
 
 /* Responsive adjustments */
 @media (max-width: 640px) {
+  .view-users-modal-overlay {
+    padding: 1rem;
+  }
+  
   .view-users-modal-container {
     padding: 1.25rem;
     padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+    max-height: 85vh;
   }
   
   .view-users-modal-header h2 {
