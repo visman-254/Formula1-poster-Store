@@ -72,19 +72,19 @@ const ImportData = () => {
   const extractImageReferencesFromCSV = (csvData) => {
     const lines = csvData.trim().split('\n');
     const dataLines = lines.slice(1); // Skip header
-    const references = [];
+    const referencedImages = [];
     
     for (const line of dataLines) {
       if (!line.trim()) continue;
       
       // Use proper CSV parsing
       const values = parseCSVLine(line);
-      if (values.length >= 9 && values[8] && values[8].trim()) {
-        references.push(values[8].trim());
+      if (values.length >= 10 && values[9] && values[9].trim()) {
+        referencedImages.push(values[9].trim());
       }
     }
     
-    return references;
+    return referencedImages;
   };
 
   // Handle CSV file selection
@@ -356,9 +356,10 @@ const ImportData = () => {
   const downloadTemplate = () => {
     let csvContent;
     if (importType === 'products') {
-      csvContent = 'title,description,category,color,buying_price,selling_price,stock,discount,image\n' +
-                   'Gaming Mouse,High precision gaming mouse,Gaming,Black,500,1500,10,0,mouse.jpg\n' +
-                   'Wireless Earbuds,Noise cancelling earbuds,Audio,White,800,2500,20,100,earbuds.png';
+      csvContent = 'title,description,category,subcategory,color,buying_price,selling_price,stock,discount,image\n' +
+                   'Gaming Mouse,High precision gaming mouse,Gaming,Mouse,Black,500,1500,10,0,mouse.jpg\n' +
+                   'Wireless Earbuds,Noise cancelling earbuds,Audio,Headphones,White,800,2500,20,100,earbuds.png\n' +
+                   'Gaming Laptop,High performance laptop,Computers,Laptops,Black,50000,75000,5,5000,laptop.jpg';
     } else {
       csvContent = 'variant_id,stock,buying_price\n' +
                    '52,10,357\n' +
@@ -582,6 +583,7 @@ const ImportData = () => {
                 <li><strong>title</strong> - Product name (required)</li>
                 <li><strong>description</strong> - Product description</li>
                 <li><strong>category</strong> - Category name (required)</li>
+                <li><strong>subcategory</strong> - Subcategory name (optional, e.g., "Mouse", "Headphones")</li>
                 <li><strong>color</strong> - Variant color (default: "Default")</li>
                 <li><strong>buying_price</strong> - Your cost price</li>
                 <li><strong>selling_price</strong> - Price to customers (required)</li>

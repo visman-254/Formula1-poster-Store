@@ -46,6 +46,7 @@ export const importProductsFromCSV = async (csvData, imageMapping = {}) => {
         title,
         description,
         categoryName,
+        subcategoryName,
         color,
         buyingPrice,
         sellingPrice,
@@ -58,6 +59,7 @@ export const importProductsFromCSV = async (csvData, imageMapping = {}) => {
         title,
         description: description?.substring(0, 30) + '...',
         categoryName,
+        subcategoryName,
         color,
         buyingPrice,
         sellingPrice,
@@ -75,9 +77,9 @@ export const importProductsFromCSV = async (csvData, imageMapping = {}) => {
         continue;
       }
 
-      // Find or create category
-      console.log(`Finding/creating category: "${categoryName}"`);
-      let categoryId = await getOrCreateCategory(categoryName);
+      // Find or create category (with optional subcategory)
+      console.log(`Finding/creating category: "${categoryName}" with subcategory: "${subcategoryName}"`);
+      let categoryId = await getOrCreateCategory(categoryName, subcategoryName);
       console.log(`Category ID: ${categoryId}`);
 
       // Insert product
@@ -208,13 +210,41 @@ function parseCSVLine(line) {
   return values;
 }
 
-// Get or create category
-async function getOrCreateCategory(categoryName) {
-  console.log(`Looking up category: "${categoryName}"`);
+// Get or create category (with optional subcategory)
+async function getOrCreateCategory(categoryName, subcategoryName = null) {
+  console.log(`Looking up category: "${categoryName}", subcategory: "${subcategoryName}"`);
   
+  // If subcategory is provided, try to find/create it under the parent
+  if (subcategoryName && subcategoryName.trim()) {
+    // First find or create the parent category
+    const parentId = await getOrCreateCategory(categoryName, null);
+    
+    // Check if subcategory exists under this parent
+    const [existingSub] = await db.execute(
+      'SELECT category_id FROM categories WHERE category_name = ? AND parent_id = ? AND is_deleted = 0',
+      [subcategoryName.trim(), parentId]
+    );
+    
+    if (existingSub.length > 0) {
+      console.log(`Found existing subcategory: ${subcategoryName} (ID: ${existingSub[0].category_id})`);
+      return existingSub[0].category_id;
+    }
+    
+    // Create new subcategory
+    console.log(`Subcategory "${subcategoryName}" not found, creating new one under parent ${parentId}`);
+    const [result] = await db.execute(
+      'INSERT INTO categories (category_name, parent_id, is_deleted) VALUES (?, ?, 0)',
+      [subcategoryName.trim(), parentId]
+    );
+    
+    console.log(`Created new subcategory: ${subcategoryName} (ID: ${result.insertId})`);
+    return result.insertId;
+  }
+  
+  // No subcategory - just find or create the main category
   // Try to find existing category
   const [existing] = await db.execute(
-    'SELECT category_id FROM categories WHERE category_name = ? AND is_deleted = 0',
+    'SELECT category_id FROM categories WHERE category_name = ? AND is_deleted = 0 AND parent_id IS NULL',
     [categoryName]
   );
   

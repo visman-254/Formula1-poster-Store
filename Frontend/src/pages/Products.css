@@ -1,4 +1,11 @@
 /* Base Container Styles */
+.flex {
+  display: flex;
+  align-items: flex-start; /* This is crucial - prevents stretching */
+  min-height: auto; /* Remove any min-height that might be forcing stretch */
+}
+
+
 .products-container {
   min-height: 100vh;
   background: linear-gradient(to bottom, #fafafa 0%, #ffffff 100%);
@@ -42,6 +49,8 @@
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 12px !important;
     width: 100% !important;
+      align-content: start; /* Align grid rows to the start */
+  height: fit-content; /* Make container only as tall as its content */
     padding: 16px !important;
   }
   
