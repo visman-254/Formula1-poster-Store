@@ -446,10 +446,42 @@ export const deleteCategory = async (id) => {
     if (id === UNCATEGORIZED_ID)
       throw new Error("Cannot delete the Uncategorized category");
 
-    await db.execute(
-      "UPDATE products SET category_id = ? WHERE category_id = ?",
-      [UNCATEGORIZED_ID, id]
+    // First check if UNCATEGORIZED_ID exists
+    const [uncategorized] = await db.execute(
+      'SELECT category_id FROM categories WHERE category_id = ? AND is_deleted = 0',
+      [UNCATEGORIZED_ID]
     );
+    
+    // If Uncategorized doesn't exist, create it or use NULL
+    let targetCategoryId = UNCATEGORIZED_ID;
+    if (uncategorized.length === 0) {
+      // Try to create Uncategorized category
+      try {
+        const [result] = await db.execute(
+          'INSERT INTO categories (category_name, parent_id, is_deleted) VALUES (?, NULL, 0)',
+          ['Uncategorized']
+        );
+        targetCategoryId = result.insertId;
+      } catch (createErr) {
+        // If creation fails, set to NULL (products won't have a category)
+        targetCategoryId = null;
+      }
+    }
+    
+    // Move products to target category (or NULL if Uncategorized doesn't exist)
+    if (targetCategoryId !== null) {
+      await db.execute(
+        "UPDATE products SET category_id = ? WHERE category_id = ?",
+        [targetCategoryId, id]
+      );
+    } else {
+      // If no valid target category, just mark products as uncategorized by setting category_id to a valid one or delete them
+      // For safety, we'll just set category_id to UNCATEGORIZED_ID (even if deleted) or leave as is
+      await db.execute(
+        "UPDATE products SET category_id = NULL WHERE category_id = ?",
+        [id]
+      );
+    }
 
     await db.execute(
       "UPDATE categories SET is_deleted = 1 WHERE category_id = ? OR parent_id = ?",

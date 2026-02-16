@@ -40,7 +40,7 @@ const UncategorizedProducts = () => {
 
     const fetchCategories = async () => {
       try {
-        const { data } = await axios.get(`${API_BASE}/api/categories`, {
+        const { data } = await axios.get(`${API_BASE}/api/products/categories`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCategories(data);
