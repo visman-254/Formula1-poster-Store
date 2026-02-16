@@ -317,7 +317,7 @@ const Navbar = ({ searchQuery, setSearchQuery }) => {
                     <User className="h-6 w-6 text-gray-800 dark:text-white" />
                   </Link>
                 )}
-                <Disclosure.Button className="mobile-toggle">
+                <Disclosure.Button className="mobile-toggle md:hidden">
                   {open ? <X className="h-6 w-6 text-gray-800 dark:text-white" /> : <Menu className="h-6 w-6 text-gray-800 dark:text-white" />}
                 </Disclosure.Button>
               </div>
@@ -344,7 +344,7 @@ const Navbar = ({ searchQuery, setSearchQuery }) => {
               </div>
             )}
             
-            <Disclosure.Panel className="mobile-dropdown">
+            <Disclosure.Panel className="mobile-dropdown md:hidden">
               <div className="mobile-list">
                 <Link
                   to="/home"
