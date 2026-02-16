@@ -1,10 +1,10 @@
 import axios from 'axios';
 import API_BASE from '../config';
 
-const importProductsFromCSV = async (csvData, token) => {
+const importProductsFromCSV = async (csvData, token, imageMapping = {}) => {
   const response = await axios.post(
     `${API_BASE}/api/import/products`,
-    { csvData },
+    { csvData, imageMapping },
     {
       headers: {
         Authorization: `Bearer ${token}`,

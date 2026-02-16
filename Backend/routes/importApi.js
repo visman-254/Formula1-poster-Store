@@ -5,16 +5,16 @@ const router = express.Router();
 
 // POST /api/import/products
 // Import products from CSV
-// CSV Format: title, description, category, color, buying_price, selling_price, stock, discount
+// CSV Format: title, description, category, color, buying_price, selling_price, stock, discount, image
 router.post('/import/products', async (req, res) => {
   try {
-    const { csvData } = req.body;
+    const { csvData, imageMapping } = req.body;
     
     if (!csvData) {
       return res.status(400).json({ message: 'CSV data is required' });
     }
     
-    const results = await importProductsFromCSV(csvData);
+    const results = await importProductsFromCSV(csvData, imageMapping || {});
     
     res.json({
       message: `Import complete: ${results.success} products added, ${results.failed} failed`,
