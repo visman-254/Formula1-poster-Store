@@ -20,6 +20,8 @@ import {
   Image,
 } from "lucide-react";
 import { useAdminNotification } from "../context/AdminNotificationContext";
+import { getWallpaper, updateWallpaper, deleteWallpaper } from "../api/adminSettings";
+import API_BASE from "../config";
 
 import elegantwaterBg from "../assets/elegantwater.jpg";
 
@@ -54,7 +56,6 @@ import OnlineMonthlySales from "../components/OnlineMonthlySales";
 
 import { useNavigate } from "react-router-dom";
 import { exportOrders, exportProducts, exportInventory, exportUsers } from "../api/exportApi";
-import { getWallpaper, updateWallpaper, deleteWallpaper } from "../api/adminSettings";
 import "./Admin.css";
 
 export default function AdminPage() {
@@ -227,7 +228,7 @@ export default function AdminPage() {
       try {
         const response = await updateWallpaper(file);
         if (response.success) {
-          setAdminBackground(response.wallpaper);
+          setAdminBackground(`${API_BASE}/${response.wallpaper}`);
         }
       } catch (error) {
         console.error("Error uploading wallpaper:", error);
@@ -263,7 +264,7 @@ export default function AdminPage() {
       try {
         const response = await getWallpaper();
         if (response.success && response.wallpaper) {
-          setAdminBackground(response.wallpaper);
+          setAdminBackground(`${API_BASE}/${response.wallpaper}`);
         }
       } catch (error) {
         console.error("Error loading wallpaper:", error);
