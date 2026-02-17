@@ -25,6 +25,7 @@ import imeiTrackingRoutes from "./routes/imeiTrackingApi.js";
 import exportRoutes from "./routes/exportApi.js";
 import importRoutes from "./routes/importApi.js";
 import imageUploadRoutes from "./routes/imageUploadApi.js";
+import adminSettingsRoutes from "./routes/adminSettingsApi.js";
 
 
 
@@ -75,6 +76,7 @@ app.use('/api/imei', imeiTrackingRoutes);
 app.use('/api', exportRoutes);
 app.use('/api', importRoutes);
 app.use('/api', imageUploadRoutes);
+app.use('/api/admin-settings', adminSettingsRoutes);
 
 
 if(process.env.NODE_ENV === "production") {

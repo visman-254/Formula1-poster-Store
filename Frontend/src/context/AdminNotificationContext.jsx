@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import API_BASE from "../config";
 
 const AdminNotificationContext = createContext();
 
@@ -8,7 +9,7 @@ export const AdminNotificationProvider = ({ children }) => {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch("/api/admin/notifications");
+      const res = await fetch(`${API_BASE}/api/admin/notifications`);
       const data = await res.json();
 
       if (data.success) {
@@ -27,12 +28,12 @@ export const AdminNotificationProvider = ({ children }) => {
   }, []);
 
   const resetNewOrdersCount = async () => {
-    await fetch("/api/admin/orders/mark-seen", { method: "PATCH" });
+    await fetch(`${API_BASE}/api/admin/orders/mark-seen`, { method: "PATCH" });
     setNewOrdersCount(0);
   };
 
   const resetNewPreordersCount = async () => {
-    await fetch("/api/admin/preorders/mark-seen", { method: "PATCH" });
+    await fetch(`${API_BASE}/api/admin/preorders/mark-seen`, { method: "PATCH" });
     setNewPreordersCount(0);
   };
 

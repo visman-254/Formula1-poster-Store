@@ -16,6 +16,8 @@ import {
   X,
   FileDown,
   Upload,
+  Settings,
+  Image,
 } from "lucide-react";
 import { useAdminNotification } from "../context/AdminNotificationContext";
 
@@ -52,12 +54,15 @@ import OnlineMonthlySales from "../components/OnlineMonthlySales";
 
 import { useNavigate } from "react-router-dom";
 import { exportOrders, exportProducts, exportInventory, exportUsers } from "../api/exportApi";
+import { getWallpaper, updateWallpaper, deleteWallpaper } from "../api/adminSettings";
 import "./Admin.css";
 
 export default function AdminPage() {
   const [activeCategory, setActiveCategory] = useState("Dashboard");
   const [activeTab, setActiveTab] = useState("home");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [user, setUser] = useState(null);
+  const [adminBackground, setAdminBackground] = useState(null);
   const [exportLoading, setExportLoading] = useState(null);
   const navigate = useNavigate();
 
@@ -189,6 +194,7 @@ export default function AdminPage() {
           { value: "analytics", label: "Analytics", icon: <ChartNoAxesCombined size={16} /> },
           { value: "low-stock", label: "Low Stock", icon: <BellElectric size={16} />, count: lowStockCount },
           { value: "users", label: "Users", icon: <User size={16} /> },
+          { value: "settings", label: "Settings", icon: <Settings size={16} /> },
         ];
       default:
         return [];
@@ -214,10 +220,66 @@ export default function AdminPage() {
     return () => observer.disconnect();
   }, []);
 
+  // Handle wallpaper upload
+  const handleWallpaperUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      try {
+        const response = await updateWallpaper(file);
+        if (response.success) {
+          setAdminBackground(response.wallpaper);
+        }
+      } catch (error) {
+        console.error("Error uploading wallpaper:", error);
+      }
+    }
+  };
+
+  // Handle wallpaper reset
+  const handleWallpaperReset = async () => {
+    try {
+      const response = await deleteWallpaper();
+      if (response.success) {
+        setAdminBackground(null);
+      }
+    } catch (error) {
+      console.error("Error resetting wallpaper:", error);
+    }
+  };
+
+  // Load user and admin background from backend
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Error parsing user data:", e);
+      }
+    }
+    
+    // Load wallpaper from backend
+    const loadWallpaper = async () => {
+      try {
+        const response = await getWallpaper();
+        if (response.success && response.wallpaper) {
+          setAdminBackground(response.wallpaper);
+        }
+      } catch (error) {
+        console.error("Error loading wallpaper:", error);
+      }
+    };
+    
+    loadWallpaper();
+  }, []);
+
   return (
     <div className="admin-root">
       {/* Background */}
-      <div className="admin-background" style={{ backgroundImage: `url(${elegantwaterBg})` }}>
+      <div 
+        className="admin-background" 
+        style={{ backgroundImage: adminBackground ? `url(${adminBackground})` : `url(${elegantwaterBg})` }}
+      >
         <div className="background-overlay" />
       </div>
 
@@ -275,6 +337,39 @@ export default function AdminPage() {
                   </button>
                 ))}
               </nav>
+              
+              {/* User Footer Section - VS Code style */}
+              <div className="sidebar-user-footer">
+                <div className="sidebar-user-info">
+                  <div className="sidebar-user-avatar">
+                    <User size={18} />
+                  </div>
+                  <div className="sidebar-user-details">
+                    <span className="sidebar-user-name">
+                      {user ? (user.name || user.username) : 'Admin User'}
+                    </span>
+                    {user && user.role && (
+                      <span className="sidebar-user-role">{user.role}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="sidebar-user-actions">
+                  <button 
+                    className="sidebar-action-btn"
+                    onClick={() => handleTabClick('settings')}
+                    title="Settings"
+                  >
+                    <Settings size={18} />
+                  </button>
+                  <button 
+                    className="sidebar-logout-btn"
+                    onClick={handleLogout}
+                    title="Logout"
+                  >
+                    <LogOut size={18} />
+                  </button>
+                </div>
+              </div>
             </aside>
           )}
 
@@ -441,6 +536,93 @@ export default function AdminPage() {
                     </div>
                   </div>
                   
+                </div>
+              </GlassmorphicContainer>
+            )}
+            {activeTab === "settings" && (
+              <GlassmorphicContainer>
+                <div className="settings-container">
+                  <h2 className="settings-header">Admin Settings</h2>
+                  
+                  {/* Wallpaper Settings */}
+                  <div className="settings-section">
+                    <h3 className="settings-section-header">
+                      <Image size={20} />
+                      Wallpaper / Background
+                    </h3>
+                    <p className="settings-description">
+                      Upload a custom background image for the admin section
+                    </p>
+                    
+                    <div className="wallpaper-preview">
+                      {adminBackground ? (
+                        <img src={adminBackground} alt="Current wallpaper" />
+                      ) : (
+                        <img src={elegantwaterBg} alt="Default wallpaper" />
+                      )}
+                    </div>
+                    
+                    <div className="wallpaper-actions">
+                      <label className="wallpaper-upload-btn">
+                        <Upload size={16} />
+                        Upload New Wallpaper
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handleWallpaperUpload}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                      
+                      {adminBackground && (
+                        <button 
+                          className="wallpaper-reset-btn"
+                          onClick={handleWallpaperReset}
+                        >
+                          Reset to Default
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* User Info Section */}
+                  <div className="settings-section">
+                    <h3 className="settings-section-header">
+                      <User size={20} />
+                      Current User
+                    </h3>
+                    {user ? (
+                      <div className="user-info-display">
+                        <div className="user-info-row">
+                          <span className="user-info-label">Name:</span>
+                          <span className="user-info-value">{user.name || user.username}</span>
+                        </div>
+                        <div className="user-info-row">
+                          <span className="user-info-label">Email:</span>
+                          <span className="user-info-value">{user.email}</span>
+                        </div>
+                        {user.role && (
+                          <div className="user-info-row">
+                            <span className="user-info-label">Role:</span>
+                            <span className="user-info-value">{user.role}</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="no-user-info">No user information available</p>
+                    )}
+                  </div>
+                  
+                  {/* Logout Section */}
+                  <div className="settings-section">
+                    <button 
+                      className="logout-btn-large"
+                      onClick={handleLogout}
+                    >
+                      <LogOut size={20} />
+                      Logout
+                    </button>
+                  </div>
                 </div>
               </GlassmorphicContainer>
             )}

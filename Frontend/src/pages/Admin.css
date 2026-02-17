@@ -334,6 +334,345 @@ html.dark .logout-btn:hover {
 }
 
 /* =========================
+   SIDEBAR USER FOOTER (VS Code style)
+   ========================= */
+
+.sidebar-user-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: rgba(0,0,0,0.05);
+  border-top: 1px solid rgba(0,0,0,0.1);
+}
+
+html.dark .sidebar-user-footer {
+  background: rgba(0,0,0,0.3);
+  border-top-color: rgba(255,255,255,0.06);
+}
+
+.sidebar-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+.sidebar-user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(59,130,246,0.15);
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+html.dark .sidebar-user-avatar {
+  background: rgba(59,130,246,0.25);
+  color: #60a5fa;
+}
+
+.sidebar-user-details {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-user-name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+html.dark .sidebar-user-name {
+  color: #f1f5f9;
+}
+
+.sidebar-user-role {
+  font-size: 0.6875rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+html.dark .sidebar-user-role {
+  color: #94a3b8;
+}
+
+.sidebar-logout-btn {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  color: #64748b;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.sidebar-logout-btn:hover {
+  background: rgba(239,68,68,0.15);
+  color: #ef4444;
+}
+
+html.dark .sidebar-logout-btn:hover {
+  background: rgba(239,68,68,0.25);
+  color: #f87171;
+}
+
+.sidebar-user-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.sidebar-action-btn {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  color: #64748b;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.sidebar-action-btn:hover {
+  background: rgba(59,130,246,0.15);
+  color: #3b82f6;
+}
+
+html.dark .sidebar-action-btn:hover {
+  background: rgba(59,130,246,0.25);
+  color: #60a5fa;
+}
+
+/* =========================
+   SETTINGS PAGE STYLES
+   ========================= */
+
+.settings-container {
+  padding: 1.5rem;
+  animation: fadeIn 0.6s ease;
+}
+
+.settings-header {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  text-align: center;
+  color: #1e293b;
+}
+
+html.dark .settings-header {
+  color: #f1f5f9;
+}
+
+.settings-section {
+  background: rgba(255,255,255,0.5);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+html.dark .settings-section {
+  background: rgba(30,30,40,0.6);
+  border-color: rgba(255,255,255,0.08);
+}
+
+.settings-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #1e293b;
+}
+
+html.dark .settings-section-header {
+  color: #f1f5f9;
+}
+
+.settings-description {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-bottom: 1rem;
+}
+
+html.dark .settings-description {
+  color: #94a3b8;
+}
+
+.wallpaper-preview {
+  width: 100%;
+  height: 200px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+
+html.dark .wallpaper-preview {
+  border-color: rgba(255,255,255,0.1);
+}
+
+.wallpaper-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.wallpaper-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.wallpaper-upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: 8px;
+  background: rgba(59,130,246,0.15);
+  color: #3b82f6;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wallpaper-upload-btn:hover {
+  background: rgba(59,130,246,0.25);
+}
+
+html.dark .wallpaper-upload-btn {
+  background: rgba(59,130,246,0.2);
+  color: #60a5fa;
+}
+
+html.dark .wallpaper-upload-btn:hover {
+  background: rgba(59,130,246,0.3);
+}
+
+.wallpaper-reset-btn {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: 8px;
+  background: rgba(107,114,128,0.15);
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wallpaper-reset-btn:hover {
+  background: rgba(107,114,128,0.25);
+}
+
+html.dark .wallpaper-reset-btn {
+  background: rgba(107,114,128,0.2);
+  color: #9ca3af;
+}
+
+html.dark .wallpaper-reset-btn:hover {
+  background: rgba(107,114,128,0.3);
+}
+
+.user-info-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.user-info-row {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.user-info-label {
+  font-weight: 500;
+  color: #64748b;
+  min-width: 60px;
+}
+
+html.dark .user-info-label {
+  color: #94a3b8;
+}
+
+.user-info-value {
+  color: #1e293b;
+  font-weight: 500;
+}
+
+html.dark .user-info-value {
+  color: #f1f5f9;
+}
+
+.no-user-info {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+html.dark .no-user-info {
+  color: #94a3b8;
+}
+
+.logout-btn-large {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  background: rgba(239,68,68,0.1);
+  color: #ef4444;
+  transition: all 0.2s;
+}
+
+.logout-btn-large:hover {
+  background: rgba(239,68,68,0.2);
+}
+
+html.dark .logout-btn-large {
+  background: rgba(239,68,68,0.15);
+}
+
+html.dark .logout-btn-large:hover {
+  background: rgba(239,68,68,0.25);
+}
+
+/* =========================
    ANALYTICS PAGE LAYOUT
    ========================= */
 
