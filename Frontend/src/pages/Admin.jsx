@@ -129,6 +129,58 @@ export default function AdminPage() {
   const handleCategoryClick = (category) => {
     setActiveCategory(category);
     setSidebarOpen(true);
+    
+    // Automatically select the first tab of the selected category
+    const tabs = getCurrentTabsForCategory(category);
+    if (tabs && tabs.length > 0) {
+      setActiveTab(tabs[0].value);
+    }
+  };
+
+  // Helper function to get tabs for a specific category (used by handleCategoryClick)
+  const getCurrentTabsForCategory = (category) => {
+    switch (category) {
+      case "Dashboard":
+        return [
+          { value: "home", label: "Dashboard", icon: <Home size={16} /> },
+        ];
+      case "Products & Inventory":
+        return [
+          { value: "products", label: "All Products", icon: <PackageSearch size={16} /> },
+          { value: "add", label: "Add Product", icon: <BookmarkPlus size={16} /> },
+          { value: "delete", label: "Categories", icon: <Delete size={16} /> },
+          { value: "uncategorized", label: "Uncategorized", icon: <HeartCrack size={16} /> },
+          { value: "imei", label: "IMEI Tracking", icon: <Barcode size={16} /> },
+        ];
+      case "Orders & Sales":
+        return [
+          { value: "orders", label: "Orders", icon: <Forklift size={16} />, count: newOrdersCount },
+          { value: "backorders", label: "Backorders", icon: <Forklift size={16} /> },
+          { value: "preorders", label: "Preorders", icon: <Shuffle size={16} />, count: newPreordersCount },
+        ];
+      case "Website":
+        return [
+          { value: "create-hero", label: "Hero Slides", icon: <PackageSearch size={16} /> },
+          { value: "create-promotion", label: "Promotions", icon: <PackageSearch size={16} /> },
+        ];
+      case "Export Data":
+        return [
+          { value: "export-orders", label: "Export Orders", icon: <FileDown size={16} /> },
+          { value: "export-products", label: "Export Products", icon: <FileDown size={16} /> },
+          { value: "export-inventory", label: "Export Inventory", icon: <FileDown size={16} /> },
+          { value: "export-users", label: "Export Users", icon: <FileDown size={16} /> },
+          { value: "import-data", label: "Import Data", icon: <Upload size={16} /> },
+        ];
+      case "System":
+        return [
+          { value: "analytics", label: "Analytics", icon: <ChartNoAxesCombined size={16} /> },
+          { value: "low-stock", label: "Low Stock", icon: <BellElectric size={16} />, count: lowStockCount },
+          { value: "users", label: "Users", icon: <User size={16} /> },
+          { value: "settings", label: "Settings", icon: <Settings size={16} /> },
+        ];
+      default:
+        return [];
+    }
   };
 
   // Handle tab clicks
