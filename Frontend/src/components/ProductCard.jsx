@@ -7,7 +7,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { MoreVertical, SquarePen, CookingPot, Delete } from "lucide-react";
+import { MoreVertical, SquarePen, CookingPot, Delete, X } from "lucide-react";
 import "./ProductCard.css";
 import API_BASE from "../config";
 
@@ -650,7 +650,15 @@ const EditProductModal = ({ product, onUpdated, setIsEditing, user, token }) => 
     return ReactDOM.createPortal(
         <div className="modal-overlay">
             <div className="modal-content bg-white dark:bg-black dark:text-white border dark:border-gray-800 max-w-4xl max-h-[90vh] overflow-y-auto">
-                <h2 className="text-2xl font-bold mb-4 text-black dark:text-white">Edit Product</h2>
+                {/* Close Button - Top Right */}
+                <button 
+                    onClick={() => setIsEditing(false)}
+                    className="modal-close-btn absolute top-4 right-4"
+                    title="Close"
+                >
+                    <X size={20} />
+                </button>
+                <h2 className="text-2xl font-bold mb-4 text-black dark:text-white pr-10">Edit Product</h2>
                 <form onSubmit={handleUpdate} className="space-y-6">
                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

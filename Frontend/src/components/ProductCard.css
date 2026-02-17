@@ -39,6 +39,8 @@
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -46,18 +48,22 @@
 }
 
 .modal-content {
-  background-color: white;
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   padding: 2rem;
-  border-radius: 0.5rem;
-  max-width: 500px;
+  border-radius: 1rem;
+  max-width: 900px;
   width: 100%;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  position: relative;
 }
 
 .dark .modal-content {
-  background-color: #000000;
+  background-color: rgba(0, 0, 0, 0.85);
   color: #ffffff;
-  border: 1px solid #374151;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Switch Toggle Styles for Light and Dark Mode */
@@ -170,4 +176,34 @@ label[for*="visibility-toggle"] {
 td .flex.items-center.space-x-2 {
   display: inline-flex !important;
   margin-left: 0.5rem;
+}
+
+/* Close button styles */
+.modal-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(156, 163, 175, 0.2);
+  color: #6b7280;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.dark .modal-close-btn {
+  background: rgba(75, 85, 99, 0.4);
+  color: #9ca3af;
+}
+
+.dark .modal-close-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #f87171;
 }

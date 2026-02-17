@@ -12,7 +12,7 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import {
+import { 
   Card,
   CardHeader,
   CardTitle,
@@ -156,19 +156,24 @@ const ProductAnalytics = () => {
                 <CardTitle>{title}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-80 w-full min-h-[320px]">
+                <div className="h-96 w-full min-h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data} margin={{ bottom: 20 }}>
+                    <BarChart data={data} margin={{ top: 30, right: 30, bottom: 60, left: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis
                         dataKey="name"
-                        angle={-30}
+                        angle={-45}
                         textAnchor="end"
-                        height={70}
+                        height={80}
                         interval={0}
-                        fontSize={12}
+                        fontSize={11}
+                        tick={{ fill: '#666' }}
                       />
-                      <YAxis tickFormatter={(val) => val > 1000 ? `${val/1000}k` : val} />
+                      <YAxis 
+                        tickFormatter={(val) => val > 1000 ? `${val/1000}k` : val}
+                        width={60}
+                        tick={{ fill: '#666' }}
+                      />
                       <Tooltip formatter={formatter} />
                       <Bar dataKey="value" fill={fill} radius={[4, 4, 0, 0]} />
                     </BarChart>
@@ -210,11 +215,12 @@ const AnalyticsPieCard = ({
                 innerRadius={60}
                 outerRadius={80}
                 paddingAngle={5}
-                label={({ percent }) =>
+                label={({ percent, cx, cy }) =>
                   percent > 0.05
                     ? `${(percent * 100).toFixed(0)}%`
                     : null
                 }
+                labelLine={false}
               >
                 {data.map((item, i) => (
                   <Cell

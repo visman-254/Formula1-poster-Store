@@ -612,17 +612,22 @@ html.dark {
 }
 
 .analytics-pies-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.25rem;
+    display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 1.5rem;
+
 }
 
 .analytics-pie-card {
   background: rgba(30, 35, 45, 0.3);
   border-radius: 12px;
-  padding: 1rem;
+  padding: 1.25rem;
   border: 1px solid var(--color-border-subtle);
+  min-height: 480px;  /* CRITICAL */
+  display: flex;
+  flex-direction: column;
 }
+
 
 .analytics-pie-header {
   margin-bottom: 0.75rem;
@@ -643,7 +648,8 @@ html.dark {
 }
 
 .analytics-pie-container {
-  min-height: 200px;
+  min-height: 360px;
+   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
