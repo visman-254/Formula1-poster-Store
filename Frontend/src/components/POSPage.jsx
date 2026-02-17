@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, X } from "lucide-react";
+import { Search, X, User, Settings, LogOut, Menu, Table, Grid, ShoppingCart, Upload, Image } from "lucide-react";
 import { toast } from 'sonner';
 import POSReceipt from './POSReceipt';
+import GlassmorphicContainer from './GlassmorphicContainer';
 import './POSPage.css';
 import API_BASE from '../config';
+import { getWallpaper, updateWallpaper, deleteWallpaper } from "../api/adminSettings";
+import elegantwaterBg from "../assets/elegantwater.jpg";
 
 const POSPage = () => {
   const navigate = useNavigate();
@@ -25,35 +25,88 @@ const POSPage = () => {
   const [mpesaPhone, setMpesaPhone] = useState('');
   const [mpesaModalError, setMpesaModalError] = useState('');
   const [selectedVariants, setSelectedVariants] = useState({});
+  const [user, setUser] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [viewMode, setViewMode] = useState('table');
+  const [showAllProducts, setShowAllProducts] = useState(true);
+  const [posBackground, setPosBackground] = useState(null);
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
 
-  // --- IMEI input state (separate from cart) ---
-  const [imeiInputs, setImeiInputs] = useState({}); // { variant_id: rawInputValue }
+  // IMEI input state
+  const [imeiInputs, setImeiInputs] = useState({});
+  const imeiInputsRef = useRef({});
 
-  // --- 🔥 CRITICAL: REF THAT ALWAYS HAS LATEST IMEI VALUE (for debounced callback) ---
-  const imeiInputsRef = useRef({}); // mirror of imeiInputs, updated synchronously
-
-  // --- Polling state ---
+  // Polling state
   const [isPolling, setIsPolling] = useState(false);
   const [mpesaCheckoutId, setMpesaCheckoutId] = useState(null);
   const pollingIntervalRef = useRef(null);
-
-  // --- Debounce timer ref ---
   const debounceTimerRef = useRef({});
-
-  // --- Validation request ID ref (race condition prevention) ---
   const validationReqIdRef = useRef(0);
   const latestValidationVariantRef = useRef(null);
 
   const API_URL = `${API_BASE}/api`;
   const token = localStorage.getItem('token');
 
-  // ------------------------------------------------------------------
-  // Utility functions
-  // ------------------------------------------------------------------
+  // Load user data
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error('Failed to parse user:', e);
+      }
+    }
+  }, []);
+
+  // Load wallpaper
+  useEffect(() => {
+    const loadPosWallpaper = async () => {
+      try {
+        const response = await getWallpaper();
+        if (response.success && response.wallpaper) {
+          setPosBackground(`${API_BASE}/${response.wallpaper}`);
+        }
+      } catch (err) {
+        console.error('Error loading wallpaper:', err);
+      }
+    };
+    loadPosWallpaper();
+  }, []);
+
+  // Handle wallpaper upload
+  const handleWallpaperUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const response = await updateWallpaper(file);
+      if (response.success) {
+        setPosBackground(`${API_BASE}/${response.wallpaper}`);
+        toast.success('Wallpaper updated successfully');
+      }
+    } catch (err) {
+      console.error('Error uploading wallpaper:', err);
+      toast.error('Failed to update wallpaper');
+    }
+  };
+
+  // Handle wallpaper reset
+  const handleWallpaperReset = async () => {
+    try {
+      await deleteWallpaper();
+      setPosBackground(null);
+      toast.success('Wallpaper reset to default');
+    } catch (err) {
+      console.error('Error resetting wallpaper:', err);
+      toast.error('Failed to reset wallpaper');
+    }
+  };
+
+  // Reset sale
   const resetSale = () => {
     setCart([]);
     setImeiInputs({});
-    imeiInputsRef.current = {}; // clear ref
+    imeiInputsRef.current = {};
     setMpesaPhone('');
     setError('');
     setCheckoutLoading(false);
@@ -67,9 +120,7 @@ const POSPage = () => {
     }
   };
 
-  // ------------------------------------------------------------------
-  // API calls
-  // ------------------------------------------------------------------
+  // Fetch products
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -88,9 +139,7 @@ const POSPage = () => {
     fetchProducts();
   }, [token, API_URL]);
 
-  // ------------------------------------------------------------------
-  // Polling logic (unchanged)
-  // ------------------------------------------------------------------
+  // Polling logic
   useEffect(() => {
     if (isPolling && mpesaCheckoutId) {
       pollingIntervalRef.current = setInterval(async () => {
@@ -113,9 +162,7 @@ const POSPage = () => {
             setMpesaCheckoutId(null);
             clearInterval(pollingIntervalRef.current);
             pollingIntervalRef.current = null;
-          } else if (
-            ['failed', 'cancelled', 'not_found', 'paid_but_order_failed'].includes(data.status)
-          ) {
+          } else if (['failed', 'cancelled', 'not_found', 'paid_but_order_failed'].includes(data.status)) {
             setError(`Payment failed or was not found. Status: ${data.status}`);
             setCheckoutLoading(false);
             setIsPolling(false);
@@ -141,11 +188,9 @@ const POSPage = () => {
     };
   }, [isPolling, mpesaCheckoutId, API_URL, token]);
 
-  // ------------------------------------------------------------------
-  // Product image helper (unchanged)
-  // ------------------------------------------------------------------
+  // Product image helper
   const getProductImage = (product) => {
-    const fallback = '/fallback.jpg';
+    const fallback = '/images/poster1.jpg';
     if (!product) return fallback;
 
     const getImageUrl = (path) => {
@@ -179,13 +224,18 @@ const POSPage = () => {
     return fallback;
   };
 
+  // Filter products based on search
   const filteredProducts = products.filter((p) =>
     p.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // ------------------------------------------------------------------
-  // IMEI validation (unchanged, but uses callback correctly)
-  // ------------------------------------------------------------------
+  // Display products
+  const displayProducts = showAllProducts ? filteredProducts : cart.map(item => {
+    const product = products.find(p => p.product_id === item.product_id);
+    return product || { ...item, title: item.title, variants: [{ ...item, product_id: item.product_id }] };
+  });
+
+  // IMEI validation
   const validateImei = useCallback(
     async (imeiValue, variantId, productId) => {
       if (!imeiValue || imeiValue.trim().length < 5) {
@@ -198,36 +248,21 @@ const POSPage = () => {
       try {
         const response = await axios.post(
           `${API_URL}/imei/validate?_=${Date.now()}`,
-          {
-            imeiNumber: imeiValue.trim(),
-            variantId,
-            productId,
-          },
+          { imeiNumber: imeiValue.trim(), variantId, productId },
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
         const { data } = response;
-
-        // Stale check
         if (latestValidationVariantRef.current !== variantId || validationReqIdRef.current !== requestId) {
           return { valid: null, status: 'stale' };
         }
 
         if (!data.valid) {
-          return {
-            valid: false,
-            status: data.status || 'error',
-            error: data.error || 'IMEI validation failed',
-          };
+          return { valid: false, status: data.status || 'error', error: data.error || 'IMEI validation failed' };
         }
 
         if (data.warning) {
-          return {
-            valid: true,
-            status: data.status || 'available',
-            warning: data.warning,
-            error: null,
-          };
+          return { valid: true, status: data.status || 'available', warning: data.warning, error: null };
         }
 
         return { valid: true, status: data.status || 'new', error: null };
@@ -237,142 +272,66 @@ const POSPage = () => {
         }
 
         const errorData = err.response?.data;
+        if (errorData?.status === 'used') return { valid: false, status: 'used', error: 'IMEI has already been used in another order' };
+        if (errorData?.status === 'reserved') return { valid: false, status: 'reserved', error: 'IMEI is reserved for another order' };
+        if (errorData?.status === 'not_found') return { valid: false, status: 'not_found', error: errorData?.error || 'IMEI not found in database' };
+        if (errorData?.status === 'wrong_product') return { valid: false, status: 'wrong_product', error: errorData?.error || 'IMEI belongs to a different product', found_product_title: errorData?.found_product_title };
+        if (errorData?.status === 'wrong_variant') return { valid: false, status: 'wrong_variant', error: errorData?.error || 'IMEI belongs to a different variant', found_variant_id: errorData?.found_variant_id };
 
-        if (errorData?.status === 'used') {
-          return {
-            valid: false,
-            status: 'used',
-            error: 'IMEI has already been used in another order',
-          };
-        }
-        if (errorData?.status === 'reserved') {
-          return {
-            valid: false,
-            status: 'reserved',
-            error: 'IMEI is reserved for another order',
-          };
-        }
-        if (errorData?.status === 'not_found') {
-          return {
-            valid: false,
-            status: 'not_found',
-            error: errorData?.error || 'IMEI not found in database',
-          };
-        }
-        if (errorData?.status === 'wrong_product') {
-          return {
-            valid: false,
-            status: 'wrong_product',
-            error: errorData?.error || 'IMEI belongs to a different product',
-            found_product_title: errorData?.found_product_title,
-            found_variant_color: errorData?.found_variant_color,
-          };
-        }
-        if (errorData?.status === 'wrong_variant') {
-          return {
-            valid: false,
-            status: 'wrong_variant',
-            error: errorData?.error || 'IMEI belongs to a different variant',
-            found_variant_id: errorData?.found_variant_id,
-            found_product_title: errorData?.found_product_title,
-            found_variant_color: errorData?.found_variant_color,
-          };
-        }
-
-        console.error('IMEI validation error:', errorData || err.message);
-        return {
-          valid: false,
-          status: 'error',
-          error: 'Failed to validate IMEI. Please try again.',
-        };
+        return { valid: false, status: 'error', error: 'Failed to validate IMEI. Please try again.' };
       }
     },
     [API_URL, token]
   );
 
-  // ------------------------------------------------------------------
-  // ✅ FIXED: IMEI input change handler – updates ref synchronously
-  // ------------------------------------------------------------------
+  // Handle IMEI change
   const handleImeiChange = (variantId, rawValue) => {
-    // 1. Update ref IMMEDIATELY (synchronous, no stale closure)
     imeiInputsRef.current[variantId] = rawValue;
+    setImeiInputs((prev) => ({ ...prev, [variantId]: rawValue }));
 
-    // 2. Update state for UI (async)
-    setImeiInputs((prev) => ({
-      ...prev,
-      [variantId]: rawValue,
-    }));
-
-    // 3. Clear any pending debounce for this variant
     if (debounceTimerRef.current[variantId]) {
       clearTimeout(debounceTimerRef.current[variantId]);
     }
 
-    // 4. Get the cart item to retrieve productId
     const cartItem = cart.find((i) => i.variant_id === variantId);
     if (!cartItem) return;
 
-    // 5. Clean the IMEI for validation only (remove control characters, NOT truncate)
     const cleanedImei = rawValue.replace(/[\r\n\t\x00-\x1F]/g, '');
 
-    // 6. If IMEI is empty, clear validation state immediately
     if (!cleanedImei) {
       setCart((prevCart) =>
         prevCart.map((item) =>
           item.variant_id === variantId
-            ? {
-                ...item,
-                imei: '',
-                imeiValid: null,
-                imeiError: null,
-                imeiWarning: null,
-              }
+            ? { ...item, imei: '', imeiValid: null, imeiError: null, imeiWarning: null }
             : item
         )
       );
       return;
     }
 
-    // 7. Update cart with EXACT IMEI value (preserve full string)
     setCart((prevCart) =>
       prevCart.map((item) =>
         item.variant_id === variantId
-          ? {
-              ...item,
-              imei: cleanedImei,
-              imeiValid: null,
-              imeiError: null,
-              imeiWarning: null,
-            }
+          ? { ...item, imei: cleanedImei, imeiValid: null, imeiError: null, imeiWarning: null }
           : item
       )
     );
 
-    // 8. Debounce validation: wait 500ms after last keystroke
     debounceTimerRef.current[variantId] = setTimeout(async () => {
-      // ✅ CRITICAL: Read from REF, not from state (state is stale in this closure)
       const currentRaw = imeiInputsRef.current[variantId] || '';
       const currentCleaned = currentRaw.replace(/[\r\n\t\x00-\x1F]/g, '');
 
-      // Only validate if the input has at least 5 chars
       if (currentCleaned.length < 5) return;
 
-      const result = await validateImei(
-        currentCleaned,
-        variantId,
-        cartItem.product_id
-      );
-
-      // If result is stale, do nothing
+      const result = await validateImei(currentCleaned, variantId, cartItem.product_id);
       if (result.status === 'stale') return;
 
-      // Update cart with validation result - PRESERVE the IMEI value
       setCart((prevCart) =>
         prevCart.map((item) =>
           item.variant_id === variantId
             ? {
                 ...item,
-                imei: currentCleaned, // keep the full value
+                imei: currentCleaned,
                 imeiValid: result.valid ? 'valid' : 'invalid',
                 imeiError: result.error || null,
                 imeiWarning: result.warning || null,
@@ -381,68 +340,43 @@ const POSPage = () => {
         )
       );
 
-      // Show toast based on result
       if (result.valid) {
-        if (result.warning) {
-          toast.warning(result.warning);
-        } else {
-          toast.success('IMEI is valid');
-        }
+        if (result.warning) toast.warning(result.warning);
+        else toast.success('IMEI is valid');
       } else if (result.error) {
         toast.error(result.error);
       }
     }, 500);
   };
 
-  // ------------------------------------------------------------------
-  // ✅ FIXED: Auto-fill IMEI (also updates ref)
-  // ------------------------------------------------------------------
+  // Auto-fill IMEI
   const autoFillImei = async (variantId) => {
     try {
       const response = await axios.post(
         `${API_URL}/imei/auto-assign`,
-        {
-          variantId,
-          orderId: 0,
-        },
+        { variantId, orderId: 0 },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.imei) {
         const imei = response.data.imei;
-        
-        // Update ref immediately
         imeiInputsRef.current[variantId] = imei;
-        
-        // Update state for UI
         setImeiInputs((prev) => ({ ...prev, [variantId]: imei }));
-        
-        // Update cart
         setCart((prevCart) =>
           prevCart.map((item) =>
             item.variant_id === variantId
-              ? {
-                  ...item,
-                  imei,
-                  imeiId: response.data.imeiId,
-                  imeiValid: 'valid',
-                  imeiError: null,
-                }
+              ? { ...item, imei, imeiId: response.data.imeiId, imeiValid: 'valid', imeiError: null }
               : item
           )
         );
-        
         toast.success(`IMEI auto-filled: ${imei}`);
       }
     } catch (err) {
       console.error('Auto-fill failed:', err);
-      // Silent fail – user can enter manually
     }
   };
 
-  // ------------------------------------------------------------------
-  // Variant selection (unchanged)
-  // ------------------------------------------------------------------
+  // Variant selection
   const handleVariantSelect = (productId, variantId) => {
     setSelectedVariants((prev) => ({ ...prev, [productId]: variantId }));
   };
@@ -450,17 +384,12 @@ const POSPage = () => {
   const getSelectedVariant = (product) => {
     const selectedId = selectedVariants[product.product_id];
     if (selectedId) {
-      return (
-        product.variants.find((v) => v.variant_id === selectedId) ||
-        product.variants[0]
-      );
+      return product.variants.find((v) => v.variant_id === selectedId) || product.variants[0];
     }
-    return product.variants[0];
+    return product.variants?.[0];
   };
 
-  // ------------------------------------------------------------------
-  // Add to cart (unchanged)
-  // ------------------------------------------------------------------
+  // Add to cart
   const addToCart = async (product) => {
     const variant = getSelectedVariant(product);
     if (!variant || variant.stock <= 0) {
@@ -496,41 +425,29 @@ const POSPage = () => {
         imeiWarning: null,
       };
       setCart((prevCart) => [...prevCart, newItem]);
-      // Initialize local IMEI input state and ref for this variant
       setImeiInputs((prev) => ({ ...prev, [variant.variant_id]: '' }));
-      imeiInputsRef.current[variant.variant_id] = ''; // also initialize ref
+      imeiInputsRef.current[variant.variant_id] = '';
       toast.info('Scan or enter IMEI for this product');
     }
   };
 
-  // ------------------------------------------------------------------
-  // Quantity updates (unchanged)
-  // ------------------------------------------------------------------
+  // Update quantity
   const updateQuantity = (variantId, quantity) => {
     if (quantity <= 0) return removeFromCart(variantId);
     const item = cart.find((i) => i.variant_id === variantId);
     if (item && quantity > item.stock) return setError('Insufficient stock');
-    setCart((prevCart) =>
-      prevCart.map((i) =>
-        i.variant_id === variantId ? { ...i, quantity } : i
-      )
-    );
+    setCart((prevCart) => prevCart.map((i) => (i.variant_id === variantId ? { ...i, quantity } : i)));
   };
 
-  // ------------------------------------------------------------------
-  // ✅ FIXED: Remove from cart – also clean ref
-  // ------------------------------------------------------------------
+  // Remove from cart
   const removeFromCart = (variantId) => {
     setCart((prevCart) => prevCart.filter((i) => i.variant_id !== variantId));
-    // Remove from IMEI input state
     setImeiInputs((prev) => {
       const newState = { ...prev };
       delete newState[variantId];
       return newState;
     });
-    // ✅ Also delete from ref
     delete imeiInputsRef.current[variantId];
-    // Clear any pending debounce timer
     if (debounceTimerRef.current[variantId]) {
       clearTimeout(debounceTimerRef.current[variantId]);
       delete debounceTimerRef.current[variantId];
@@ -538,14 +455,10 @@ const POSPage = () => {
   };
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-  // Check if all cart items have valid IMEIs
   const allImeisValid = cart.length > 0 && cart.every((item) => item.imeiValid === 'valid');
   const pendingImeis = cart.filter((item) => !item.imei || item.imeiValid !== 'valid');
 
-  // ------------------------------------------------------------------
-  // Checkout (unchanged)
-  // ------------------------------------------------------------------
+  // Checkout
   const handleCheckout = async () => {
     if (cart.length === 0) return setError('Cart is empty');
     setError('');
@@ -571,11 +484,7 @@ const POSPage = () => {
     try {
       const response = await axios.post(
         `${API_URL}/pos/checkout`,
-        {
-          cartItems: cart,
-          total: total.toFixed(2),
-          payment_method: paymentMethod,
-        },
+        { cartItems: cart, total: total.toFixed(2), payment_method: paymentMethod },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setReceiptData(response.data.receipt);
@@ -602,12 +511,7 @@ const POSPage = () => {
     try {
       const response = await axios.post(
         `${API_URL}/pos/checkout`,
-        {
-          cartItems: cart,
-          total: total.toFixed(2),
-          payment_method: 'mpesa',
-          phone_number: mpesaPhone,
-        },
+        { cartItems: cart, total: total.toFixed(2), payment_method: 'mpesa', phone_number: mpesaPhone },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -627,14 +531,23 @@ const POSPage = () => {
     }
   };
 
-  // ------------------------------------------------------------------
-  // Render
-  // ------------------------------------------------------------------
+  // Handle logout
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
+
+  // Background image
+  const backgroundImage = posBackground || elegantwaterBg;
+
+  // Redirect if no token
   if (!token) {
     navigate('/login');
     return null;
   }
 
+  // Show receipt
   if (showReceipt && receiptData) {
     return (
       <POSReceipt
@@ -648,370 +561,861 @@ const POSPage = () => {
   }
 
   return (
-    <div className="pos-page-container">
-      {/* Info / Error alerts */}
-      {isPolling && (
-        <div className="pos-info-alert">
-          <p>
-            Awaiting M-Pesa payment confirmation for Ksh{' '}
-            {total.toLocaleString('en-KE')}... Please ask the customer to
-            complete the transaction on their phone.
-          </p>
-        </div>
-      )}
-      {error && (
-        <div className="pos-error-alert">
-          <p>{error}</p>
-          <button onClick={() => setError('')}>
-            <X className="w-4 h-4" />
+    <div 
+      className="pos-page-container" 
+      style={{ 
+        display: 'flex', 
+        minHeight: '100vh',
+        background: `url(${backgroundImage}) center/cover no-repeat fixed`,
+        backgroundColor: '#000000'
+      }}
+    >
+      {/* Glass Overlay for entire page */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0, 0, 0, 0.3)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        zIndex: 0
+      }} />
+
+      {/* Sidebar */}
+      <aside className={`pos-sidebar ${sidebarOpen ? 'open' : 'collapsed'}`} style={{
+        width: sidebarOpen ? '260px' : '60px',
+        background: 'rgba(20, 20, 30, 0.6)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+        padding: '20px 0',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'width 0.3s ease',
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        zIndex: 10
+      }}>
+        {/* Sidebar Header */}
+        <div style={{ padding: '0 16px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: 'none',
+              color: 'white',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              width: '100%'
+            }}
+          >
+            <Menu size={18} />
+            {sidebarOpen && <span style={{ fontWeight: 600 }}>POS System</span>}
           </button>
         </div>
-      )}
 
-      <div className="pos-main-layout">
-        {/* Products Grid */}
-        <div className="pos-products-section">
-          <div className="search-container" style={{ marginBottom: '1rem' }}>
-            <div className="relative w-full">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  type="text"
-                  placeholder="Search products..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-10 w-full"
-                />
-                {searchTerm && (
+        {/* View Toggle */}
+        {sidebarOpen && (
+          <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => setViewMode('table')}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  background: viewMode === 'table' ? '#10b981' : 'rgba(255,255,255,0.1)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  fontSize: '12px'
+                }}
+              >
+                <Table size={14} /> Table
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  background: viewMode === 'grid' ? '#10b981' : 'rgba(255,255,255,0.1)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  fontSize: '12px'
+                }}
+              >
+                <Grid size={14} /> Grid
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* View All Products Toggle */}
+        {sidebarOpen && (
+          <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <button
+              onClick={() => setShowAllProducts(!showAllProducts)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                background: showAllProducts ? 'rgba(59, 130, 246, 0.8)' : 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                fontWeight: 500
+              }}
+            >
+              <ShoppingCart size={16} />
+              {showAllProducts ? 'View All Products' : 'Scan IMEIs Only'}
+            </button>
+          </div>
+        )}
+
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* Settings - at bottom */}
+        {sidebarOpen && (
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '8px',
+            padding: '16px',
+            borderTop: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            {/* Settings Button - Expandable */}
+            <button
+              onClick={() => setSettingsExpanded(!settingsExpanded)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                background: settingsExpanded ? 'rgba(59, 130, 246, 0.5)' : 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                fontSize: '13px',
+                fontWeight: 500
+              }}
+            >
+              <Settings size={16} /> Settings
+            </button>
+            
+            {/* Expanded Settings Menu - Wallpaper */}
+            {settingsExpanded && (
+              <div style={{
+                padding: '16px',
+                background: 'rgba(0,0,0,0.4)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                borderRadius: '12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                border: '1px solid rgba(255,255,255,0.1)'
+              }}>
+                <h4 style={{ 
+                  color: 'rgba(255,255,255,0.9)', 
+                  fontSize: '13px', 
+                  margin: 0, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px',
+                  fontWeight: 500
+                }}>
+                  <Image size={14} /> Background Settings
+                </h4>
+                <label style={{
+                  width: '100%',
+                  padding: '10px',
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  fontSize: '13px',
+                  transition: 'all 0.2s'
+                }}>
+                  <Upload size={14} /> Upload Wallpaper
+                  <input 
+                    type='file' 
+                    accept='image/*' 
+                    onChange={handleWallpaperUpload}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+                {posBackground && (
                   <button
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    onClick={() => setSearchTerm('')}
+                    onClick={handleWallpaperReset}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      background: 'rgba(239, 68, 68, 0.2)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '8px',
+                      color: '#ef4444',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      transition: 'all 0.2s'
+                    }}
                   >
-                    <X size={16} />
+                    Reset to Default
                   </button>
                 )}
               </div>
+            )}
+            
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              style={{
+                width: '100%',
+                padding: '10px',
+                background: 'rgba(239, 68, 68, 0.2)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: '8px',
+                color: '#ef4444',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                fontSize: '13px',
+                fontWeight: 500,
+                transition: 'all 0.2s'
+              }}
+            >
+              <LogOut size={16} /> Logout
+            </button>
+          </div>
+        )}
+      </aside>
+
+      {/* Main Content */}
+      <main style={{
+        flex: 1,
+        marginLeft: sidebarOpen ? '260px' : '60px',
+        transition: 'margin-left 0.3s ease',
+        padding: '20px',
+        position: 'relative',
+        zIndex: 5,
+        minHeight: '100vh'
+      }}>
+        {/* Header */}
+        <GlassmorphicContainer>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <h1 style={{
+              color: 'white',
+              fontSize: '28px',
+              fontWeight: 700,
+              margin: 0,
+              textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+            }}>
+              Point of Sale
+            </h1>
+            
+            {/* Search */}
+            <div style={{ position: 'relative', width: '300px' }}>
+              <Search style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'rgba(255,255,255,0.5)',
+                zIndex: 1
+              }} size={18} />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 40px',
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '10px',
+                  color: 'white',
+                  fontSize: '14px',
+                  outline: 'none',
+                  transition: 'all 0.2s'
+                }}
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'rgba(255,255,255,0.5)',
+                    cursor: 'pointer',
+                    zIndex: 1
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
           </div>
+        </GlassmorphicContainer>
 
-          {loading ? (
-            <div className="loading-container">
-              <div className="spinner"></div>
-              <p>Loading products...</p>
+        {/* Alerts */}
+        {isPolling && (
+          <GlassmorphicContainer style={{ marginTop: '20px' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              color: '#60a5fa'
+            }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#60a5fa', animation: 'pulse 1.5s infinite' }} />
+              Awaiting M-Pesa payment confirmation for Ksh {total.toLocaleString('en-KE')}... Please ask the customer to complete the transaction on their phone.
             </div>
-          ) : (
-            <div className="pos-products-grid">
-              {filteredProducts.map((product) => {
-                const variants = product.variants || [];
-                const selectedVariant = getSelectedVariant(product);
-                const isOutOfStock = !selectedVariant || selectedVariant.stock <= 0;
-                const hasMultipleVariants = variants.length > 1;
-
-                const selectedVariantImage = selectedVariant?.image;
-                const getImageUrl = (path) => {
-                  if (!path) return null;
-                  if (path.startsWith('http://') || path.startsWith('https://'))
-                    return path;
-                  return `${API_BASE}/${path.replace(/\\/g, '/')}`;
-                };
-                const imageUrl = selectedVariantImage
-                  ? getImageUrl(selectedVariantImage)
-                  : getProductImage(product);
-
-                return (
-                  <Card
-                    key={product.product_id}
-                    className={`pos-product-card ${isOutOfStock ? 'out-of-stock' : ''}`}
-                  >
-                    <CardContent className="p-0">
-                      <div className="pos-product-image-wrapper">
-                        <img
-                          src={imageUrl}
-                          alt={product.title}
-                          className="pos-product-image"
-                          onError={(e) => {
-                            e.target.src = '/fallback.jpg';
-                          }}
-                        />
-                        {isOutOfStock && (
-                          <div className="pos-stock-badge">Out of Stock</div>
-                        )}
-                      </div>
-                      <div className="pos-product-info">
-                        <p className="pos-product-title">{product.title}</p>
-
-                        {/* Variant Selector (dropdown) */}
-                        {hasMultipleVariants && (
-                          <div className="pos-variant-selector">
-                            <select
-                              value={selectedVariant?.variant_id || ''}
-                              onChange={(e) =>
-                                handleVariantSelect(
-                                  product.product_id,
-                                  Number(e.target.value)
-                                )
-                              }
-                              className="pos-variant-dropdown"
-                            >
-                              {variants.map((v) => (
-                                <option
-                                  key={v.variant_id}
-                                  value={v.variant_id}
-                                  disabled={v.stock <= 0}
-                                >
-                                  {v.color || v.name || `Variant ${v.variant_id}`}
-                                  {' - Ksh '}
-                                  {v.price?.toLocaleString('en-KE')}
-                                  {v.stock <= 0
-                                    ? ' (Out of Stock)'
-                                    : ` (${v.stock} in stock)`}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-
-                        {/* Variant chips */}
-                        {hasMultipleVariants && (
-                          <div className="pos-variant-chips">
-                            {variants.map((v) => (
-                              <button
-                                key={v.variant_id}
-                                className={`pos-variant-chip ${
-                                  selectedVariant?.variant_id === v.variant_id
-                                    ? 'active'
-                                    : ''
-                                } ${v.stock <= 0 ? 'disabled' : ''}`}
-                                onClick={() =>
-                                  v.stock > 0 &&
-                                  handleVariantSelect(
-                                    product.product_id,
-                                    v.variant_id
-                                  )
-                                }
-                                title={`${v.color || v.name || 'Variant'} - Ksh ${v.price?.toLocaleString('en-KE')} (${v.stock} in stock)`}
-                              >
-                                {v.color || v.name || `V${v.variant_id}`}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                        <p className="pos-product-price">
-                          Ksh{' '}
-                          {selectedVariant?.price?.toLocaleString('en-KE') ||
-                            'N/A'}
-                        </p>
-                        <p className="pos-product-stock">
-                          Stock: {selectedVariant?.stock || 0}
-                        </p>
-                        <Button
-                          onClick={() => addToCart(product)}
-                          disabled={isOutOfStock || checkoutLoading || isPolling}
-                          className="w-full mt-2 bg-green-500 hover:bg-green-600 text-white"
-                        >
-                          Add to Cart
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+          </GlassmorphicContainer>
+        )}
+        
+        {error && (
+          <GlassmorphicContainer style={{ marginTop: '20px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              color: '#f87171'
+            }}>
+              <span>{error}</span>
+              <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
             </div>
-          )}
-        </div>
+          </GlassmorphicContainer>
+        )}
 
-        {/* Cart Section */}
-        <div className="pos-cart-section">
-          <Card className="sticky-cart">
-            <CardHeader>
-              <CardTitle>Cart ({cart.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {cart.length === 0 ? (
-                <p>Cart is empty</p>
-              ) : (
-                <>
-                  <div className="pos-cart-items">
-                    {cart.map((item) => {
-                      // Get the current IMEI input value from local state
-                      const currentImeiValue = imeiInputs[item.variant_id] ?? item.imei ?? '';
-
+        {/* Products and Cart Layout */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: '1fr 400px', 
+          gap: '20px',
+          marginTop: '20px'
+        }}>
+          {/* Products Section */}
+          <GlassmorphicContainer>
+            <h2 style={{ color: 'white', fontSize: '18px', marginBottom: '16px' }}>
+              {showAllProducts ? 'All Products' : 'Products in Cart - Scan IMEI'}
+            </h2>
+            
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.5)' }}>
+                Loading products...
+              </div>
+            ) : displayProducts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.5)' }}>
+                No products found
+              </div>
+            ) : viewMode === 'table' ? (
+              /* Table View */
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  color: 'white'
+                }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.7)' }}>Image</th>
+                      <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.7)' }}>Product</th>
+                      <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.7)' }}>Variant</th>
+                      <th style={{ padding: '12px', textAlign: 'right', color: 'rgba(255,255,255,0.7)' }}>Price</th>
+                      <th style={{ padding: '12px', textAlign: 'right', color: 'rgba(255,255,255,0.7)' }}>Stock</th>
+                      <th style={{ padding: '12px', textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {displayProducts.map((product) => {
+                      const variant = getSelectedVariant(product);
+                      const isOutOfStock = !variant || variant.stock <= 0;
                       return (
-                        <div key={item.variant_id} className="pos-cart-item">
-                          <div className="pos-cart-item-info">
-                            <p className="pos-cart-item-name">{item.title}</p>
-                            {item.variantColor && (
-                              <p className="pos-cart-item-variant">
-                                Variant: {item.variantColor}
-                              </p>
-                            )}
-                            <p className="pos-cart-item-price">
-                              Ksh {item.price.toLocaleString('en-KE')}
-                            </p>
-                            <div className="flex gap-1">
-                              {/* ✅ IMEI Input - NO maxLength, value from imeiInputs state */}
-                              <Input
-                                type="text"
-                                placeholder="Scan IMEI/Serial Number"
-                                value={currentImeiValue}
-                                onChange={(e) => handleImeiChange(item.variant_id, e.target.value)}
-                                autoComplete="off"
-                                autoCorrect="off"
-                                autoCapitalize="off"
-                                spellCheck="false"
-                                className={`w-full mt-1 text-sm ${
-                                  item.imeiValid === 'valid'
-                                    ? 'border-green-500 bg-green-50'
-                                    : item.imeiValid === 'invalid'
-                                    ? 'border-red-500 bg-red-50'
-                                    : ''
-                                }`}
-                              />
-                              {item.imeiValid === 'valid' && (
-                                <span className="mt-2 text-green-600" title="IMEI Valid">
-                                  ✓
-                                </span>
-                              )}
-                              {item.imeiValid === 'invalid' && (
-                                <span className="mt-2 text-red-600" title="IMEI Invalid">
-                                  ✗
-                                </span>
-                              )}
-                            </div>
-                            {!item.imei && (
-                              <p className="text-xs text-amber-600 mt-1">
-                                ⚠ Scan IMEI to enable checkout
-                              </p>
-                            )}
-                            {item.imeiError && (
-                              <p className="text-xs text-red-500 mt-1">
-                                {item.imeiError}
-                              </p>
-                            )}
-                            {item.imeiWarning && (
-                              <p className="text-xs text-amber-500 mt-1">
-                                {item.imeiWarning}
-                              </p>
-                            )}
-                            {/* Auto-fill button */}
-                            {!item.imei && (
-                              <button
-                                onClick={() => autoFillImei(item.variant_id)}
-                                className="text-xs text-blue-600 underline mt-1"
+                        <tr key={product.product_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <td style={{ padding: '12px' }}>
+                            <img
+                              src={variant?.image ? (variant.image.startsWith('http') ? variant.image : `${API_BASE}/${variant.image}`) : getProductImage(product)}
+                              alt={product.title}
+                              style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '8px' }}
+                              onError={(e) => { e.target.src = '/images/poster1.jpg'; }}
+                            />
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            <div style={{ fontWeight: 500 }}>{product.title}</div>
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            {product.variants?.length > 1 ? (
+                              <select
+                                value={selectedVariants[product.product_id] || variant?.variant_id || ''}
+                                onChange={(e) => handleVariantSelect(product.product_id, Number(e.target.value))}
+                                style={{
+                                  background: 'rgba(255,255,255,0.1)',
+                                  border: '1px solid rgba(255,255,255,0.2)',
+                                  borderRadius: '6px',
+                                  color: 'white',
+                                  padding: '6px 10px',
+                                  fontSize: '13px'
+                                }}
                               >
-                                Auto-fill IMEI
-                              </button>
+                                {product.variants.map((v) => (
+                                  <option key={v.variant_id} value={v.variant_id} disabled={v.stock <= 0} style={{ color: 'black' }}>
+                                    {v.color || v.name || `Variant ${v.variant_id}`} - Ksh {v.price?.toLocaleString()}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span>{variant?.color || variant?.name || '-'}</span>
                             )}
-                          </div>
-                          <div className="pos-cart-item-actions">
-                            <div className="quantity-controls">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  updateQuantity(item.variant_id, item.quantity - 1)
-                                }
-                              >
-                                -
-                              </Button>
-                              <span className="quantity-display">{item.quantity}</span>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  updateQuantity(item.variant_id, item.quantity + 1)
-                                }
-                              >
-                                +
-                              </Button>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => removeFromCart(item.variant_id)}
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'right', color: '#10b981', fontWeight: 600 }}>
+                            Ksh {variant?.price?.toLocaleString() || 'N/A'}
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'right' }}>
+                            <span style={{
+                              color: variant?.stock > 10 ? '#10b981' : variant?.stock > 0 ? '#f59e0b' : '#ef4444',
+                              fontWeight: 500
+                            }}>
+                              {variant?.stock || 0}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            <button
+                              onClick={() => addToCart(product)}
+                              disabled={isOutOfStock || checkoutLoading || isPolling}
+                              style={{
+                                background: isOutOfStock ? 'rgba(100,100,100,0.5)' : '#10b981',
+                                border: 'none',
+                                borderRadius: '6px',
+                                color: 'white',
+                                padding: '8px 16px',
+                                cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                                fontWeight: 500
+                              }}
                             >
-                              Remove
-                            </Button>
-                          </div>
-                        </div>
+                              Add
+                            </button>
+                          </td>
+                        </tr>
                       );
                     })}
-                  </div>
-                  <div className="cart-summary">
-                    <div className="cart-total">
-                      <span>Total:</span>
-                      <span>Ksh {total.toLocaleString('en-KE')}</span>
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              /* Grid View */
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                gap: '16px'
+              }}>
+                {displayProducts.map((product) => {
+                  const variant = getSelectedVariant(product);
+                  const isOutOfStock = !variant || variant.stock <= 0;
+                  return (
+                    <div key={product.product_id} style={{
+                      background: 'rgba(255,255,255,0.05)',
+                      borderRadius: '12px',
+                      padding: '12px',
+                      border: '1px solid rgba(255,255,255,0.1)'
+                    }}>
+                      <img
+                        src={variant?.image ? (variant.image.startsWith('http') ? variant.image : `${API_BASE}/${variant.image}`) : getProductImage(product)}
+                        alt={product.title}
+                        style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px' }}
+                        onError={(e) => { e.target.src = '/images/poster1.jpg'; }}
+                      />
+                      <h3 style={{ color: 'white', fontSize: '14px', margin: '12px 0 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {product.title}
+                      </h3>
+                      <p style={{ color: '#10b981', fontWeight: 600, margin: 0 }}>Ksh {variant?.price?.toLocaleString() || 'N/A'}</p>
+                      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', margin: '4px 0' }}>Stock: {variant?.stock || 0}</p>
+                      <button
+                        onClick={() => addToCart(product)}
+                        disabled={isOutOfStock || checkoutLoading || isPolling}
+                        style={{
+                          width: '100%',
+                          marginTop: '8px',
+                          padding: '8px',
+                          background: isOutOfStock ? 'rgba(100,100,100,0.5)' : '#10b981',
+                          border: 'none',
+                          borderRadius: '6px',
+                          color: 'white',
+                          cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                          fontWeight: 500
+                        }}
+                      >
+                        {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+                      </button>
                     </div>
-                    <div className="payment-methods">
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          value="cash"
-                          checked={paymentMethod === 'cash'}
-                          onChange={(e) => setPaymentMethod(e.target.value)}
-                        />
-                        Cash
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          value="mpesa"
-                          checked={paymentMethod === 'mpesa'}
-                          onChange={(e) => setPaymentMethod(e.target.value)}
-                        />
-                        M-Pesa
-                      </label>
-                    </div>
-                    <Button
-                      onClick={handleCheckout}
-                      disabled={checkoutLoading || isPolling || !allImeisValid}
-                      className={`w-full mt-4 font-bold ${
-                        !allImeisValid
-                          ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-green-600 hover:bg-green-700 text-white'
-                      }`}
-                    >
-                      {checkoutLoading
-                        ? 'Processing...'
-                        : !allImeisValid
-                        ? `Scan IMEIs (${pendingImeis.length} pending)`
-                        : 'Checkout'}
-                    </Button>
-                  </div>
-                </>
+                  );
+                })}
+              </div>
+            )}
+          </GlassmorphicContainer>
+
+          {/* Cart Section */}
+          <GlassmorphicContainer>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ color: 'white', fontSize: '18px', margin: 0 }}>Cart ({cart.length})</h2>
+              {cart.length > 0 && (
+                <button
+                  onClick={resetSale}
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    borderRadius: '6px',
+                    color: '#ef4444',
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 500
+                  }}
+                >
+                  Clear All
+                </button>
               )}
-            </CardContent>
-          </Card>
+            </div>
+
+            {cart.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.5)' }}>
+                Cart is empty
+              </div>
+            ) : (
+              <>
+                {/* Cart Items */}
+                <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '16px' }}>
+                  {cart.map((item) => {
+                    const currentImeiValue = imeiInputs[item.variant_id] ?? item.imei ?? '';
+                    return (
+                      <div key={item.variant_id} style={{
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: '10px',
+                        padding: '12px',
+                        marginBottom: '12px',
+                        border: '1px solid rgba(255,255,255,0.1)'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div style={{ flex: 1 }}>
+                            <h4 style={{ color: 'white', margin: '0 0 4px', fontSize: '14px' }}>{item.title}</h4>
+                            {item.variantColor && <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', margin: 0 }}>{item.variantColor}</p>}
+                            <p style={{ color: '#10b981', fontWeight: 600, margin: '8px 0 0' }}>Ksh {item.price.toLocaleString()}</p>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                              onClick={() => updateQuantity(item.variant_id, item.quantity - 1)}
+                              style={{
+                                width: '28px',
+                                height: '28px',
+                                background: 'rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                borderRadius: '6px',
+                                color: 'white',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              -
+                            </button>
+                            <span style={{ color: 'white', minWidth: '20px', textAlign: 'center' }}>{item.quantity}</span>
+                            <button
+                              onClick={() => updateQuantity(item.variant_id, item.quantity + 1)}
+                              style={{
+                                width: '28px',
+                                height: '28px',
+                                background: 'rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                borderRadius: '6px',
+                                color: 'white',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* IMEI Input */}
+                        <div style={{ marginTop: '12px' }}>
+                          <input
+                            type="text"
+                            placeholder="Scan IMEI/Serial Number"
+                            value={currentImeiValue}
+                            onChange={(e) => handleImeiChange(item.variant_id, e.target.value)}
+                            autoComplete="off"
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              background: item.imeiValid === 'valid' ? 'rgba(16, 185, 129, 0.2)' : item.imeiValid === 'invalid' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.1)',
+                              border: `1px solid ${item.imeiValid === 'valid' ? '#10b981' : item.imeiValid === 'invalid' ? '#ef4444' : 'rgba(255,255,255,0.2)'}`,
+                              borderRadius: '6px',
+                              color: 'white',
+                              fontSize: '13px',
+                              outline: 'none'
+                            }}
+                          />
+                          {!item.imei && (
+                            <p style={{ color: '#f59e0b', fontSize: '11px', margin: '6px 0 0' }}>⚠ Scan IMEI to enable checkout</p>
+                          )}
+                          {item.imeiError && (
+                            <p style={{ color: '#ef4444', fontSize: '11px', margin: '6px 0 0' }}>{item.imeiError}</p>
+                          )}
+                          {!item.imei && (
+                            <button
+                              onClick={() => autoFillImei(item.variant_id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#3b82f6',
+                                fontSize: '11px',
+                                cursor: 'pointer',
+                                marginTop: '4px',
+                                textDecoration: 'underline'
+                              }}
+                            >
+                              Auto-fill IMEI
+                            </button>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => removeFromCart(item.variant_id)}
+                          style={{
+                            width: '100%',
+                            marginTop: '8px',
+                            padding: '6px',
+                            background: 'rgba(239, 68, 68, 0.2)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            borderRadius: '6px',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: 500
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Cart Summary */}
+                <div style={{
+                  borderTop: '1px solid rgba(255,255,255,0.1)',
+                  paddingTop: '16px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+                    <span style={{ color: 'white', fontSize: '18px', fontWeight: 600 }}>Total:</span>
+                    <span style={{ color: '#10b981', fontSize: '24px', fontWeight: 700 }}>Ksh {total.toLocaleString()}</span>
+                  </div>
+
+                  {/* Payment Method */}
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                    <label style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '10px',
+                      background: paymentMethod === 'cash' ? '#10b981' : 'rgba(255,255,255,0.1)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: '8px',
+                      color: 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}>
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="cash"
+                        checked={paymentMethod === 'cash'}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        style={{ display: 'none' }}
+                      />
+                      Cash
+                    </label>
+                    <label style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '10px',
+                      background: paymentMethod === 'mpesa' ? '#10b981' : 'rgba(255,255,255,0.1)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: '8px',
+                      color: 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}>
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="mpesa"
+                        checked={paymentMethod === 'mpesa'}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        style={{ display: 'none' }}
+                      />
+                      M-Pesa
+                    </label>
+                  </div>
+
+                  {/* Checkout Button */}
+                  <button
+                    onClick={handleCheckout}
+                    disabled={checkoutLoading || isPolling || !allImeisValid}
+                    style={{
+                      width: '100%',
+                      padding: '14px',
+                      background: !allImeisValid ? 'rgba(100,100,100,0.5)' : '#10b981',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: 'white',
+                      fontSize: '16px',
+                      fontWeight: 700,
+                      cursor: !allImeisValid ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {checkoutLoading
+                      ? 'Processing...'
+                      : !allImeisValid
+                      ? `Scan IMEIs (${pendingImeis.length} pending)`
+                      : 'Checkout'}
+                  </button>
+                </div>
+              </>
+            )}
+          </GlassmorphicContainer>
         </div>
-      </div>
+      </main>
 
       {/* M-Pesa Modal */}
       {showMpesaModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>Enter M-Pesa Phone Number</h3>
-            <p>Total: Ksh {total.toLocaleString('en-KE')}</p>
-            <Input
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.8)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'rgba(20, 20, 30, 0.9)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            borderRadius: '16px',
+            padding: '24px',
+            width: '400px',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <h3 style={{ color: 'white', margin: '0 0 16px', fontSize: '18px' }}>Enter M-Pesa Phone Number</h3>
+            <p style={{ color: '#10b981', fontSize: '20px', fontWeight: 700, margin: '0 0 16px' }}>Total: Ksh {total.toLocaleString()}</p>
+            <input
               type="tel"
               placeholder="254XXXXXXXXX"
               value={mpesaPhone}
               onChange={(e) => setMpesaPhone(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '16px',
+                marginBottom: '12px'
+              }}
             />
-            {mpesaModalError && <p className="error-text">{mpesaModalError}</p>}
-            <div className="modal-actions">
-              <Button variant="outline" onClick={() => setShowMpesaModal(false)}>
+            {mpesaModalError && <p style={{ color: '#ef4444', fontSize: '14px', margin: '0 0 16px' }}>{mpesaModalError}</p>}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowMpesaModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  cursor: 'pointer'
+                }}
+              >
                 Cancel
-              </Button>
-              <Button className="bg-green-600 text-white" onClick={handleMpesaSubmit}>
+              </button>
+              <button
+                onClick={handleMpesaSubmit}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: '#10b981',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
                 Pay with M-Pesa
-              </Button>
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Add keyframe animation for pulse effect */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
     </div>
   );
 };

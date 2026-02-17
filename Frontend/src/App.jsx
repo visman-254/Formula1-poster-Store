@@ -32,8 +32,9 @@ function App() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Check if current route is admin
+  // Check if current route is admin or pos
   const isAdminRoute = location.pathname === "/admin";
+  const isPosRoute = location.pathname === "/pos";
 
 
   useEffect(() => {
@@ -54,10 +55,10 @@ function App() {
     <UserProvider>
       <CartProvider>
         <div className="app-container">
-          {!isAdminRoute && <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />}
+          {!isAdminRoute && !isPosRoute && <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />}
           {isNavigating && <LoadingScreen />}
           <main className={`main-content ${isAdminRoute ? 'admin-main-content' : ''}`}>
-            <Breadcrumbs />
+            {(location.pathname !== '/pos' && location.pathname !== '/admin') && <Breadcrumbs />}
             <Suspense fallback={<LoadingScreen />}>
               <Routes>
                 <Route path="/" element={<ProductList searchQuery={searchQuery} setSearchQuery={setSearchQuery} />} />
