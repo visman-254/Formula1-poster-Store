@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Search, X, User, Settings, LogOut, Menu, Table, Grid, ShoppingCart, Upload, Image } from "lucide-react";
+import { Search, X, User, Settings, LogOut, Menu, Table, Grid, ShoppingCart, Upload, Image, ScanBarcode } from "lucide-react";
 import { toast } from 'sonner';
 import POSReceipt from './POSReceipt';
 import GlassmorphicContainer from './GlassmorphicContainer';
@@ -9,6 +9,7 @@ import './POSPage.css';
 import API_BASE from '../config';
 import { getWallpaper, updateWallpaper, deleteWallpaper } from "../api/adminSettings";
 import elegantwaterBg from "../assets/elegantwater.jpg";
+import logoDark from "../assets/pmc2.png";
 
 const POSPage = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ const POSPage = () => {
   const [user, setUser] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [viewMode, setViewMode] = useState('table');
+  const [posMode, setPosMode] = useState('products'); // 'products' | 'scan-imei'
   const [showAllProducts, setShowAllProducts] = useState(true);
   const [posBackground, setPosBackground] = useState(null);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
@@ -35,6 +37,11 @@ const POSPage = () => {
   // IMEI input state
   const [imeiInputs, setImeiInputs] = useState({});
   const imeiInputsRef = useRef({});
+  
+  // Scan IMEI mode state
+  const [scanImeiInput, setScanImeiInput] = useState('');
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanError, setScanError] = useState('');
 
   // Polling state
   const [isPolling, setIsPolling] = useState(false);
@@ -114,6 +121,8 @@ const POSPage = () => {
     setReceiptData(null);
     setIsPolling(false);
     setMpesaCheckoutId(null);
+    setScanImeiInput('');
+    setScanError('');
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
@@ -376,6 +385,114 @@ const POSPage = () => {
     }
   };
 
+  // Scan IMEI to add to cart - looks up product by IMEI and adds to cart
+  const handleScanImeiToCart = async (e) => {
+    e?.preventDefault();
+    const imei = scanImeiInput.trim();
+    if (!imei || imei.length < 5) {
+      setScanError('Please enter a valid IMEI (at least 5 characters)');
+      return;
+    }
+
+    setScanLoading(true);
+    setScanError('');
+
+    try {
+      // First, validate the IMEI to get product info
+      const response = await axios.post(
+        `${API_URL}/imei/validate`,
+        { imeiNumber: imei },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const { data } = response;
+
+      if (!data.valid) {
+        setScanError(data.error || 'IMEI validation failed');
+        setScanLoading(false);
+        return;
+      }
+
+      // Get product info from the response
+      const productId = data.product_id;
+      const variantId = data.variant_id;
+
+      // Fetch the product details
+      const productResponse = await axios.get(
+        `${API_URL}/pos/products`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const allProducts = productResponse.data;
+      const product = allProducts.find(p => p.product_id === productId);
+
+      if (!product) {
+        setScanError('Product not found for this IMEI');
+        setScanLoading(false);
+        return;
+      }
+
+      const variant = product.variants?.find(v => v.variant_id === variantId) || product.variants?.[0];
+
+      if (!variant || variant.stock <= 0) {
+        setScanError('Product out of stock');
+        setScanLoading(false);
+        return;
+      }
+
+      // Check if already in cart
+      const existingItem = cart.find((item) => item.variant_id === variant.variant_id && item.imei === imei);
+      if (existingItem) {
+        setScanError('This IMEI is already in the cart');
+        setScanLoading(false);
+        return;
+      }
+
+      // Add to cart with IMEI pre-filled
+      const newItem = {
+        variant_id: variant.variant_id,
+        product_id: product.product_id,
+        title: product.title,
+        variantColor: variant.color || variant.name || null,
+        price: variant.price,
+        image: variant.image
+          ? variant.image.startsWith('http://') || variant.image.startsWith('https://')
+            ? variant.image
+            : `${API_BASE}/${variant.image.replace(/\\/g, '/')}`
+          : getProductImage(product),
+        quantity: 1,
+        stock: variant.stock,
+        imei: imei,
+        imeiId: data.imeiId || null,
+        imeiValid: 'valid',
+        imeiError: null,
+        imeiWarning: null,
+      };
+
+      setCart((prevCart) => [...prevCart, newItem]);
+      setImeiInputs((prev) => ({ ...prev, [variant.variant_id]: imei }));
+      imeiInputsRef.current[variant.variant_id] = imei;
+
+      setScanImeiInput('');
+      toast.success(`Added: ${product.title} (${variant.color || variant.name || 'Default'})`);
+
+    } catch (err) {
+      console.error('Scan IMEI error:', err);
+      const errorData = err.response?.data;
+      if (errorData?.status === 'used') {
+        setScanError('IMEI has already been used in another order');
+      } else if (errorData?.status === 'reserved') {
+        setScanError('IMEI is reserved for another order');
+      } else if (errorData?.status === 'not_found') {
+        setScanError('IMEI not found in database');
+      } else {
+        setScanError(err.response?.data?.error || 'Failed to scan IMEI. Please try again.');
+      }
+    } finally {
+      setScanLoading(false);
+    }
+  };
+
   // Variant selection
   const handleVariantSelect = (productId, variantId) => {
     setSelectedVariants((prev) => ({ ...prev, [productId]: variantId }));
@@ -623,140 +740,20 @@ const POSPage = () => {
         </div>
 
         {/* View Toggle */}
+        {/* View Toggle - Windows Explorer Style */}
+
+
+        {/* POS Mode Toggle - Products vs Scan IMEI */}
         {sidebarOpen && (
           <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button
-                onClick={() => setViewMode('table')}
+                onClick={() => setPosMode('products')}
                 style={{
-                  flex: 1,
-                  padding: '8px',
-                  background: viewMode === 'table' ? '#10b981' : 'rgba(255,255,255,0.1)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  color: 'white',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px',
-                  fontSize: '12px'
-                }}
-              >
-                <Table size={14} /> Table
-              </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                style={{
-                  flex: 1,
-                  padding: '8px',
-                  background: viewMode === 'grid' ? '#10b981' : 'rgba(255,255,255,0.1)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  color: 'white',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px',
-                  fontSize: '12px'
-                }}
-              >
-                <Grid size={14} /> Grid
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* View All Products Toggle */}
-        {sidebarOpen && (
-          <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-            <button
-              onClick={() => setShowAllProducts(!showAllProducts)}
-              style={{
-                width: '100%',
-                padding: '10px',
-                background: showAllProducts ? 'rgba(59, 130, 246, 0.8)' : 'rgba(255,255,255,0.1)',
-                border: 'none',
-                borderRadius: '8px',
-                color: 'white',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                fontWeight: 500
-              }}
-            >
-              <ShoppingCart size={16} />
-              {showAllProducts ? 'View All Products' : 'Scan IMEIs Only'}
-            </button>
-          </div>
-        )}
-
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
-
-        {/* Settings - at bottom */}
-        {sidebarOpen && (
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '8px',
-            padding: '16px',
-            borderTop: '1px solid rgba(255,255,255,0.1)'
-          }}>
-            {/* Settings Button - Expandable */}
-            <button
-              onClick={() => setSettingsExpanded(!settingsExpanded)}
-              style={{
-                width: '100%',
-                padding: '10px',
-                background: settingsExpanded ? 'rgba(59, 130, 246, 0.5)' : 'rgba(255,255,255,0.1)',
-                border: 'none',
-                borderRadius: '8px',
-                color: 'white',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                fontSize: '13px',
-                fontWeight: 500
-              }}
-            >
-              <Settings size={16} /> Settings
-            </button>
-            
-            {/* Expanded Settings Menu - Wallpaper */}
-            {settingsExpanded && (
-              <div style={{
-                padding: '16px',
-                background: 'rgba(0,0,0,0.4)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                borderRadius: '12px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                border: '1px solid rgba(255,255,255,0.1)'
-              }}>
-                <h4 style={{ 
-                  color: 'rgba(255,255,255,0.9)', 
-                  fontSize: '13px', 
-                  margin: 0, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '6px',
-                  fontWeight: 500
-                }}>
-                  <Image size={14} /> Background Settings
-                </h4>
-                <label style={{
                   width: '100%',
                   padding: '10px',
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.2)',
+                  background: posMode === 'products' ? '#636b68' : 'rgba(255,255,255,0.1)',
+                  border: 'none',
                   borderRadius: '8px',
                   color: 'white',
                   cursor: 'pointer',
@@ -764,61 +761,214 @@ const POSPage = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
+                  fontWeight: 500
+                }}
+              >
+                <Grid size={16} />
+                View All Products
+              </button>
+              <button
+                onClick={() => setPosMode('scan-imei')}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  background: posMode === 'scan-imei' ? '#636b68' : 'rgba(255,255,255,0.1)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  fontWeight: 500
+                }}
+              >
+                <ScanBarcode size={16} />
+                Scan IMEI to Add
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Wallpaper Settings */}
+        {sidebarOpen && settingsExpanded && (
+          <div style={{
+            padding: '16px',
+            margin: '0 16px',
+            background: 'rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            borderRadius: '12px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <h4 style={{ 
+              color: 'rgba(255,255,255,0.9)', 
+              fontSize: '13px', 
+              margin: 0, 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px',
+              fontWeight: 500
+            }}>
+              <Image size={14} /> Background Settings
+            </h4>
+            <label style={{
+              width: '100%',
+              padding: '10px',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '8px',
+              color: 'white',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              fontSize: '13px',
+              transition: 'all 0.2s'
+            }}>
+              <Upload size={14} /> Upload Wallpaper
+              <input 
+                type='file' 
+                accept='image/*' 
+                onChange={handleWallpaperUpload}
+                style={{ display: 'none' }}
+              />
+            </label>
+            {posBackground && (
+              <button
+                onClick={handleWallpaperReset}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '8px',
+                  color: '#ef4444',
+                  cursor: 'pointer',
                   fontSize: '13px',
+                  fontWeight: 500,
                   transition: 'all 0.2s'
-                }}>
-                  <Upload size={14} /> Upload Wallpaper
-                  <input 
-                    type='file' 
-                    accept='image/*' 
-                    onChange={handleWallpaperUpload}
-                    style={{ display: 'none' }}
-                  />
-                </label>
-                {posBackground && (
-                  <button
-                    onClick={handleWallpaperReset}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      background: 'rgba(239, 68, 68, 0.2)',
-                      border: '1px solid rgba(239, 68, 68, 0.3)',
-                      borderRadius: '8px',
-                      color: '#ef4444',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    Reset to Default
-                  </button>
-                )}
-              </div>
+                }}
+              >
+                Reset to Default
+              </button>
             )}
-            
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              style={{
-                width: '100%',
-                padding: '10px',
-                background: 'rgba(239, 68, 68, 0.2)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                borderRadius: '8px',
-                color: '#ef4444',
-                cursor: 'pointer',
+          </div>
+        )}
+
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* User Footer Section - VS Code style */}
+        {sidebarOpen && (
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px',
+            background: 'rgba(0,0,0,0.2)',
+            borderTop: '1px solid rgba(255,255,255,0.06)'
+          }}>
+            {/* User Info */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
+              <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px',
-                fontSize: '13px',
-                fontWeight: 500,
-                transition: 'all 0.2s'
-              }}
-            >
-              <LogOut size={16} /> Logout
-            </button>
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: 'rgba(59,130,246,0.25)',
+                color: '#60a5fa',
+                flexShrink: 0
+              }}>
+                <User size={18} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <span style={{
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: 'white',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}>
+                  {user ? (user.name || user.username) : 'Cashier User'}
+                </span>
+                {user && user.role && (
+                  <span style={{
+                    fontSize: '11px',
+                    color: 'rgba(255,255,255,0.6)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    {user.role}
+                  </span>
+                )}
+              </div>
+            </div>
+            {/* User Actions */}
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button
+                onClick={() => setSettingsExpanded(!settingsExpanded)}
+                title="Settings"
+                style={{
+                  all: 'unset',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '6px',
+                  color: 'rgba(255,255,255,0.6)',
+                  transition: 'all 0.2s',
+                  flexShrink: 0,
+                  background: settingsExpanded ? 'rgba(59,130,246,0.25)' : 'transparent'
+                }}
+                onMouseEnter={(e) => e.target.style.background = 'rgba(59,130,246,0.25)'}
+                onMouseLeave={(e) => e.target.style.background = settingsExpanded ? 'rgba(59,130,245,0.25)' : 'transparent'}
+              >
+                <Settings size={18} />
+              </button>
+              <button
+                onClick={handleLogout}
+                title="Logout"
+                style={{
+                  all: 'unset',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '6px',
+                  color: 'rgba(255,255,255,0.6)',
+                  transition: 'all 0.2s',
+                  flexShrink: 0
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = 'rgba(239,68,68,0.25)';
+                  e.target.style.color = '#f87171';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'transparent';
+                  e.target.style.color = 'rgba(255,255,255,0.6)';
+                }}
+              >
+                <LogOut size={18} />
+              </button>
+            </div>
           </div>
         )}
       </aside>
@@ -840,15 +990,20 @@ const POSPage = () => {
             justifyContent: 'space-between',
             alignItems: 'center'
           }}>
-            <h1 style={{
-              color: 'white',
-              fontSize: '28px',
-              fontWeight: 700,
-              margin: 0,
-              textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-            }}>
-              Point of Sale
-            </h1>
+           <div style={{ display: 'flex', alignItems: 'center' }}>
+      <img 
+        src={logoDark} 
+        alt="Logo" 
+        style={{
+          width: '60px',  
+          height: 'auto',
+          transition: 'transform 0.3s ease',
+          cursor:'pointer'
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+      />
+    </div>
             
             {/* Search */}
             <div style={{ position: 'relative', width: '300px' }}>
@@ -933,173 +1088,432 @@ const POSPage = () => {
         {/* Products and Cart Layout */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: '1fr 400px', 
+          gridTemplateColumns: posMode === 'scan-imei' ? '1fr 380px' : '1fr 400px', 
           gap: '20px',
           marginTop: '20px'
         }}>
-          {/* Products Section */}
+          {/* Main Content Area - Products or Scan IMEI */}
           <GlassmorphicContainer>
-            <h2 style={{ color: 'white', fontSize: '18px', marginBottom: '16px' }}>
-              {showAllProducts ? 'All Products' : 'Products in Cart - Scan IMEI'}
-            </h2>
+            {posMode === 'scan-imei' ? (
+              /* Scan IMEI to Add Mode */
+              <div>
+                <h2 style={{ color: 'white', fontSize: '18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ScanBarcode size={20} /> Scan IMEI to Add to Cart
+                </h2>
+
+                {/* IMEI Scanner Input */}
+                <form onSubmit={handleScanImeiToCart} style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                      <ScanBarcode style={{
+                        position: 'absolute',
+                        left: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: 'rgba(255,255,255,0.5)',
+                        zIndex: 1
+                      }} size={20} />
+                      <input
+                        type="text"
+                        placeholder="Scan or enter IMEI/Serial Number here..."
+                        value={scanImeiInput}
+                        onChange={(e) => {
+                          setScanImeiInput(e.target.value);
+                          setScanError('');
+                          // Auto-submit on Enter or when IMEI is long enough
+                          if (e.target.value.length >= 15) {
+                            handleScanImeiToCart();
+                          }
+                        }}
+                        autoFocus
+                        style={{
+                          width: '100%',
+                          padding: '14px 14px 14px 44px',
+                          background: 'rgba(255,255,255,0.1)',
+                          border: `1px solid ${scanError ? '#ef4444' : 'rgba(255,255,255,0.2)'}`,
+                          borderRadius: '10px',
+                          color: 'white',
+                          fontSize: '16px',
+                          outline: 'none',
+                          transition: 'all 0.2s'
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={scanLoading || !scanImeiInput.trim()}
+                      style={{
+                        padding: '14px 28px',
+                        background: scanLoading ? 'rgba(100,100,100,0.5)' : '#10b981',
+                        border: 'none',
+                        borderRadius: '10px',
+                        color: 'white',
+                        fontSize: '16px',
+                        fontWeight: 600,
+                        cursor: scanLoading || !scanImeiInput.trim() ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      {scanLoading ? 'Scanning...' : 'Add to Cart'}
+                    </button>
+                  </div>
+                  {scanError && (
+                    <p style={{ color: '#ef4444', fontSize: '13px', margin: '8px 0 0' }}>{scanError}</p>
+                  )}
+                </form>
+
+                {/* Scanned Products Table */}
+                {cart.length > 0 ? (
+                  <div>
+                    <h3 style={{ color: 'white', fontSize: '16px', marginBottom: '12px' }}>Scanned Products ({cart.length})</h3>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{
+                        width: '100%',
+                        borderCollapse: 'collapse',
+                        color: 'white'
+                      }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                            <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>Image</th>
+                            <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>Product</th>
+                            <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>IMEI</th>
+                            <th style={{ padding: '12px', textAlign: 'right', color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>Price</th>
+                            <th style={{ padding: '12px', textAlign: 'center', color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>Qty</th>
+                            <th style={{ padding: '12px', textAlign: 'right', color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>Total</th>
+                            <th style={{ padding: '12px', textAlign: 'center', color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {cart.map((item) => (
+                            <tr key={item.variant_id + '-' + item.imei} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                              <td style={{ padding: '12px' }}>
+                                <img
+                                  src={item.image}
+                                  alt={item.title}
+                                  style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px' }}
+                                  onError={(e) => { e.target.src = '/images/poster1.jpg'; }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px' }}>
+                                <div style={{ fontWeight: 500, fontSize: '14px' }}>{item.title}</div>
+                                {item.variantColor && <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>{item.variantColor}</div>}
+                              </td>
+                              <td style={{ padding: '12px' }}>
+                                <div style={{ 
+                                  background: item.imeiValid === 'valid' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.1)',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  fontFamily: 'monospace',
+                                  color: item.imeiValid === 'valid' ? '#10b981' : 'white'
+                                }}>
+                                  {item.imei || 'N/A'}
+                                </div>
+                              </td>
+                              <td style={{ padding: '12px', textAlign: 'right', color: '#10b981', fontWeight: 600, fontSize: '14px' }}>
+                                Ksh {item.price?.toLocaleString()}
+                              </td>
+                              <td style={{ padding: '12px', textAlign: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                  <button
+                                    onClick={() => updateQuantity(item.variant_id, item.quantity - 1)}
+                                    style={{
+                                      width: '24px',
+                                      height: '24px',
+                                      background: 'rgba(255,255,255,0.1)',
+                                      border: '1px solid rgba(255,255,255,0.2)',
+                                      borderRadius: '4px',
+                                      color: 'white',
+                                      cursor: 'pointer',
+                                      fontSize: '14px'
+                                    }}
+                                  >
+                                    -
+                                  </button>
+                                  <span style={{ color: 'white', minWidth: '20px', textAlign: 'center', fontSize: '14px' }}>{item.quantity}</span>
+                                  <button
+                                    onClick={() => updateQuantity(item.variant_id, item.quantity + 1)}
+                                    style={{
+                                      width: '24px',
+                                      height: '24px',
+                                      background: 'rgba(255,255,255,0.1)',
+                                      border: '1px solid rgba(255,255,255,0.2)',
+                                      borderRadius: '4px',
+                                      color: 'white',
+                                      cursor: 'pointer',
+                                      fontSize: '14px'
+                                    }}
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </td>
+                              <td style={{ padding: '12px', textAlign: 'right', color: '#10b981', fontWeight: 600, fontSize: '14px' }}>
+                                Ksh {(item.price * item.quantity).toLocaleString()}
+                              </td>
+                              <td style={{ padding: '12px', textAlign: 'center' }}>
+                                <button
+                                  onClick={() => removeFromCart(item.variant_id)}
+                                  style={{
+                                    background: 'rgba(239, 68, 68, 0.2)',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                                    borderRadius: '4px',
+                                    color: '#ef4444',
+                                    padding: '4px 10px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  Remove
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '60px 40px', color: 'rgba(255,255,255,0.5)' }}>
+                    <ScanBarcode size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                    <p style={{ fontSize: '16px', margin: 0 }}>Scan an IMEI to add products to cart</p>
+                    <p style={{ fontSize: '13px', margin: '8px 0 0', opacity: 0.7 }}>The product will be automatically detected and added</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Products View (Table or Grid) */
+              <>
+              {/* View Toggle - Windows Explorer Style */}
+{sidebarOpen && (
+  <div style={{ 
+    padding: '12px 16px', 
+    borderBottom: '1px solid rgba(255,255,255,0.1)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px'
+  }}>
+    <button
+      onClick={() => setViewMode('table')}
+      style={{
+        padding: '8px',
+        background: viewMode === 'table' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
+        border: viewMode === 'table' ? '1px solid #10b981' : '1px solid transparent',
+        borderRadius: '6px',
+        color: viewMode === 'table' ? '#10b981' : 'rgba(255,255,255,0.7)',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'all 0.2s',
+        width: '36px',
+        height: '36px'
+      }}
+      title="Table View"
+    >
+      <Table size={18} />
+    </button>
+    <button
+      onClick={() => setViewMode('grid')}
+      style={{
+        padding: '8px',
+        background: viewMode === 'grid' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
+        border: viewMode === 'grid' ? '1px solid #10b981' : '1px solid transparent',
+        borderRadius: '6px',
+        color: viewMode === 'grid' ? '#10b981' : 'rgba(255,255,255,0.7)',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'all 0.2s',
+        width: '36px',
+        height: '36px'
+      }}
+      title="Grid View"
+    >
+      <Grid size={18} />
+    </button>
+    <div style={{ 
+      width: '1px', 
+      height: '24px', 
+      background: 'rgba(255,255,255,0.1)',
+      margin: '0 8px'
+    }} />
+    <span style={{ 
+      color: 'rgba(255,255,255,0.5)', 
+      fontSize: '12px',
+      marginLeft: '4px'
+    }}>
+      View
+    </span>
+  </div>
+)}
+                
             
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.5)' }}>
-                Loading products...
-              </div>
-            ) : displayProducts.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.5)' }}>
-                No products found
-              </div>
-            ) : viewMode === 'table' ? (
-              /* Table View */
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                  color: 'white'
-                }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                      <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.7)' }}>Image</th>
-                      <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.7)' }}>Product</th>
-                      <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.7)' }}>Variant</th>
-                      <th style={{ padding: '12px', textAlign: 'right', color: 'rgba(255,255,255,0.7)' }}>Price</th>
-                      <th style={{ padding: '12px', textAlign: 'right', color: 'rgba(255,255,255,0.7)' }}>Stock</th>
-                      <th style={{ padding: '12px', textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                {loading ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.5)' }}>
+                    Loading products...
+                  </div>
+                ) : displayProducts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.5)' }}>
+                    No products found
+                  </div>
+                ) : viewMode === 'table' ? (
+                  /* Table View */
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{
+                      width: '100%',
+                      borderCollapse: 'collapse',
+                      color: 'white'
+                    }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                          <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.7)' }}>Image</th>
+                          <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.7)' }}>Product</th>
+                          <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.7)' }}>Variant</th>
+                          <th style={{ padding: '12px', textAlign: 'right', color: 'rgba(255,255,255,0.7)' }}>Price</th>
+                          <th style={{ padding: '12px', textAlign: 'right', color: 'rgba(255,255,255,0.7)' }}>Stock</th>
+                          <th style={{ padding: '12px', textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayProducts.map((product) => {
+                          const variant = getSelectedVariant(product);
+                          const isOutOfStock = !variant || variant.stock <= 0;
+                          return (
+                            <tr key={product.product_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                              <td style={{ padding: '12px' }}>
+                                <img
+                                  src={variant?.image ? (variant.image.startsWith('http') ? variant.image : `${API_BASE}/${variant.image}`) : getProductImage(product)}
+                                  alt={product.title}
+                                  style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '8px' }}
+                                  onError={(e) => { e.target.src = '/images/poster1.jpg'; }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px' }}>
+                                <div style={{ fontWeight: 500 }}>{product.title}</div>
+                              </td>
+                              <td style={{ padding: '12px' }}>
+                                {product.variants?.length > 1 ? (
+                                  <select
+                                    value={selectedVariants[product.product_id] || variant?.variant_id || ''}
+                                    onChange={(e) => handleVariantSelect(product.product_id, Number(e.target.value))}
+                                    style={{
+                                      background: 'rgba(255,255,255,0.1)',
+                                      border: '1px solid rgba(255,255,255,0.2)',
+                                      borderRadius: '6px',
+                                      color: 'white',
+                                      padding: '6px 10px',
+                                      fontSize: '13px'
+                                    }}
+                                  >
+                                    {product.variants.map((v) => (
+                                      <option key={v.variant_id} value={v.variant_id} disabled={v.stock <= 0} style={{ color: 'black' }}>
+                                        {v.color || v.name || `Variant ${v.variant_id}`} - Ksh {v.price?.toLocaleString()}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <span>{variant?.color || variant?.name || '-'}</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '12px', textAlign: 'right', color: '#10b981', fontWeight: 600 }}>
+                                Ksh {variant?.price?.toLocaleString() || 'N/A'}
+                              </td>
+                              <td style={{ padding: '12px', textAlign: 'right' }}>
+                                <span style={{
+                                  color: variant?.stock > 10 ? '#10b981' : variant?.stock > 0 ? '#f59e0b' : '#ef4444',
+                                  fontWeight: 500
+                                }}>
+                                  {variant?.stock || 0}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px', textAlign: 'center' }}>
+                                <button
+                                  onClick={() => addToCart(product)}
+                                  disabled={isOutOfStock || checkoutLoading || isPolling}
+                                  style={{
+                                    background: isOutOfStock ? 'rgba(100,100,100,0.5)' : '#10b981',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    color: 'white',
+                                    padding: '8px 16px',
+                                    cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                                    fontWeight: 500
+                                  }}
+                                >
+                                  Add
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  /* Grid View */
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gap: '16px'
+                  }}>
                     {displayProducts.map((product) => {
                       const variant = getSelectedVariant(product);
                       const isOutOfStock = !variant || variant.stock <= 0;
                       return (
-                        <tr key={product.product_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                          <td style={{ padding: '12px' }}>
-                            <img
-                              src={variant?.image ? (variant.image.startsWith('http') ? variant.image : `${API_BASE}/${variant.image}`) : getProductImage(product)}
-                              alt={product.title}
-                              style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '8px' }}
-                              onError={(e) => { e.target.src = '/images/poster1.jpg'; }}
-                            />
-                          </td>
-                          <td style={{ padding: '12px' }}>
-                            <div style={{ fontWeight: 500 }}>{product.title}</div>
-                          </td>
-                          <td style={{ padding: '12px' }}>
-                            {product.variants?.length > 1 ? (
-                              <select
-                                value={selectedVariants[product.product_id] || variant?.variant_id || ''}
-                                onChange={(e) => handleVariantSelect(product.product_id, Number(e.target.value))}
-                                style={{
-                                  background: 'rgba(255,255,255,0.1)',
-                                  border: '1px solid rgba(255,255,255,0.2)',
-                                  borderRadius: '6px',
-                                  color: 'white',
-                                  padding: '6px 10px',
-                                  fontSize: '13px'
-                                }}
-                              >
-                                {product.variants.map((v) => (
-                                  <option key={v.variant_id} value={v.variant_id} disabled={v.stock <= 0} style={{ color: 'black' }}>
-                                    {v.color || v.name || `Variant ${v.variant_id}`} - Ksh {v.price?.toLocaleString()}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : (
-                              <span>{variant?.color || variant?.name || '-'}</span>
-                            )}
-                          </td>
-                          <td style={{ padding: '12px', textAlign: 'right', color: '#10b981', fontWeight: 600 }}>
-                            Ksh {variant?.price?.toLocaleString() || 'N/A'}
-                          </td>
-                          <td style={{ padding: '12px', textAlign: 'right' }}>
-                            <span style={{
-                              color: variant?.stock > 10 ? '#10b981' : variant?.stock > 0 ? '#f59e0b' : '#ef4444',
+                        <div key={product.product_id} style={{
+                          background: 'rgba(255,255,255,0.05)',
+                          borderRadius: '12px',
+                          padding: '12px',
+                          border: '1px solid rgba(255,255,255,0.1)'
+                        }}>
+                          <img
+                            src={variant?.image ? (variant.image.startsWith('http') ? variant.image : `${API_BASE}/${variant.image}`) : getProductImage(product)}
+                            alt={product.title}
+                            style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px' }}
+                            onError={(e) => { e.target.src = '/images/poster1.jpg'; }}
+                          />
+                          <h3 style={{ color: 'white', fontSize: '14px', margin: '12px 0 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {product.title}
+                          </h3>
+                          <p style={{ color: '#10b981', fontWeight: 600, margin: 0 }}>Ksh {variant?.price?.toLocaleString() || 'N/A'}</p>
+                          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', margin: '4px 0' }}>Stock: {variant?.stock || 0}</p>
+                          <button
+                            onClick={() => addToCart(product)}
+                            disabled={isOutOfStock || checkoutLoading || isPolling}
+                            style={{
+                              width: '100%',
+                              marginTop: '8px',
+                              padding: '8px',
+                              background: isOutOfStock ? 'rgba(100,100,100,0.5)' : '#10b981',
+                              border: 'none',
+                              borderRadius: '6px',
+                              color: 'white',
+                              cursor: isOutOfStock ? 'not-allowed' : 'pointer',
                               fontWeight: 500
-                            }}>
-                              {variant?.stock || 0}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>
-                            <button
-                              onClick={() => addToCart(product)}
-                              disabled={isOutOfStock || checkoutLoading || isPolling}
-                              style={{
-                                background: isOutOfStock ? 'rgba(100,100,100,0.5)' : '#10b981',
-                                border: 'none',
-                                borderRadius: '6px',
-                                color: 'white',
-                                padding: '8px 16px',
-                                cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                                fontWeight: 500
-                              }}
-                            >
-                              Add
-                            </button>
-                          </td>
-                        </tr>
+                            }}
+                          >
+                            {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+                          </button>
+                        </div>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              /* Grid View */
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                gap: '16px'
-              }}>
-                {displayProducts.map((product) => {
-                  const variant = getSelectedVariant(product);
-                  const isOutOfStock = !variant || variant.stock <= 0;
-                  return (
-                    <div key={product.product_id} style={{
-                      background: 'rgba(255,255,255,0.05)',
-                      borderRadius: '12px',
-                      padding: '12px',
-                      border: '1px solid rgba(255,255,255,0.1)'
-                    }}>
-                      <img
-                        src={variant?.image ? (variant.image.startsWith('http') ? variant.image : `${API_BASE}/${variant.image}`) : getProductImage(product)}
-                        alt={product.title}
-                        style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px' }}
-                        onError={(e) => { e.target.src = '/images/poster1.jpg'; }}
-                      />
-                      <h3 style={{ color: 'white', fontSize: '14px', margin: '12px 0 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {product.title}
-                      </h3>
-                      <p style={{ color: '#10b981', fontWeight: 600, margin: 0 }}>Ksh {variant?.price?.toLocaleString() || 'N/A'}</p>
-                      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', margin: '4px 0' }}>Stock: {variant?.stock || 0}</p>
-                      <button
-                        onClick={() => addToCart(product)}
-                        disabled={isOutOfStock || checkoutLoading || isPolling}
-                        style={{
-                          width: '100%',
-                          marginTop: '8px',
-                          padding: '8px',
-                          background: isOutOfStock ? 'rgba(100,100,100,0.5)' : '#10b981',
-                          border: 'none',
-                          borderRadius: '6px',
-                          color: 'white',
-                          cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                          fontWeight: 500
-                        }}
-                      >
-                        {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+                  </div>
+                )}
+              </>
             )}
           </GlassmorphicContainer>
 
-          {/* Cart Section */}
+          {/* Cart Section - Always visible */}
           <GlassmorphicContainer>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h2 style={{ color: 'white', fontSize: '18px', margin: 0 }}>Cart ({cart.length})</h2>
+              <h2 style={{ color: 'white', fontSize: '18px', margin: 0 }}>
+                {posMode === 'scan-imei' ? 'Cart' : `Cart (${cart.length})`}
+              </h2>
               {cart.length > 0 && (
                 <button
                   onClick={resetSale}
@@ -1416,7 +1830,7 @@ const POSPage = () => {
           50% { opacity: 0.5; }
         }
       `}</style>
-    </div>
+    </div> 
   );
 };
 
