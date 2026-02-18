@@ -42,6 +42,7 @@ const POSPage = () => {
   const [scanImeiInput, setScanImeiInput] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
   const [scanError, setScanError] = useState('');
+  const scanImeiRef = useRef('');
 
   // Polling state
   const [isPolling, setIsPolling] = useState(false);
@@ -330,7 +331,7 @@ const POSPage = () => {
       const currentRaw = imeiInputsRef.current[variantId] || '';
       const currentCleaned = currentRaw.replace(/[\r\n\t\x00-\x1F]/g, '');
 
-      if (currentCleaned.length < 5) return;
+      // Allow any non-empty IMEI (removed minimum length check)
 
       const result = await validateImei(currentCleaned, variantId, cartItem.product_id);
       if (result.status === 'stale') return;
@@ -385,112 +386,129 @@ const POSPage = () => {
     }
   };
 
-  // Scan IMEI to add to cart - looks up product by IMEI and adds to cart
+  // Scan IMEI to add to cart - uses debounce like View Products mode
   const handleScanImeiToCart = async (e) => {
-    e?.preventDefault();
-    const imei = scanImeiInput.trim();
-    if (!imei) {
+    if (e) e?.preventDefault();
+    
+    // Clear previous timer
+    if (debounceTimerRef.current['scan']) {
+      clearTimeout(debounceTimerRef.current['scan']);
+    }
+
+    const currentImei = scanImeiRef.current || '';
+    const cleanedImei = currentImei.replace(/[\r\n\t\x00-\x1F]/g, '');
+
+    if (!cleanedImei) {
       setScanError('Please enter a valid IMEI');
       return;
     }
 
-    setScanLoading(true);
-    setScanError('');
+    // Debounce - wait 500ms like View Products mode
+    debounceTimerRef.current['scan'] = setTimeout(async () => {
+      // Read latest value from ref
+      const imei = scanImeiRef.current.replace(/[\r\n\t\x00-\x1F]/g, '').trim();
+      if (!imei) return;
 
-    try {
-      // First, validate the IMEI to get product info
-      const response = await axios.post(
-        `${API_URL}/imei/validate`,
-        { imeiNumber: imei },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      setScanLoading(true);
+      setScanError('');
 
-      const { data } = response;
+      try {
+        // Validate the IMEI to get product info
+        const response = await axios.post(
+          `${API_URL}/imei/validate`,
+          { imeiNumber: imei },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-      if (!data.valid) {
-        setScanError(data.error || 'IMEI validation failed');
+        const { data } = response;
+
+        if (!data.valid) {
+          setScanError(data.error || 'IMEI validation failed');
+          setScanLoading(false);
+          return;
+        }
+
+        // Get product info from the response
+        const productId = data.product_id;
+        const variantId = data.variant_id;
+
+        // Fetch the product details
+        const productResponse = await axios.get(
+          `${API_URL}/pos/products`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        const allProducts = productResponse.data;
+        const product = allProducts.find(p => p.product_id === productId);
+
+        if (!product) {
+          setScanError('Product not found for this IMEI');
+          setScanLoading(false);
+          return;
+        }
+
+        const variant = product.variants?.find(v => v.variant_id === variantId) || product.variants?.[0];
+
+        if (!variant || variant.stock <= 0) {
+          setScanError('Product out of stock');
+          setScanLoading(false);
+          return;
+        }
+
+        // Check if already in cart
+        const existingItem = cart.find((item) => item.variant_id === variant.variant_id && item.imei === imei);
+        if (existingItem) {
+          setScanError('This IMEI is already in the cart');
+          setScanLoading(false);
+          return;
+        }
+
+        // Add to cart with IMEI pre-filled (like normal products)
+        const newItem = {
+          variant_id: variant.variant_id,
+          product_id: product.product_id,
+          title: product.title,
+          variantColor: variant.color || variant.name || null,
+          price: variant.price,
+          image: variant.image
+            ? variant.image.startsWith('http://') || variant.image.startsWith('https://')
+              ? variant.image
+              : `${API_BASE}/${variant.image.replace(/\\/g, '/')}`
+            : getProductImage(product),
+          quantity: 1,
+          stock: variant.stock,
+          imei: imei,
+          imeiId: data.imeiId || null,
+          imeiValid: 'valid',
+          imeiError: null,
+          imeiWarning: null,
+        };
+
+        setCart((prevCart) => [...prevCart, newItem]);
+        setImeiInputs((prev) => ({ ...prev, [variant.variant_id]: imei }));
+        imeiInputsRef.current[variant.variant_id] = imei;
+
+        setScanImeiInput('');
+        scanImeiRef.current = '';
+        toast.success('IMEI is valid');
+        toast.success(`Added: ${product.title} (${variant.color || variant.name || 'Default'})`);
+
+      } catch (err) {
+        console.error('Scan IMEI error:', err);
+        const errorData = err.response?.data;
+        if (errorData?.status === 'used') {
+          setScanError('IMEI has already been used in another order');
+        } else if (errorData?.status === 'reserved') {
+          setScanError('IMEI is reserved for another order');
+        } else if (errorData?.status === 'not_found') {
+          setScanError('IMEI not found in database');
+        } else {
+          setScanError(err.response?.data?.error || 'Failed to scan IMEI. Please try again.');
+        }
+      } finally {
         setScanLoading(false);
-        return;
       }
-
-      // Get product info from the response
-      const productId = data.product_id;
-      const variantId = data.variant_id;
-
-      // Fetch the product details
-      const productResponse = await axios.get(
-        `${API_URL}/pos/products`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      const allProducts = productResponse.data;
-      const product = allProducts.find(p => p.product_id === productId);
-
-      if (!product) {
-        setScanError('Product not found for this IMEI');
-        setScanLoading(false);
-        return;
-      }
-
-      const variant = product.variants?.find(v => v.variant_id === variantId) || product.variants?.[0];
-
-      if (!variant || variant.stock <= 0) {
-        setScanError('Product out of stock');
-        setScanLoading(false);
-        return;
-      }
-
-      // Check if already in cart
-      const existingItem = cart.find((item) => item.variant_id === variant.variant_id && item.imei === imei);
-      if (existingItem) {
-        setScanError('This IMEI is already in the cart');
-        setScanLoading(false);
-        return;
-      }
-
-      // Add to cart with IMEI pre-filled (like normal products)
-      const newItem = {
-        variant_id: variant.variant_id,
-        product_id: product.product_id,
-        title: product.title,
-        variantColor: variant.color || variant.name || null,
-        price: variant.price,
-        image: variant.image
-          ? variant.image.startsWith('http://') || variant.image.startsWith('https://')
-            ? variant.image
-            : `${API_BASE}/${variant.image.replace(/\\/g, '/')}`
-          : getProductImage(product),
-        quantity: 1,
-        stock: variant.stock,
-        imei: imei,
-        imeiId: data.imeiId || null,
-        imeiValid: 'valid',
-        imeiError: null,
-        imeiWarning: null,
-      };
-
-      setCart((prevCart) => [...prevCart, newItem]);
-      setImeiInputs((prev) => ({ ...prev, [variant.variant_id]: imei }));
-      imeiInputsRef.current[variant.variant_id] = imei;
-
-      setScanImeiInput('');
-      toast.success(`Added: ${product.title} (${variant.color || variant.name || 'Default'})`);
-
-    } catch (err) {
-      console.error('Scan IMEI error:', err);
-      const errorData = err.response?.data;
-      if (errorData?.status === 'used') {
-        setScanError('IMEI has already been used in another order');
-      } else if (errorData?.status === 'reserved') {
-        setScanError('IMEI is reserved for another order');
-      } else if (errorData?.status === 'not_found') {
-        setScanError('IMEI not found in database');
-      } else {
-        setScanError(err.response?.data?.error || 'Failed to scan IMEI. Please try again.');
-      }
-    } finally {
-      setScanLoading(false);
-    }
+    }, 500);
   };
 
   // Variant selection
@@ -1090,10 +1108,11 @@ const POSPage = () => {
           display: 'grid', 
           gridTemplateColumns: posMode === 'scan-imei' ? '1fr 380px' : '1fr 400px', 
           gap: '20px',
-          marginTop: '20px'
+          marginTop: '20px',
+          alignItems: 'start'
         }}>
           {/* Main Content Area - Products or Scan IMEI */}
-          <GlassmorphicContainer>
+          <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 180px)' }}>
             {posMode === 'scan-imei' ? (
               /* Scan IMEI to Add Mode */
               <div>
@@ -1118,13 +1137,10 @@ const POSPage = () => {
                         placeholder="Scan or enter IMEI/Serial Number here..."
                         value={scanImeiInput}
                         onChange={(e) => {
+                          scanImeiRef.current = e.target.value;
                           setScanImeiInput(e.target.value);
                           setScanError('');
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleScanImeiToCart();
-                          }
+                          handleScanImeiToCart();
                         }}
                         autoFocus
                         style={{
@@ -1507,10 +1523,10 @@ const POSPage = () => {
                 )}
               </>
             )}
-          </GlassmorphicContainer>
+          </div>
 
           {/* Cart Section - Always visible */}
-          <GlassmorphicContainer>
+          <div style={{ position: 'sticky', top: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h2 style={{ color: 'white', fontSize: '18px', margin: 0 }}>
                 {posMode === 'scan-imei' ? 'Cart' : `Cart (${cart.length})`}
@@ -1744,7 +1760,7 @@ const POSPage = () => {
                 </div>
               </>
             )}
-          </GlassmorphicContainer>
+          </div>
         </div>
       </main>
 
