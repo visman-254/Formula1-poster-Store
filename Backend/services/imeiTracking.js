@@ -17,12 +17,20 @@ export const imeiService = {
     try {
       await connection.beginTransaction();
 
+      console.log(`[IMEI Service] Adding ${imeiNumbers.length} IMEIs for variant ${variantId}`);
+      console.log(`[IMEI Service] IMEI data:`, imeiNumbers);
+
       let addedCount = 0;
       const errors = [];
 
       for (const imei of imeiNumbers) {
         const trimmedImei = imei.trim();
-        if (!trimmedImei) continue;
+        if (!trimmedImei) {
+          console.log(`[IMEI Service] Skipping empty IMEI`);
+          continue;
+        }
+
+        console.log(`[IMEI Service] Processing IMEI: ${trimmedImei}`);
 
         // Check if IMEI already exists
         const [existing] = await connection.execute(
@@ -31,18 +39,23 @@ export const imeiService = {
         );
 
         if (existing.length > 0) {
+          console.log(`[IMEI Service] IMEI ${trimmedImei} already exists in database`);
           errors.push(`IMEI ${trimmedImei} already exists`);
           continue;
         }
 
+        console.log(`[IMEI Service] Inserting IMEI: ${trimmedImei} for variant ${variantId}`);
+        
         await connection.execute(
           'INSERT INTO imei_tracking (variant_id, imei_number, status) VALUES (?, ?, ?)',
           [variantId, trimmedImei, 'available']
         );
         addedCount++;
+        console.log(`[IMEI Service] Successfully added IMEI: ${trimmedImei} for variant ${variantId}`);
       }
 
       await connection.commit();
+      console.log(`[IMEI Service] Successfully added ${addedCount} IMEIs for variant ${variantId}`);
       return {
         success: errors.length === 0,
         count: addedCount,
@@ -50,7 +63,7 @@ export const imeiService = {
       };
     } catch (err) {
       await connection.rollback();
-      console.error('Error adding IMEIs:', err);
+      console.error('[IMEI Service] Error adding IMEIs:', err);
       throw err;
     } finally {
       connection.release();
@@ -403,6 +416,8 @@ export const imeiService = {
       // Split by comma or newline
       const imeiNumbers = imeiText.split(/[,\n]+/).map(i => i.trim()).filter(i => i);
 
+      console.log(`[IMEI Service] Bulk adding ${imeiNumbers.length} IMEIs for variant ${variantId}`);
+
       let added = 0;
       const duplicates = [];
       const errors = [];
@@ -416,16 +431,20 @@ export const imeiService = {
             [variantId, imei, 'available']
           );
           added++;
+          console.log(`[IMEI Service] Bulk added IMEI: ${imei} for variant ${variantId}`);
         } catch (err) {
           if (err.code === 'ER_DUP_ENTRY') {
             duplicates.push(imei);
+            console.log(`[IMEI Service] Duplicate IMEI: ${imei} - skipped`);
           } else {
             errors.push(`Error adding ${imei}: ${err.message}`);
+            console.error(`[IMEI Service] Error adding IMEI ${imei}:`, err.message);
           }
         }
       }
 
       await connection.commit();
+      console.log(`[IMEI Service] Bulk add complete: ${added} added, ${duplicates.length} duplicates for variant ${variantId}`);
       return {
         success: errors.length === 0,
         added,
@@ -434,7 +453,7 @@ export const imeiService = {
       };
     } catch (err) {
       await connection.rollback();
-      console.error('Error bulk adding IMEIs:', err);
+      console.error('[IMEI Service] Error bulk adding IMEIs:', err);
       throw err;
     } finally {
       connection.release();

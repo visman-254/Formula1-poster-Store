@@ -80,12 +80,16 @@ const ManageIMEIs = () => {
     setImeiMessage("");
 
     try {
+      console.log(`[ManageIMEIs] Saving IMEIs for variant ${selectedVariant.variant_id}, count: ${imeiText.split(/[,\n]+/).filter(i => i.trim()).length}`);
+      
       const response = await axios.post(
         `${API_BASE}/api/imei/${selectedVariant.variant_id}/bulk`,
         { imeiText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      console.log(`[ManageIMEIs] IMEI save response:`, response.data);
+      
       setImeiMessage(
         `✓ Successfully added ${response.data.added} IMEI(s)${response.data.duplicates?.length ? `, ${response.data.duplicates.length} duplicates skipped` : ""}`
       );
@@ -97,6 +101,7 @@ const ManageIMEIs = () => {
       });
       setExistingIMEIs(res.data.imeis || []);
     } catch (err) {
+      console.error(`[ManageIMEIs] Error saving IMEIs:`, err);
       setImeiMessage(`❌ Error: ${err.response?.data?.error || "Failed to save IMEIs"}`);
     } finally {
       setImeiLoading(false);

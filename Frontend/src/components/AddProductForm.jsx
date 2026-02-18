@@ -224,11 +224,15 @@ const AddProductForm = () => {
     setImeiMessage("");
     
     try {
+      console.log(`[AddProductForm] Saving IMEIs for variant ${selectedVariantId}, count: ${imeiText.split(/[,\n]+/).filter(i => i.trim()).length}`);
+      
       const response = await axios.post(`${API_BASE}/api/imei/${selectedVariantId}/bulk`, {
         imeiText: imeiText
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      console.log(`[AddProductForm] IMEI save response:`, response.data);
       
       setImeiMessage(`✓ Successfully added ${response.data.added} IMEI(s)${response.data.duplicates?.length ? `, ${response.data.duplicates.length} duplicates skipped` : ''}`);
       setImeiText("");
@@ -240,6 +244,7 @@ const AddProductForm = () => {
       setAllProducts(res.data);
       
     } catch (err) {
+      console.error(`[AddProductForm] Error saving IMEIs:`, err);
       setImeiMessage(`❌ Error: ${err.response?.data?.error || 'Failed to save IMEIs'}`);
     } finally {
       setImeiLoading(false);

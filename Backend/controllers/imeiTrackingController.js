@@ -31,11 +31,15 @@ export const imeiController = {
       const { variantId } = req.params;
       const { imeis } = req.body;
 
+      console.log(`[IMEI Controller] addIMEIs called with variantId: ${variantId}, imeis:`, imeis);
+
       if (!imeis || !Array.isArray(imeis) || imeis.length === 0) {
         return res.status(400).json({ error: 'IMEI array is required' });
       }
 
       const result = await imeiService.addIMEIs(parseInt(variantId), imeis);
+
+      console.log(`[IMEI Controller] addIMEIs result:`, result);
 
       if (!result.success) {
         return res.status(400).json({
@@ -49,7 +53,7 @@ export const imeiController = {
         ...result
       });
     } catch (err) {
-      console.error('Error adding IMEIs:', err);
+      console.error('[IMEI Controller] Error adding IMEIs:', err);
       res.status(500).json({ error: 'Failed to add IMEIs' });
     }
   },
@@ -63,11 +67,15 @@ export const imeiController = {
       const { variantId } = req.params;
       const { imeiText } = req.body;
 
+      console.log(`[IMEI Controller] bulkAddIMEIs called with variantId: ${variantId}, imeiText length: ${imeiText?.length}`);
+
       if (!imeiText || typeof imeiText !== 'string') {
         return res.status(400).json({ error: 'IMEI text is required' });
       }
 
       const result = await imeiService.bulkAddIMEIs(parseInt(variantId), imeiText);
+
+      console.log(`[IMEI Controller] bulkAddIMEIs result:`, result);
 
       if (!result.success) {
         return res.status(400).json({
@@ -82,7 +90,7 @@ export const imeiController = {
         errors: result.errors
       });
     } catch (err) {
-      console.error('Error bulk adding IMEIs:', err);
+      console.error('[IMEI Controller] Error bulk adding IMEIs:', err);
       res.status(500).json({ error: 'Failed to add IMEIs' });
     }
   },
@@ -137,10 +145,11 @@ export const imeiController = {
 
       const trimmedImei = String(imeiNumber).trim();
       
-      if (trimmedImei.length < 5) {
-        console.log('ERROR: IMEI too short');
-        return res.status(400).json({ error: 'IMEI number is too short' });
-      }
+      // Allow any non-empty IMEI
+      // if (trimmedImei.length < 5) {
+      //   console.log('ERROR: IMEI too short');
+      //   return res.status(400).json({ error: 'IMEI number is too short' });
+      // }
 
       // Handle variantId - can be null/undefined (optional)
       let parsedVariantId = null;
