@@ -200,6 +200,7 @@ export const imeiService = {
             valid: true,
             status: 'reserved',
             variant_id: imei.variant_id,
+            product_id: imei.imei_product_id,
             imei_id: imei.imei_id,
             note: 'Auto-assigned from available stock'
           };
@@ -219,6 +220,7 @@ export const imeiService = {
         valid: true,
         status: 'available',
         variant_id: imei.variant_id,
+        product_id: imei.imei_product_id,
         imei_id: imei.imei_id
       };
     } catch (err) {

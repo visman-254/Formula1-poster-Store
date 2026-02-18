@@ -41,7 +41,6 @@ const POSPage = () => {
   // Scan IMEI mode state
   const [scanImeiInput, setScanImeiInput] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
-  const [scannedProduct, setScannedProduct] = useState(null); // For showing identified product
   const [scanError, setScanError] = useState('');
 
   // Polling state
@@ -397,7 +396,6 @@ const POSPage = () => {
 
     setScanLoading(true);
     setScanError('');
-    setScannedProduct(null); // Clear previous scan
 
     try {
       // First, validate the IMEI to get product info
@@ -450,8 +448,8 @@ const POSPage = () => {
         return;
       }
 
-      // Show product preview instead of auto-adding to cart
-      setScannedProduct({
+      // Add to cart with IMEI pre-filled (like normal products)
+      const newItem = {
         variant_id: variant.variant_id,
         product_id: product.product_id,
         title: product.title,
@@ -466,8 +464,17 @@ const POSPage = () => {
         stock: variant.stock,
         imei: imei,
         imeiId: data.imeiId || null,
-      });
+        imeiValid: 'valid',
+        imeiError: null,
+        imeiWarning: null,
+      };
+
+      setCart((prevCart) => [...prevCart, newItem]);
+      setImeiInputs((prev) => ({ ...prev, [variant.variant_id]: imei }));
+      imeiInputsRef.current[variant.variant_id] = imei;
+
       setScanImeiInput('');
+      toast.success(`Added: ${product.title} (${variant.color || variant.name || 'Default'})`);
 
     } catch (err) {
       console.error('Scan IMEI error:', err);
@@ -484,25 +491,6 @@ const POSPage = () => {
     } finally {
       setScanLoading(false);
     }
-  };
-
-  // Confirm adding scanned product to cart
-  const confirmAddScannedToCart = () => {
-    if (!scannedProduct) return;
-
-    const newItem = {
-      ...scannedProduct,
-      imeiValid: 'valid',
-      imeiError: null,
-      imeiWarning: null,
-    };
-
-    setCart((prevCart) => [...prevCart, newItem]);
-    setImeiInputs((prev) => ({ ...prev, [scannedProduct.variant_id]: scannedProduct.imei }));
-    imeiInputsRef.current[scannedProduct.variant_id] = scannedProduct.imei;
-
-    toast.success(`Added: ${scannedProduct.title} (${scannedProduct.variantColor || 'Default'})`);
-    setScannedProduct(null);
   };
 
   // Variant selection
@@ -1177,80 +1165,6 @@ const POSPage = () => {
                     <p style={{ color: '#ef4444', fontSize: '13px', margin: '8px 0 0' }}>{scanError}</p>
                   )}
                 </form>
-
-                {/* Scanned Product Preview */}
-                {scannedProduct && (
-                  <div style={{
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    border: '1px solid rgba(16, 185, 129, 0.3)',
-                    borderRadius: '12px',
-                    padding: '20px',
-                    marginBottom: '20px'
-                  }}>
-                    <h3 style={{ color: '#10b981', fontSize: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <CheckCircle size={18} /> Product Found
-                    </h3>
-                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                      <img
-                        src={scannedProduct.image}
-                        alt={scannedProduct.title}
-                        style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
-                        onError={(e) => { e.target.src = '/images/poster1.jpg'; }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <p style={{ color: 'white', fontSize: '16px', fontWeight: 600, margin: '0 0 4px' }}>
-                          {scannedProduct.title}
-                        </p>
-                        {scannedProduct.variantColor && (
-                          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px', margin: '0 0 4px' }}>
-                            Variant: {scannedProduct.variantColor}
-                          </p>
-                        )}
-                        <p style={{ color: '#10b981', fontSize: '18px', fontWeight: 700, margin: 0 }}>
-                          KES {Number(scannedProduct.price).toLocaleString()}
-                        </p>
-                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', margin: '8px 0 0' }}>
-                          IMEI: {scannedProduct.imei}
-                        </p>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <button
-                          onClick={confirmAddScannedToCart}
-                          style={{
-                            padding: '12px 24px',
-                            background: '#10b981',
-                            border: 'none',
-                            borderRadius: '8px',
-                            color: 'white',
-                            fontSize: '14px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                          }}
-                        >
-                          <Plus size={16} /> Add to Cart
-                        </button>
-                        <button
-                          onClick={() => setScannedProduct(null)}
-                          style={{
-                            padding: '12px 24px',
-                            background: 'rgba(239, 68, 68, 0.2)',
-                            border: '1px solid rgba(239, 68, 68, 0.5)',
-                            borderRadius: '8px',
-                            color: '#ef4444',
-                            fontSize: '14px',
-                            fontWeight: 600,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {/* Scanned Products Table */}
                 {cart.length > 0 ? (
