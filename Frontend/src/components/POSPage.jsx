@@ -153,6 +153,37 @@ const POSPage = () => {
     return () => { if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current); };
   }, [isPolling, mpesaCheckoutId, token]);
 
+  // ── Manage body scroll when mobile cart opens ─────────────────
+  useEffect(() => {
+    if (mobileCartOpen) {
+      // Prevent scrolling on body
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.height = '100%';
+      document.body.style.top = '0';
+      document.body.style.left = '0';
+    } else {
+      // Restore scrolling
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+    }
+    
+    // Cleanup function
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+    };
+  }, [mobileCartOpen]);
+
   // ── Helpers ──────────────────────────────────────────────────
   const getProductImage = (product) => {
     const fallback = '/images/poster1.jpg';
@@ -278,7 +309,6 @@ const POSPage = () => {
         imeiInputsRef.current[variant.variant_id] = imei;
         setScanImeiInput(''); scanImeiRef.current = '';
         toast.success(`Added: ${product.title}`);
-        // Cart panel only opens when user clicks the cart icon — not automatically
       } catch (err) {
         const d = err.response?.data;
         setScanError(d?.status === 'used' ? 'IMEI already used' : d?.status === 'reserved' ? 'IMEI is reserved' : d?.status === 'not_found' ? 'IMEI not found' : d?.error || 'Failed to scan IMEI');
@@ -305,7 +335,6 @@ const POSPage = () => {
       setImeiInputs(prev => ({ ...prev, [variant.variant_id]: '' }));
       imeiInputsRef.current[variant.variant_id] = '';
       toast.info('Scan IMEI for this product');
-      // Cart panel only opens when user clicks the cart icon — not automatically
     }
   };
 
@@ -376,7 +405,7 @@ const POSPage = () => {
 
   const backgroundImage = posBackground || elegantwaterBg;
 
-  // ── Shared cart content (used in both desktop column + mobile panel) ──
+  // ── Shared cart content ──────────────────────────────────────
   const CartContent = () => (
     <>
       {cart.length === 0 ? (
@@ -405,7 +434,6 @@ const POSPage = () => {
                     </div>
                   </div>
 
-                  {/* IMEI input */}
                   <div className="imei-input-wrap">
                     <input
                       type="text"
@@ -483,7 +511,6 @@ const POSPage = () => {
                 </td>
                 <td>
                   <p className="product-name">{product.title}</p>
-                  {/* show variant inline on mobile */}
                   <div style={{ display: 'none' }} className="mobile-variant-inline">
                     {product.variants?.length > 1 ? (
                       <select className="variant-select" value={selectedVariants[product.product_id] || variant?.variant_id || ''} onChange={e => handleVariantSelect(product.product_id, Number(e.target.value))}>
@@ -556,10 +583,9 @@ const POSPage = () => {
     </div>
   );
 
-  // ── Sidebar content (shared between desktop + mobile drawer) ─
+  // ── Sidebar content ──────────────────────────────────────────
   const SidebarContent = () => (
     <>
-      {/* Header */}
       <div style={{ padding: '0 14px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
         <button
           onClick={() => { setSidebarOpen(!sidebarOpen); setMobileSidebarOpen(false); }}
@@ -570,7 +596,6 @@ const POSPage = () => {
         </button>
       </div>
 
-      {/* Mode buttons */}
       <div style={{ padding: 14, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <button className={`sidebar-mode-btn ${posMode === 'products' ? 'active' : ''}`} onClick={() => { setPosMode('products'); setMobileSidebarOpen(false); }}>
           <Grid size={16} /> View All Products
@@ -580,7 +605,6 @@ const POSPage = () => {
         </button>
       </div>
 
-      {/* Wallpaper settings */}
       {settingsExpanded && (
         <div style={{ padding: '14px 0' }}>
           <div className="wallpaper-panel">
@@ -598,7 +622,6 @@ const POSPage = () => {
 
       <div style={{ flex: 1 }} />
 
-      {/* User footer */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
           <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(59,130,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -638,10 +661,9 @@ const POSPage = () => {
       className="pos-page-container"
       style={{ background: `url(${backgroundImage}) center/cover no-repeat fixed`, backgroundColor: '#000' }}
     >
-      {/* Full-page blur overlay */}
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 0, pointerEvents: 'none' }} />
+      <div className="pos-bg-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 0, pointerEvents: 'none' }} />
 
-      {/* ── DESKTOP SIDEBAR ──────────────────────────────────── */}
+      {/* Desktop Sidebar */}
       <aside
         className="pos-sidebar"
         style={{
@@ -656,7 +678,7 @@ const POSPage = () => {
         <SidebarContent />
       </aside>
 
-      {/* ── MOBILE SIDEBAR DRAWER ────────────────────────────── */}
+      {/* Mobile Sidebar Drawer */}
       {mobileSidebarOpen && (
         <>
           <div className="pos-sidebar-backdrop" onClick={() => setMobileSidebarOpen(false)} />
@@ -675,20 +697,18 @@ const POSPage = () => {
         </>
       )}
 
-      {/* ── MAIN ─────────────────────────────────────────────── */}
+      {/* Main Content */}
       <main
-        className="pos-main"
+        className={`pos-main ${mobileCartOpen ? 'cart-open-mobile' : ''}`}
         style={{ marginLeft: sidebarOpen ? 'var(--sidebar-w)' : 'var(--sidebar-slim)' }}
       >
         {/* Header */}
-        <GlassmorphicContainer style={{ position: 'sticky', top: 0, zIndex: 50, borderRadius: 0 }}>
+        <GlassmorphicContainer className="pos-header" style={{ position: 'sticky', top: 0, zIndex: 50, borderRadius: 0 }}>
           <div className="pos-header-inner">
-            {/* Mobile hamburger */}
             <button className="pos-header-menu-btn" onClick={() => setMobileSidebarOpen(true)}>
               <Menu size={20} />
             </button>
 
-            {/* Logo */}
             <div className="pos-header-logo">
               <img
                 src={logoDark}
@@ -699,7 +719,6 @@ const POSPage = () => {
               />
             </div>
 
-            {/* Search */}
             <div className="pos-header-search">
               <Search className="search-icon" size={16} />
               <input
@@ -713,7 +732,6 @@ const POSPage = () => {
               )}
             </div>
 
-            {/* Mobile cart button */}
             <button className="pos-header-cart-btn" onClick={() => setMobileCartOpen(true)}>
               <ShoppingCart size={20} />
               {cart.length > 0 && <span className="cart-count">{cart.length}</span>}
@@ -737,10 +755,9 @@ const POSPage = () => {
 
         {/* Body */}
         <div className="pos-body">
-          {/* ── Products column ─────────────────────────────── */}
-          <div className="pos-products-col">
+          {/* Products Column */}
+          <div className={`pos-products-col ${mobileCartOpen ? 'blurred' : ''}`}>
             {posMode === 'scan-imei' ? (
-              /* Scan IMEI mode */
               <div className="pos-products-scroll">
                 <div className="scan-imei-section">
                   <h2 className="scan-title"><ScanBarcode size={20} /> Scan IMEI to Add</h2>
@@ -767,7 +784,6 @@ const POSPage = () => {
                   </form>
                   {scanError && <p className="scan-error">{scanError}</p>}
 
-                  {/* Scanned items table */}
                   {cart.length > 0 && (
                     <div style={{ marginTop: 24 }}>
                       <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginBottom: 12 }}>Scanned ({cart.length})</p>
@@ -825,7 +841,6 @@ const POSPage = () => {
                 </div>
               </div>
             ) : (
-              /* Products view */
               <>
                 <div className="pos-view-toggle">
                   <button className={`pos-view-btn ${viewMode === 'table' ? 'active' : ''}`} onClick={() => setViewMode('table')} title="Table View"><Table size={16} /></button>
@@ -852,10 +867,15 @@ const POSPage = () => {
             )}
           </div>
 
-          {/* ── Cart column (desktop: sidebar, mobile: slide-up panel) ── */}
-          <div className={`pos-cart-col ${mobileCartOpen ? "mobile-open" : ""}`}>
-            {/* Drag handle — visible on mobile only */}
-            <div className="cart-drag-handle">
+          {/* Cart Column */}
+          <div 
+            className={`pos-cart-col ${mobileCartOpen ? "mobile-open" : ""}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div 
+              className="cart-drag-handle"
+              onTouchStart={(e) => e.stopPropagation()}
+            >
               <div className="cart-drag-handle-bar" />
             </div>
             <div className="cart-header">
@@ -867,7 +887,6 @@ const POSPage = () => {
                 {cart.length > 0 && (
                   <button className="btn btn-danger btn-sm" onClick={resetSale}>Clear All</button>
                 )}
-                {/* X close button — mobile only */}
                 <button
                   className="cart-close-btn"
                   onClick={() => setMobileCartOpen(false)}
@@ -877,17 +896,37 @@ const POSPage = () => {
                 </button>
               </div>
             </div>
-            <CartContent />
+            <div 
+              className="cart-content-wrapper"
+              onTouchMove={(e) => e.stopPropagation()}
+            >
+              <CartContent />
+            </div>
           </div>
         </div>
       </main>
 
-      {/* Cart backdrop — shown on mobile when cart is open */}
+      {/* Cart Backdrop */}
       {mobileCartOpen && (
-        <div className="pos-cart-backdrop" onClick={() => setMobileCartOpen(false)} />
+        <div 
+          className="pos-cart-backdrop" 
+          onClick={() => setMobileCartOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            zIndex: 199,
+            animation: 'fadeIn 0.25s ease forwards'
+          }}
+        />
       )}
 
-      {/* ── BOTTOM NAV (mobile only) ──────────────────────────── */}
+      {/* Bottom Navigation (Mobile) */}
       <nav className="pos-bottom-nav">
         <button className={`pos-bottom-nav-item ${posMode === 'products' ? 'active' : ''}`} onClick={() => { setPosMode('products'); setMobileCartOpen(false); }}>
           <Grid size={20} />
@@ -908,7 +947,7 @@ const POSPage = () => {
         </button>
       </nav>
 
-      {/* ── M-PESA MODAL ─────────────────────────────────────── */}
+      {/* M-PESA Modal */}
       {showMpesaModal && (
         <div className="mpesa-modal-overlay">
           <div className="mpesa-modal">
@@ -932,6 +971,7 @@ const POSPage = () => {
 
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
       `}</style>
     </div>
   );

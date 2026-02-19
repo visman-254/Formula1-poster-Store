@@ -1255,3 +1255,161 @@
     transition-duration: 0.01ms !important;
   }
 }
+/* Add these styles to your POSPage.css file */
+
+/* Prevent body scrolling when mobile cart is open */
+body.cart-open-mobile {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+/* Main content styles when cart is open on mobile */
+@media (max-width: 768px) {
+  .pos-main.cart-open-mobile {
+    overflow: hidden;
+    height: 100vh;
+    pointer-events: none;
+  }
+  
+  .pos-main.cart-open-mobile .pos-header {
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  
+  .pos-main.cart-open-mobile .pos-products-col {
+    overflow: hidden;
+    pointer-events: none;
+  }
+  
+  .pos-products-col.blurred {
+    filter: blur(2px);
+    opacity: 0.4;
+    transition: filter 0.3s ease, opacity 0.3s ease;
+    pointer-events: none;
+    user-select: none;
+  }
+  
+  /* Ensure cart remains interactive */
+  .pos-cart-col.mobile-open {
+    pointer-events: auto;
+    z-index: 201;
+  }
+  
+  .pos-cart-col.mobile-open * {
+    pointer-events: auto;
+  }
+  
+  /* Cart content should be scrollable */
+  .cart-content-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 12px 12px;
+    pointer-events: auto;
+  }
+  
+  /* Ensure buttons in cart are clickable */
+  .cart-content-wrapper button,
+  .cart-content-wrapper input,
+  .cart-content-wrapper select {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+  
+  /* Bottom nav should remain clickable but dimmed */
+  .pos-bottom-nav {
+    pointer-events: auto;
+    z-index: 202;
+  }
+  
+  .pos-main.cart-open-mobile .pos-bottom-nav {
+    opacity: 0.7;
+  }
+}
+
+/* Update cart column styles for mobile */
+@media (max-width: 768px) {
+  .pos-cart-col {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--bottom-nav-h);
+    height: 85dvh;
+    z-index: 200;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border: 1px solid var(--glass-border);
+    border-bottom: none;
+    transform: translateY(100%);
+    transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: flex;
+    flex-direction: column;
+    pointer-events: none; /* Initially not interactive */
+  }
+  
+  .pos-cart-col.mobile-open {
+    transform: translateY(0);
+    pointer-events: auto; /* Interactive when open */
+  }
+  
+  /* Drag handle */
+  .cart-drag-handle {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0 6px;
+    flex-shrink: 0;
+    cursor: grab;
+    pointer-events: auto;
+  }
+  
+  .cart-drag-handle:active {
+    cursor: grabbing;
+  }
+  
+  .cart-drag-handle-bar {
+    width: 36px;
+    height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+  }
+  
+  /* Cart header */
+  .cart-header {
+    padding: 8px 16px 12px;
+    flex-shrink: 0;
+    pointer-events: auto;
+  }
+  
+  /* Cart items scroll area */
+  .cart-items-scroll {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 12px;
+    pointer-events: auto;
+  }
+  
+  /* Cart footer */
+  .cart-footer {
+    flex-shrink: 0;
+    padding: 12px 16px 16px;
+    pointer-events: auto;
+  }
+  
+  /* Ensure all cart interactions work */
+  .cart-item {
+    pointer-events: auto;
+  }
+  
+  .cart-item button,
+  .cart-item input {
+    pointer-events: auto;
+  }
+}
