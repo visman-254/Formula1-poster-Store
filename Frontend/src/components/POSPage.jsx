@@ -278,7 +278,7 @@ const POSPage = () => {
         imeiInputsRef.current[variant.variant_id] = imei;
         setScanImeiInput(''); scanImeiRef.current = '';
         toast.success(`Added: ${product.title}`);
-        if (isMobile()) setMobileCartOpen(true);
+        // Cart panel only opens when user clicks the cart icon — not automatically
       } catch (err) {
         const d = err.response?.data;
         setScanError(d?.status === 'used' ? 'IMEI already used' : d?.status === 'reserved' ? 'IMEI is reserved' : d?.status === 'not_found' ? 'IMEI not found' : d?.error || 'Failed to scan IMEI');
@@ -305,7 +305,7 @@ const POSPage = () => {
       setImeiInputs(prev => ({ ...prev, [variant.variant_id]: '' }));
       imeiInputsRef.current[variant.variant_id] = '';
       toast.info('Scan IMEI for this product');
-      if (isMobile()) setMobileCartOpen(true);
+      // Cart panel only opens when user clicks the cart icon — not automatically
     }
   };
 
