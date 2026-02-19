@@ -18,6 +18,7 @@ import {
   Upload,
   Settings,
   Image,
+  Package,
 } from "lucide-react";
 import { useAdminNotification } from "../context/AdminNotificationContext";
 import { getWallpaper, updateWallpaper, deleteWallpaper } from "../api/adminSettings";
@@ -407,6 +408,14 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <div className="sidebar-user-actions">
+                  <button 
+                    className="sidebar-action-btn"
+                    onClick={() => navigate('/pos')}
+                    title="Open POS"
+                    style={{ backgroundColor: '#10b981', color: 'white' }}
+                  >
+                    <Package size={18} />
+                  </button>
                   <button 
                     className="sidebar-action-btn"
                     onClick={() => handleTabClick('settings')}
