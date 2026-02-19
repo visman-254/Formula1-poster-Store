@@ -243,10 +243,6 @@ const Navbar = ({ searchQuery, setSearchQuery }) => {
                   Pre-order
                 </Link>
 
-                <Link to="/checkout" className="nav-link">
-                  Checkout
-                </Link>
-
                 <ThemeSwitcher />
 
                 {user ? (
@@ -388,13 +384,6 @@ const Navbar = ({ searchQuery, setSearchQuery }) => {
                       </div>
                     </div>
 
-                    <Link
-                      to="/checkout"
-                      className="mobile-link"
-                      onClick={() => handleMobileLinkClick(close)}
-                    >
-                      Checkout
-                    </Link>
                   </div>
                 </MobileDropdownPortal>
               )}

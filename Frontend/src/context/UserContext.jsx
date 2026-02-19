@@ -88,9 +88,8 @@ export const UserProvider = ({ children }) => {
       if (loggedInUser.role === 'cashier') {
         window.location.href = '/pos';
       } else if (loggedInUser.role === 'admin') {
-        // Admin can choose where to go, but we'll let them go to the page they requested
-        // or default to home
-        const redirectTo = sessionStorage.getItem('redirectAfterLogin') || '/';
+        // Admin always goes to the admin dashboard
+        const redirectTo = sessionStorage.getItem('redirectAfterLogin') || '/admin';
         sessionStorage.removeItem('redirectAfterLogin');
         window.location.href = redirectTo;
       } else {

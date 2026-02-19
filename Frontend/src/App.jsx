@@ -6,7 +6,7 @@ import { Toaster } from "sonner";
 import { CartProvider } from "./context/CartContext";
 import { UserProvider } from "./context/UserContext";
 import { AdminNotificationProvider } from "./context/AdminNotificationContext";
-import AdminRoute from "../ProtectedRoute";
+import AdminRoute, { POSRoute } from "../ProtectedRoute";
 import Contactus from "./components/Contactus";
 import Breadcrumbs from "./components/Breadcrumbs";
 import "./App.css";
@@ -80,7 +80,11 @@ function App() {
                 <Route path="/pendingpayments" element={<PendingPayments />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/preorder" element={<PreOrderForm />} />
-                <Route path="/pos" element={<POSPage />} />
+                <Route path="/pos" element={
+                  <POSRoute>
+                    <POSPage />
+                  </POSRoute>
+                } />
                 <Route
                   path="/admin"
                   element={

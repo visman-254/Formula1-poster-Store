@@ -206,7 +206,8 @@ html.dark .glass-nav {
   top: var(--nav-height);
   left: 0;
   right: 0;
-  bottom: 0;
+  height: auto;
+  max-height: calc(100vh - var(--nav-height));
   width: 100vw;
   background: var(--mobile-dropdown-bg);
   backdrop-filter: blur(20px) saturate(180%);
@@ -216,11 +217,13 @@ html.dark .glass-nav {
   /* Below navbar (1001) so the nav bar + X button remain on top and clickable */
   z-index: 999;
   animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 1.5rem;
+  padding: 1.5rem 1.5rem 2rem;
   box-sizing: border-box;
   /* Contain all scroll within the dropdown — page behind cannot scroll */
   overscroll-behavior: contain;
   touch-action: pan-y;
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 @keyframes slideDown {

@@ -354,6 +354,15 @@ export default function AdminPage() {
                 )}
               </button>
             ))}
+            {/* POS Button in top nav */}
+            <button
+              className="topbar-category topbar-pos-btn"
+              onClick={() => navigate('/pos')}
+              title="Open Point of Sale"
+            >
+              <Package size={18} />
+              <span>POS</span>
+            </button>
           </nav>
           
           {/* Logout Button */}
