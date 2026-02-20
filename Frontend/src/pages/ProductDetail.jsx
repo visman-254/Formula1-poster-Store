@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import axios from "axios";
 import { useCart } from "../context/CartContext";
 import API_BASE from "../config";
@@ -229,13 +230,34 @@ const ProductDetail = () => {
     );
   };
 
-  // Loading state
+  // Loading state — skeleton layout
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading product...</p>
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Image skeleton */}
+          <div className="w-full md:w-1/2">
+            <Skeleton className="w-full h-96 rounded-lg" />
+            <div className="flex gap-2 mt-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="w-16 h-16 rounded-md" />
+              ))}
+            </div>
+          </div>
+          {/* Info skeleton */}
+          <div className="w-full md:w-1/2 space-y-4">
+            <Skeleton className="h-8 w-3/4" />
+            <Skeleton className="h-6 w-1/4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-4 w-4/6" />
+            <div className="flex gap-2 mt-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="w-10 h-10 rounded-md" />
+              ))}
+            </div>
+            <Skeleton className="h-11 w-full rounded-md mt-4" />
+          </div>
         </div>
       </div>
     );

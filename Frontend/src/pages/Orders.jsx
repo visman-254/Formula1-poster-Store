@@ -8,15 +8,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Package, Clock, Truck, CheckCircle, XCircle, Calendar, ShoppingBag } from "lucide-react";
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [filter, setFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
   const { user } = useUser();
 
   useEffect(() => {
     if (user) {
+      setLoading(true);
       getOrders()
         .then(data => {
           console.log('Orders data from API:', data);
@@ -25,9 +28,40 @@ const Orders = () => {
         })
         .catch((err) => {
           console.error("Failed to fetch orders:", err);
-        });
+        })
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
   }, [user]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-black px-4 py-8 max-w-4xl mx-auto">
+        <Skeleton className="h-8 w-48 mb-6" />
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i} className="mb-4 border border-gray-200 dark:border-gray-800">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-6 w-20 rounded-full" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex gap-3 items-center">
+                <Skeleton className="w-14 h-14 rounded-md" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+              <Skeleton className="h-4 w-1/4 ml-auto" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   if (!user) {
     return (

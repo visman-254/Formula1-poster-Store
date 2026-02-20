@@ -11,6 +11,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Tag } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import API_BASE from "../config";
@@ -27,10 +28,12 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [selectedVariants, setSelectedVariants] = useState({});
   const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   /* ================= FETCH PRODUCTS ================= */
   useEffect(() => {
     const fetchProductsData = async () => {
+      setLoading(true);
       try {
         let res;
 
@@ -54,6 +57,8 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
         setSelectedVariants(initialVariants);
       } catch (err) {
         console.error("Failed to load products:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -124,11 +129,19 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
               src={leftImage}
               className="bundle-splice-image-left"
               alt="Bundle item 1"
+              loading="lazy"
+              decoding="async"
+              width={300}
+              height={300}
             />
             <img
               src={rightImage}
               className="bundle-splice-image-right"
               alt="Bundle item 2"
+              loading="lazy"
+              decoding="async"
+              width={300}
+              height={300}
             />
           </div>
         );
@@ -146,6 +159,10 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
         src={image}
         alt={product.title}
         className="product-image"
+        loading="lazy"
+        decoding="async"
+        width={300}
+        height={300}
       />
     );
   };
@@ -176,7 +193,25 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
 
         {/* Updated grid to use pos-products-grid */}
         <div className="pos-products-grid flex-grow">
-          {filteredProducts.length > 0 ? (
+          {loading ? (
+            Array.from({ length: 8 }).map((_, i) => (
+              <Card key={i} className="modern-card border-none">
+                <div className="pos-product-image-wrapper">
+                  <Skeleton className="w-full h-full" />
+                </div>
+                <CardHeader>
+                  <Skeleton className="h-4 w-3/4 mb-2" />
+                  <Skeleton className="h-3 w-1/2" />
+                </CardHeader>
+                <CardContent className="px-3 pb-2">
+                  <Skeleton className="h-4 w-1/3" />
+                </CardContent>
+                <CardFooter className="p-3 pt-1">
+                  <Skeleton className="h-9 w-full rounded-md" />
+                </CardFooter>
+              </Card>
+            ))
+          ) : filteredProducts.length > 0 ? (
             filteredProducts.map((product) => {
               if (!product.is_bundle && !product.variants?.length) return null;
 

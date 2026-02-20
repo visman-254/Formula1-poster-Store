@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import sharp from 'sharp';
 
 const router = express.Router();
 
@@ -53,40 +54,71 @@ const upload = multer({
 });
 
 // POST /api/upload/images
-// Upload multiple images at once
+// Upload multiple images at once (with Sharp compression to WebP)
 router.post('/upload/images', upload.array('images', 50), async (req, res) => {
   console.log('\n========== IMAGE UPLOAD REQUEST ==========');
   
   try {
     if (!req.files || req.files.length === 0) {
       console.log('No files uploaded');
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'No images uploaded' 
+        message: 'No images uploaded'
       });
     }
 
     console.log(`Received ${req.files.length} file(s) for upload`);
 
-    // Build response with mapping of original filenames to timestamp filenames
-    const uploadedFiles = req.files.map(file => {
-      const fileInfo = {
-        filename: file.filename,
-        originalName: file.originalname,
-        path: `${PUBLIC_PATH}/${file.filename}`,
-        size: file.size,
-        mimetype: file.mimetype
-      };
-      
-      console.log('File saved:', {
-        original: file.originalname,
-        savedAs: file.filename,
-        fullPath: path.join(UPLOAD_DIR, file.filename),
-        publicPath: fileInfo.path
-      });
-      
-      return fileInfo;
-    });
+    // Compress each uploaded file with Sharp → WebP
+    const uploadedFiles = [];
+    for (const file of req.files) {
+      const originalPath = path.join(UPLOAD_DIR, file.filename);
+      const timestamp = path.basename(file.filename, path.extname(file.filename));
+      const webpFilename = `${timestamp}.webp`;
+      const webpPath = path.join(UPLOAD_DIR, webpFilename);
+
+      try {
+        await sharp(originalPath)
+          .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 80 })
+          .toFile(webpPath);
+
+        // Remove the original uncompressed file
+        fs.unlinkSync(originalPath);
+
+        const stats = fs.statSync(webpPath);
+        const fileInfo = {
+          filename: webpFilename,
+          originalName: file.originalname,
+          path: `${PUBLIC_PATH}/${webpFilename}`,
+          size: stats.size,
+          mimetype: 'image/webp',
+          originalSize: file.size,
+          compressionRatio: ((1 - stats.size / file.size) * 100).toFixed(1) + '%'
+        };
+
+        console.log('File compressed:', {
+          original: file.originalname,
+          savedAs: webpFilename,
+          originalSize: `${(file.size / 1024).toFixed(1)} KB`,
+          compressedSize: `${(stats.size / 1024).toFixed(1)} KB`,
+          saved: fileInfo.compressionRatio
+        });
+
+        uploadedFiles.push(fileInfo);
+      } catch (sharpErr) {
+        console.error(`Sharp compression failed for ${file.filename}:`, sharpErr.message);
+        // Fallback: keep original file if Sharp fails
+        const fileInfo = {
+          filename: file.filename,
+          originalName: file.originalname,
+          path: `${PUBLIC_PATH}/${file.filename}`,
+          size: file.size,
+          mimetype: file.mimetype
+        };
+        uploadedFiles.push(fileInfo);
+      }
+    }
 
     // Create a mapping object for easy reference
     const mapping = {};
@@ -100,17 +132,17 @@ router.post('/upload/images', upload.array('images', 50), async (req, res) => {
 
     res.json({
       success: true,
-      message: `${uploadedFiles.length} image(s) uploaded successfully`,
+      message: `${uploadedFiles.length} image(s) uploaded and compressed successfully`,
       files: uploadedFiles,
-      mapping: mapping // Include mapping for convenience
+      mapping: mapping
     });
 
   } catch (error) {
     console.error('❌ Image upload error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Failed to upload images',
-      error: error.message 
+      error: error.message
     });
   }
 });

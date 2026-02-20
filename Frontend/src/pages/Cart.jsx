@@ -68,11 +68,15 @@ const Cart = () => {
               src={resolveImageUrl(leftImage)}
               className="bundle-splice-image-left-cart"
               alt="Bundle item 1"
+              loading="lazy"
+              decoding="async"
             />
             <img
               src={resolveImageUrl(rightImage)}
               className="bundle-splice-image-right-cart"
               alt="Bundle item 2"
+              loading="lazy"
+              decoding="async"
             />
           </div>
         );
@@ -84,6 +88,8 @@ const Cart = () => {
         className="card-img"
         src={resolveImageUrl(item.image)}
         alt={item.title}
+        loading="lazy"
+        decoding="async"
       />
     );
   };
