@@ -410,7 +410,11 @@ html.dark .glass-nav button:hover,
 html.dark .glass-nav a.p-2:hover {
   background-color: rgba(255, 255, 255, 0.1) !important;
 }
-
+/* Ensure Radix dropdowns appear above navbar on mobile */
+.nav-dropdown,
+[data-radix-popper-content-wrapper] {
+  z-index: 1100 !important;
+}
 /* ================= DESKTOP STYLES (min-width: 769px) ================= */
 @media (min-width: 769px) {
   /* Show desktop nav, hide mobile elements */

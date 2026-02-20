@@ -257,7 +257,7 @@ const Navbar = ({ searchQuery, setSearchQuery }) => {
                         </div>
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="nav-dropdown">
+                    <DropdownMenuContent className="nav-dropdown" sideOffset={8}>
                       <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -301,7 +301,7 @@ const Navbar = ({ searchQuery, setSearchQuery }) => {
                         </div>
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="nav-dropdown">
+                    <DropdownMenuContent className="nav-dropdown" sideOffset={8}>
                       <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
