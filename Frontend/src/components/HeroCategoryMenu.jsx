@@ -28,7 +28,11 @@ const HeroCategoryMenu = () => {
 
   useEffect(() => {
     api.get("/api/products/categories").then((res) => {
-      setCategories(res.data);
+      const filtered = res.data.filter((cat) => {
+        const name = cat.category_name.toLowerCase();
+        return name !== "preorders" && name !== "uncategorized";
+      });
+      setCategories(filtered);
     });
   }, []);
 

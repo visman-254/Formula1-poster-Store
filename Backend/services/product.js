@@ -5,7 +5,7 @@ import path from "path";
 
 dotenv.config();
 
-const UNCATEGORIZED_ID = 35;
+const UNCATEGORIZED_ID = 127;
 
 const groupProducts = async (rows) => {
     const productMap = new Map();

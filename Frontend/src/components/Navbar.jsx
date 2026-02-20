@@ -61,7 +61,10 @@ const Navbar = ({ searchQuery, setSearchQuery }) => {
       .then((res) => res.json())
       .then((data) => {
         const filteredData = Array.isArray(data)
-          ? data.filter((cat) => cat.category_name.toLowerCase() !== "preorders")
+          ? data.filter((cat) => {
+              const name = cat.category_name.toLowerCase();
+              return name !== "preorders" && name !== "uncategorized";
+            })
           : [];
         setCategories(filteredData);
       })

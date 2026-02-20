@@ -26,7 +26,10 @@ const SideMenu = ({ onCategorySelect, selectedCategory }) => {
       .get("/api/products/categories")
       .then((res) => {
         const filtered = res.data.filter(
-          (c) => c.category_name.toLowerCase() !== "preorders"
+          (c) => {
+            const name = c.category_name.toLowerCase();
+            return name !== "preorders" && name !== "uncategorized";
+          }
         );
         setCategories(filtered);
       })
