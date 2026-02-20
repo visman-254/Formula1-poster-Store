@@ -18,6 +18,7 @@ import API_BASE from "../config";
 import "./Products.css";
 import SideMenu from "../components/SideMenu";
 import "../components/SideMenu.css";
+import CompressedImage from "../components/CompressedImage";
 
 const ProductList = ({ searchQuery, setSearchQuery }) => {
   const { category } = useParams();
@@ -125,23 +126,21 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
       if (leftImage && rightImage) {
         return (
           <div className="bundle-image-splice">
-            <img
+            <CompressedImage
               src={leftImage}
-              className="bundle-splice-image-left"
               alt="Bundle item 1"
-              loading="lazy"
-              decoding="async"
-              width={300}
-              height={300}
+              className="bundle-splice-image-left"
+              maxWidth={300}
+              maxHeight={300}
+              quality={0.8}
             />
-            <img
+            <CompressedImage
               src={rightImage}
-              className="bundle-splice-image-right"
               alt="Bundle item 2"
-              loading="lazy"
-              decoding="async"
-              width={300}
-              height={300}
+              className="bundle-splice-image-right"
+              maxWidth={300}
+              maxHeight={300}
+              quality={0.8}
             />
           </div>
         );
@@ -155,14 +154,13 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
       "/fallback.jpg";
 
     return (
-      <img
+      <CompressedImage
         src={image}
         alt={product.title}
         className="product-image"
-        loading="lazy"
-        decoding="async"
-        width={300}
-        height={300}
+        maxWidth={300}
+        maxHeight={300}
+        quality={0.8}
       />
     );
   };

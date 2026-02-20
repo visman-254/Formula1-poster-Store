@@ -19,6 +19,7 @@ import "./Products.css";
 import SideMenu from "../components/SideMenu";
 import PromotionalBanner from "../components/PromotionalBanner";
 import "../components/SideMenu.css";
+import CompressedImage from "../components/CompressedImage";
 
 const ShopCategory = () => {
   const { category } = useParams();
@@ -217,14 +218,13 @@ const ShopCategory = () => {
 
                     <Link to={`/products/${product.product_id}`}>
                       <div className="pos-product-image-wrapper">
-                        <img
+                        <CompressedImage
                           src={selectedVariant.image}
                           alt={product.title}
                           className="product-image"
-                          loading="lazy"
-                          decoding="async"
-                          width={300}
-                          height={300}
+                          maxWidth={300}
+                          maxHeight={300}
+                          quality={0.8}
                         />
                       </div>
                       

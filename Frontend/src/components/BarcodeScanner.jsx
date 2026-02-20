@@ -21,7 +21,7 @@ const BarcodeScanner = ({ onScanSuccess, onScanError, ...props }) => {
 
     const config = {
       fps: 10,
-      qrbox: { width: 250, height: 150 }, // Wider box for barcodes
+      qrbox: { width: 300, height: 120 }, // Wider and shorter for barcode
       rememberLastUsedCamera: true,
       // Support both QR and barcode scanning
       supportedScanTypes: [0, 1] // 0 for QR, 1 for barcode
@@ -76,7 +76,22 @@ const BarcodeScanner = ({ onScanSuccess, onScanError, ...props }) => {
     };
   }, [onScanSuccess, onScanError, readerId]);
 
-  return <div id={readerId} ref={readerRef} {...props} />;
+  return (
+    <div className="barcode-scanner-wrapper" style={{ position: 'relative', ...props.style }}>
+      <div id={readerId} ref={readerRef} {...props} />
+      {/* Custom scanning overlay */}
+      <div className="scanner-overlay">
+        <div className="scanner-frame">
+          <div className="scanner-corner top-left"></div>
+          <div className="scanner-corner top-right"></div>
+          <div className="scanner-corner bottom-left"></div>
+          <div className="scanner-corner bottom-right"></div>
+          <div className="scanner-line"></div>
+        </div>
+        <p className="scanner-hint">Position barcode within the frame</p>
+      </div>
+    </div>
+  );
 };
 
 export default BarcodeScanner;
