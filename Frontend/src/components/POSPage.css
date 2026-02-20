@@ -468,6 +468,17 @@
 }
 .btn-ghost:hover:not(:disabled) { background: var(--glass-high); }
 
+.btn-outline {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+}
+.btn-outline:hover:not(:disabled) {
+  background: var(--glass-hover);
+  border-color: var(--pos-green);
+  color: var(--pos-green);
+}
+
 .btn-danger {
   background: var(--pos-red-dim);
   color: var(--pos-red);
@@ -814,6 +825,28 @@
 
 .scan-input:focus  { border-color: var(--pos-green); }
 .scan-input.err    { border-color: var(--pos-red); }
+
+/* ── BARCODE SCANNER ─────────────────────────────────────────── */
+#barcode-reader video {
+  width: 100% !important;
+  border-radius: var(--radius-md);
+}
+
+#barcode-reader img {
+  display: none;
+}
+
+#barcode-reader > div {
+  border-radius: var(--radius-md);
+}
+
+.scan-imei-section .btn-outline {
+  border-color: var(--glass-border);
+}
+
+.scan-imei-section .btn-outline:active {
+  background: var(--pos-green-dim);
+}
 
 .scan-error {
   color: var(--pos-red);

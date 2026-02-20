@@ -4,11 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   Search, X, User, Settings, LogOut, Menu, Table, Grid,
-  ShoppingCart, Upload, Image, ScanBarcode, Plus, ChevronDown
+  ShoppingCart, Upload, Image, ScanBarcode, Plus, ChevronDown, Camera
 } from 'lucide-react';
 import { toast } from 'sonner';
 import POSReceipt from './POSReceipt';
 import GlassmorphicContainer from './GlassmorphicContainer';
+import BarcodeScanner from './BarcodeScanner';
 import './POSPage.css';
 import API_BASE from '../config';
 import { getWallpaper, updateWallpaper, deleteWallpaper } from '../api/adminSettings';
@@ -63,6 +64,7 @@ const POSPage = () => {
   const [scanLoading, setScanLoading]   = useState(false);
   const [scanError, setScanError]       = useState('');
   const scanImeiRef                     = useRef('');
+  const [showScanner, setShowScanner]   = useState(false);
 
   // ── Polling state ────────────────────────────────────────────
   const [isPolling, setIsPolling]             = useState(false);
@@ -278,6 +280,51 @@ const POSPage = () => {
       }
     } catch { console.error('Auto-fill failed'); }
   };
+
+  // ── Handle barcode scan from camera ─────────────────────────────
+  const handleBarcodeScan = useCallback((scannedText) => {
+    if (!scannedText) return;
+    // Clean and set the scanned value
+    const cleaned = scannedText.replace(/[\r\n\t\x00-\x1F]/g, '').trim();
+    if (!cleaned) return;
+    
+    scanImeiRef.current = cleaned;
+    setScanImeiInput(cleaned);
+    setScanError('');
+    setShowScanner(false);
+    
+    // Trigger the add to cart process directly (inline logic)
+    if (debounceTimerRef.current['scan']) clearTimeout(debounceTimerRef.current['scan']);
+    debounceTimerRef.current['scan'] = setTimeout(async () => {
+      const imei = cleaned.replace(/[\r\n\t\x00-\x1F]/g, '').trim();
+      if (!imei) return;
+      setScanLoading(true); setScanError('');
+      try {
+        const { data } = await axios.post(`${API_URL_BASE}/imei/validate`, { imeiNumber: imei }, { headers: { Authorization: `Bearer ${token}` } });
+        if (!data.valid) { setScanError(data.error || 'IMEI validation failed'); setScanLoading(false); return; }
+        const { data: allProducts } = await axios.get(`${API_URL_BASE}/pos/products`, { headers: { Authorization: `Bearer ${token}` } });
+        const product = allProducts.find(p => p.product_id === data.product_id);
+        if (!product) { setScanError('Product not found for this IMEI'); setScanLoading(false); return; }
+        const variant = product.variants?.find(v => v.variant_id === data.variant_id) || product.variants?.[0];
+        if (!variant || variant.stock <= 0) { setScanError('Product out of stock'); setScanLoading(false); return; }
+        if (cart.find(i => i.variant_id === variant.variant_id && i.imei === imei)) { setScanError('IMEI already in cart'); setScanLoading(false); return; }
+        setCart(prev => [...prev, {
+          variant_id: variant.variant_id, product_id: product.product_id,
+          title: product.title, variantColor: variant.color || variant.name || null,
+          price: variant.price, image: getVariantImg(variant, product),
+          quantity: 1, stock: variant.stock,
+          imei, imeiId: data.imeiId || null, imeiValid: 'valid', imeiError: null, imeiWarning: null,
+        }]);
+        setImeiInputs(prev => ({ ...prev, [variant.variant_id]: imei }));
+        imeiInputsRef.current[variant.variant_id] = imei;
+        setScanImeiInput(''); scanImeiRef.current = '';
+        toast.success(`Added: ${product.title}`);
+      } catch (err) {
+        const d = err.response?.data;
+        setScanError(d?.status === 'used' ? 'IMEI already used' : d?.status === 'reserved' ? 'IMEI is reserved' : d?.status === 'not_found' ? 'IMEI not found' : d?.error || 'Failed to scan IMEI');
+      } finally { setScanLoading(false); }
+    }, 500);
+  }, [token, cart]);
 
   // ── Scan IMEI to add ─────────────────────────────────────────
   const handleScanImeiToCart = async (e) => {
@@ -782,6 +829,28 @@ const POSPage = () => {
                       {scanLoading ? 'Scanning…' : 'Add'}
                     </button>
                   </form>
+                  
+                  {/* Camera Scanner Button */}
+                  <button 
+                    className="btn btn-outline btn-md" 
+                    onClick={() => setShowScanner(!showScanner)}
+                    style={{ marginTop: 12, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  >
+                    <Camera size={18} />
+                    {showScanner ? 'Close Scanner' : 'Scan with Camera'}
+                  </button>
+                  
+                  {/* Camera Scanner Component */}
+                  {showScanner && (
+                    <div style={{ marginTop: 16, borderRadius: 12, overflow: 'hidden', border: '2px solid var(--pos-green)' }}>
+                      <BarcodeScanner 
+                        onScanSuccess={handleBarcodeScan}
+                        onScanError={(err) => console.error('Scan error:', err)}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                  )}
+                  
                   {scanError && <p className="scan-error">{scanError}</p>}
 
                   {cart.length > 0 && (
