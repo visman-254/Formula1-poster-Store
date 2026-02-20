@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import Navbar from "./components/Navbar";
-import LoadingScreen from "./components/LoadingScreen";
 import { Toaster } from "sonner";
 import { CartProvider } from "./context/CartContext";
 import { UserProvider } from "./context/UserContext";
@@ -29,37 +28,20 @@ const POSPage = lazy(() => import("./components/POSPage")); // POS Checkout
 
 function App() {
   const location = useLocation();
-  const [isNavigating, setIsNavigating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Check if current route is admin or pos
   const isAdminRoute = location.pathname === "/admin";
   const isPosRoute = location.pathname === "/pos";
 
-
-  useEffect(() => {
-    // Only set isNavigating if it's not a side menu hover event
-    if (!location.state?.fromSideMenuHover) {
-      setIsNavigating(true);
-      const timer = setTimeout(() => {
-        setIsNavigating(false);
-      }, 3000);
-
-      return () => clearTimeout(timer);
-    } else {
-      setIsNavigating(false); // Ensure it's false for hover events
-    }
-  }, [location.pathname, location.state]);
-
   return (
     <UserProvider>
       <CartProvider>
         <div className="app-container">
           {!isAdminRoute && !isPosRoute && <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />}
-          {isNavigating && <LoadingScreen />}
           <main className={`main-content ${isAdminRoute ? 'admin-main-content' : ''}`}>
             {(location.pathname !== '/pos' && location.pathname !== '/admin') && <Breadcrumbs />}
-            <Suspense fallback={<LoadingScreen />}>
+            <Suspense fallback={null}>
               <Routes>
                 <Route path="/" element={<ProductList searchQuery={searchQuery} setSearchQuery={setSearchQuery} />} />
                 <Route path="/home" element={<Home />} />

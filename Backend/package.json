@@ -25,11 +25,11 @@
     "multer": "^2.0.2",
     "mysql2": "^3.6.5",
     "nodemailer": "^7.0.6",
-    "sharp": "^0.34.4",
     "twilio": "^5.10.3",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "sharp": "^0.34.5"
   }
 }

@@ -18,10 +18,15 @@ const Cart = () => {
   } = useCart();
 
   const resolveImageUrl = (image) => {
-    if (image && (image.startsWith('http') || image.startsWith('/'))) {
-      return image;
+    if (!image) return '/placeholder.png';
+    
+    // Fix old .jpg URLs to .webp
+    let fixedImage = image.replace(/\.jpg$/i, '.webp').replace(/\.jpeg$/i, '.webp').replace(/\.png$/i, '.webp');
+    
+    if (fixedImage.startsWith('http') || fixedImage.startsWith('/')) {
+      return fixedImage;
     }
-    return `${API_BASE}/${image}`;
+    return `${API_BASE}/${fixedImage}`;
   };
 
   //  WhatsApp order message generator (WITH UNIT PRICE + QTY + ITEM TOTAL)
