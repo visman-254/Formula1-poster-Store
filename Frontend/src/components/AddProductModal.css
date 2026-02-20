@@ -1,66 +1,114 @@
-/* Add Product Modal Styles */
+/* ==========================================================================
+   ADD PRODUCT MODAL — FIXED SCROLL v2
+   The overlay IS the scroll container. Modal card starts at the very top.
+   No max-height, no overflow:hidden on the card — it grows freely.
+   ========================================================================== */
+
+/* ── Overlay: the ONE scroll container ───────────────────────────────────── */
 .add-product-modal-overlay {
   position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(12px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.62);
   z-index: 9999;
+
+  /* Scrolls vertically — this is the ONLY scroller */
+  overflow-y: scroll;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+
+  /* Always starts at scrollTop 0 (forced in JS too) */
+  scroll-behavior: auto;
+
+  /* Hidden until active */
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.3s ease, visibility 0.3s ease;
-  padding: 1rem;
-  overflow-y: auto;
+  pointer-events: none;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
 }
 
 .add-product-modal-overlay.active {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
 }
 
+/* ── Content wrapper ─────────────────────────────────────────────────────── */
 .add-product-modal-content {
+  /* 
+    Top margin = topbar height (60px) + small gap.
+    This is where the card starts — near the very top of the page.
+  */
+  margin: 68px auto 48px;
   width: 100%;
   max-width: 900px;
-  margin: 0 auto;
-  padding-top: 20px;
-  transform: scale(0.95);
+  padding: 0 1rem;
+
+  /* Slide-down entry — feels like it opens from the top */
+  transform: translateY(-14px);
   opacity: 0;
-  visibility: hidden;
-  transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
+  transition: transform 0.28s ease, opacity 0.28s ease;
 }
 
-.add-product-modal-content.active {
-  transform: scale(1);
+.add-product-modal-overlay.active .add-product-modal-content {
+  transform: translateY(0);
   opacity: 1;
-  visibility: visible;
 }
 
+/* ── Glass card ───────────────────────────────────────────────────────────── */
 .add-product-modal-container {
   backdrop-filter: blur(24px);
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 1.5rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(24px);
+  background: rgba(18, 20, 28, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 32px 64px -12px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
   position: relative;
-  padding: 1.5rem;
-  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100vh - 8rem);
-  overflow: hidden;
+  padding: 1.75rem 1.5rem 2.5rem;
+
+  /*
+    CRITICAL: NO max-height, NO overflow:hidden.
+    The card grows to fit all its content.
+    Scrolling happens on the overlay, not here.
+  */
 }
 
+/* Subtle shimmer */
+.add-product-modal-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    120deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.025) 50%,
+    transparent 80%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 220% 0; }
+  100% { background-position: -220% 0; }
+}
+
+/* ── Close button ─────────────────────────────────────────────────────────── */
 .add-product-modal-close {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -71,38 +119,37 @@
 }
 
 .add-product-modal-close:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.28);
   transform: rotate(90deg);
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
 }
 
+/* ── Header ───────────────────────────────────────────────────────────────── */
 .add-product-modal-header {
   margin-bottom: 1.5rem;
-  padding-right: 2.5rem;
-  flex-shrink: 0;
+  padding-right: 3.25rem; /* clear the ✕ button */
 }
 
 .add-product-modal-header h2 {
-  font-size: 1.75rem;
+  font-size: 1.65rem;
   font-weight: 700;
   color: #ffffff;
-  margin: 0 0 0.5rem 0;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  margin: 0 0 0.4rem;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .add-product-modal-header p {
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.58);
   margin: 0;
+  line-height: 1.5;
 }
 
-/* Toggle Tabs */
+/* ── Tab switcher ─────────────────────────────────────────────────────────── */
 .add-product-modal-tabs {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 1.5rem;
-  flex-shrink: 0;
 }
 
 .tab-button {
@@ -110,135 +157,85 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 14px 24px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
+  gap: 8px;
+  padding: 12px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
+  transition: all 0.22s ease;
 }
 
 .tab-button:hover {
   background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.24);
   color: #ffffff;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
 }
 
 .tab-button.active {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.32);
   color: #ffffff;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3),
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28),
               inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.tab-button svg {
-  flex-shrink: 0;
+.tab-button svg { flex-shrink: 0; }
+
+/* ── Body: just a plain div, NO overflow ─────────────────────────────────── */
+.add-product-modal-body {
+  /* No overflow, no max-height — content flows into the card,
+     card grows, overlay scrolls. That's it. */
 }
 
-@media (max-width: 600px) {
+/* ── Scrollbar on the overlay ────────────────────────────────────────────── */
+.add-product-modal-overlay::-webkit-scrollbar {
+  width: 6px;
+}
+.add-product-modal-overlay::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+.add-product-modal-overlay::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+.add-product-modal-overlay::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+/* ── Mobile ───────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .add-product-modal-content {
+    margin: 68px auto 32px;
+    padding: 0 0.5rem;
+  }
+
+  .add-product-modal-container {
+    padding: 1.25rem 0.875rem 2rem;
+    border-radius: 1rem;
+  }
+
+  .add-product-modal-header h2 { font-size: 1.2rem; }
+  .add-product-modal-header p  { font-size: 0.78rem; }
+
+  .add-product-modal-close {
+    width: 32px;
+    height: 32px;
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+
   .add-product-modal-tabs {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .tab-button {
-    padding: 12px 16px;
-    font-size: 0.9rem;
-  }
-}
-
-.add-product-modal-body {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  margin: 0 -0.5rem;
-  padding: 0 0.5rem;
-}
-
-/* Scrollbar styling */
-.add-product-modal-body::-webkit-scrollbar {
-  width: 6px;
-}
-
-.add-product-modal-body::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 3px;
-}
-
-.add-product-modal-body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-}
-
-.add-product-modal-body::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-/* Glare effect animation */
-@keyframes modalShimmer {
-  0% {
-    left: -100%;
-  }
-  50% {
-    left: 100%;
-  }
-  100% {
-    left: 100%;
-  }
-}
-
-.add-product-modal-container::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.03),
-    transparent
-  );
-  animation: modalShimmer 4s ease-in-out infinite;
-  pointer-events: none;
-  border-radius: inherit;
-}
-
-/* Responsive adjustments */
-@media (max-width: 640px) {
-  .add-product-modal-overlay {
-    padding: 0.5rem;
-    align-items: center;
-  }
-  
-  .add-product-modal-container {
-    padding: 1rem;
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
-    max-height: 90vh;
-    margin: auto 0;
-  }
-  
-  .add-product-modal-header h2 {
-    font-size: 1.3rem;
-  }
-  
-  .add-product-modal-header p {
-    font-size: 0.8rem;
-  }
-  
-  .add-product-modal-close {
-    width: 32px;
-    height: 32px;
-    top: 0.5rem;
-    right: 0.5rem;
+    padding: 11px 12px;
+    font-size: 0.85rem;
   }
 }

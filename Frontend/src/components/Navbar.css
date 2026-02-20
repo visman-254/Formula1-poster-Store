@@ -513,7 +513,7 @@ html.dark .glass-nav a.p-2:hover {
     border: 1px solid var(--dropdown-border) !important;
     box-shadow: var(--dropdown-shadow) !important;
     animation: modernDropdownSlide 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    z-index: 9999 !important;
+    z-index: 10000 !important;
     overflow: visible !important;
   }
 

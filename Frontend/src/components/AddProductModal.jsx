@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Plus, FileSpreadsheet } from "lucide-react";
 import AddProductForm from "./AddProductForm";
 import ImportData from "./ImportData";
@@ -6,14 +6,24 @@ import GlassmorphicContainer from "./GlassmorphicContainer";
 import "./AddProductModal.css";
 
 const AddProductModal = ({ isOpen, onClose }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState("form"); // "form" or "import"
+  const [activeTab, setActiveTab] = useState("form");
+  const overlayRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
-      setIsVisible(true);
-      setActiveTab("form"); // Reset to form tab when modal opens
+      setActiveTab("form");
       document.body.style.overflow = "hidden";
+
+      // Force scroll to top BEFORE the active class triggers the transition.
+      // Using both immediate set and rAF to cover all browsers.
+      if (overlayRef.current) {
+        overlayRef.current.scrollTop = 0;
+      }
+      requestAnimationFrame(() => {
+        if (overlayRef.current) {
+          overlayRef.current.scrollTop = 0;
+        }
+      });
     } else {
       document.body.style.overflow = "unset";
     }
@@ -23,25 +33,29 @@ const AddProductModal = ({ isOpen, onClose }) => {
     };
   }, [isOpen]);
 
-  if (!isOpen && !isVisible) return null;
-
   const handleClose = () => {
-    setIsVisible(false);
-    setTimeout(onClose, 150);
+    onClose();
   };
+
+  // Click on the dark backdrop (overlay itself) closes modal
+  const handleOverlayClick = (e) => {
+    if (e.target === overlayRef.current) {
+      handleClose();
+    }
+  };
+
+  if (!isOpen) return null;
 
   return (
     <div
-      className={`add-product-modal-overlay ${isOpen && isVisible ? "active" : ""}`}
-      onClick={handleClose}
+      ref={overlayRef}
+      className={`add-product-modal-overlay active`}
+      onClick={handleOverlayClick}
     >
-      <div
-        className={`add-product-modal-content ${isOpen && isVisible ? "active" : ""}`}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="add-product-modal-content">
         <GlassmorphicContainer className="add-product-modal-container">
           <button className="add-product-modal-close" onClick={handleClose}>
-            <X size={24} />
+            <X size={22} />
           </button>
 
           <div className="add-product-modal-header">
@@ -49,20 +63,19 @@ const AddProductModal = ({ isOpen, onClose }) => {
             <p>Fill in the details below or import from CSV to add products to your store</p>
           </div>
 
-          {/* Toggle Buttons */}
           <div className="add-product-modal-tabs">
             <button
               className={`tab-button ${activeTab === "form" ? "active" : ""}`}
               onClick={() => setActiveTab("form")}
             >
-              <Plus size={18} />
+              <Plus size={17} />
               <span>Add Single Product</span>
             </button>
             <button
               className={`tab-button ${activeTab === "import" ? "active" : ""}`}
               onClick={() => setActiveTab("import")}
             >
-              <FileSpreadsheet size={18} />
+              <FileSpreadsheet size={17} />
               <span>Import from CSV</span>
             </button>
           </div>
