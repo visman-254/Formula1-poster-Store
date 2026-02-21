@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import API_BASE from "../config";
+import BarcodeScanner from "./BarcodeScanner";
+import { Camera } from "lucide-react";
 
 const CategoryInput = ({ label, placeholder, value, onChange, suggestions, onSelect }) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -84,6 +86,7 @@ const AddProductForm = () => {
   const [selectedVariantId, setSelectedVariantId] = useState(null);
   const [imeiText, setImeiText] = useState("");
   const [imeiLoading, setImeiLoading] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [imeiMessage, setImeiMessage] = useState("");
 
   const [categoryName, setCategoryName] = useState("");
@@ -200,11 +203,14 @@ const AddProductForm = () => {
   };
 
   // --- IMEI Management Functions ---
-  const openImeiModal = (variantId) => {
-    setSelectedVariantId(variantId);
-    setImeiText("");
+  const openImeiModal = (variantIndex) => {
+    // Get the variant ID from the variants array
+    const variant = variants[variantIndex];
+    setSelectedVariantId(variant?.variant_id || variantIndex);
+    setImeiText(variant?.imeis || "");
     setImeiMessage("");
     setShowImeiModal(true);
+    setShowScanner(false);
   };
 
   const closeImeiModal = () => {
@@ -212,6 +218,23 @@ const AddProductForm = () => {
     setSelectedVariantId(null);
     setImeiText("");
     setImeiMessage("");
+    setShowScanner(false);
+  };
+
+  // Handle barcode scan from camera - adds comma after each scan
+  const handleBarcodeScan = (scannedText) => {
+    if (!scannedText) return;
+    
+    // Clean the scanned text
+    const cleaned = scannedText.replace(/[\r\n\t\x00-\x1F]/g, '').trim();
+    if (!cleaned) return;
+    
+    // Add comma separator if there's already text
+    const currentText = imeiText.trim();
+    const newText = currentText ? `${currentText}, ${cleaned}` : cleaned;
+    
+    setImeiText(newText);
+    setShowScanner(false);
   };
 
   const saveImeis = async () => {
@@ -509,7 +532,16 @@ const AddProductForm = () => {
                           
                           {/* IMEI Input Field */}
                           <div className="col-span-2 space-y-2 mt-2">
-                            <Label htmlFor={'imeis-' + index}>IMEI Numbers (Optional)</Label>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor={'imeis-' + index}>IMEI Numbers (Optional)</Label>
+                              <button
+                                type="button"
+                                className="text-xs text-blue-600 hover:text-blue-800 underline"
+                                onClick={() => openImeiModal(index)}
+                              >
+                                📷 Scan with Camera
+                              </button>
+                            </div>
                             <Input 
                               id={'imeis-' + index}
                               name="imeis" 
@@ -536,7 +568,7 @@ const AddProductForm = () => {
             )}
           </div>
 
-          <Button type="submit" className="text-white">Add Product</Button>
+          <Button type="submit"  className="text-black bg-stone-500 hover:bg-stone-600 focus:ring-4 focus:outline-none focus:ring-stone-300">Add Product</Button>
         </form>
       </CardContent>
 
@@ -546,8 +578,29 @@ const AddProductForm = () => {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
             <h3 className="text-lg font-semibold mb-4">Add IMEI Numbers</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Enter IMEI numbers, one per line or comma-separated:
+              Enter IMEI numbers, one per line or comma-separated, or scan with camera:
             </p>
+            
+            {/* Scan with Camera Button */}
+            <button
+              className="btn btn-outline btn-md w-full mb-4"
+              onClick={() => setShowScanner(!showScanner)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              <Camera size={18} />
+              {showScanner ? 'Close Scanner' : 'Scan with Camera'}
+            </button>
+            
+            {/* Camera Scanner Component */}
+            {showScanner && (
+              <div style={{ marginBottom: 16, borderRadius: 12, overflow: 'hidden', border: '2px solid #10b981' }}>
+                <BarcodeScanner
+                  onScanSuccess={handleBarcodeScan}
+                  onScanError={(err) => console.error('Scan error:', err)}
+                />
+              </div>
+            )}
+            
             <textarea
               value={imeiText}
               onChange={(e) => setImeiText(e.target.value)}
