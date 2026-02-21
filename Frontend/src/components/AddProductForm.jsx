@@ -534,22 +534,23 @@ const AddProductForm = () => {
                           <div className="col-span-2 space-y-2 mt-2">
                             <div className="flex items-center justify-between">
                               <Label htmlFor={'imeis-' + index}>IMEI Numbers (Optional)</Label>
-                              <button
-                                type="button"
-                                className="text-xs text-blue-600 hover:text-blue-800 underline"
-                                onClick={() => openImeiModal(index)}
-                              >
-                                📷 Scan with Camera
-                              </button>
                             </div>
+                            <button
+                              type="button"
+                              className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md flex items-center justify-center gap-2"
+                              onClick={() => openImeiModal(index)}
+                            >
+                              <Camera size={18} />
+                              📷 Scan Barcode/IMEI
+                            </button>
                             <Input 
                               id={'imeis-' + index}
                               name="imeis" 
                               value={variant.imeis || ''} 
                               onChange={(e) => handleVariantChange(index, e)}
-                              placeholder="Enter IMEIs, one per line or comma separated"
+                              placeholder="Or type IMEIs here, comma separated"
                             />
-                            <p className="text-xs text-gray-500">Enter each IMEI on a new line or comma separated. Leave empty to add IMEIs later.</p>
+                            <p className="text-xs text-gray-500">Enter each IMEI comma separated. Leave empty to add later.</p>
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor={`image-${index}`}>Variant Image</Label>

@@ -190,6 +190,8 @@
 .add-product-modal-body {
   /* No overflow, no max-height — content flows into the card,
      card grows, overlay scrolls. That's it. */
+  flex: 1;
+  overflow-y: auto;
 }
 
 /* ── Scrollbar on the overlay ────────────────────────────────────────────── */
@@ -209,14 +211,31 @@
 
 /* ── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
+  .add-product-modal-overlay {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
   .add-product-modal-content {
-    margin: 68px auto 32px;
+    margin: 60px auto 32px;
     padding: 0 0.5rem;
+    min-height: calc(100vh - 100px);
+    display: flex;
+    flex-direction: column;
   }
 
   .add-product-modal-container {
-    padding: 1.25rem 0.875rem 2rem;
+    padding: 1rem 0.75rem 2rem;
     border-radius: 1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .add-product-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 80px;
   }
 
   .add-product-modal-header h2 { font-size: 1.2rem; }
@@ -237,5 +256,15 @@
   .tab-button {
     padding: 11px 12px;
     font-size: 0.85rem;
+  }
+  
+  /* Make submit button always visible at bottom */
+  .add-product-modal-container button[type="submit"] {
+    position: sticky;
+    bottom: 0;
+    margin-top: auto;
+    z-index: 10;
+    background: #10b981;
+    padding: 14px;
   }
 }
