@@ -89,8 +89,9 @@ const PreOrderForm = () => {
   };
 
   return (
-    <div className="preorder-form-container">
-      <div className="preorder-card">
+    <div className="preorder-page-wrapper">
+      <div className="preorder-form-container">
+        <div className="preorder-card">
         <h2>I want to Pre-order a Device</h2>
         <p className="description">
           Can't find what you're looking for? Tell us what device you want, 
@@ -203,6 +204,7 @@ const PreOrderForm = () => {
             We don't share your details with third parties.
           </p>
         </form>
+      </div>
       </div>
     </div>
   );
