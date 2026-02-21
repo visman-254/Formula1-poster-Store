@@ -1,7 +1,7 @@
 /* ==========================================================================
-   ADD PRODUCT MODAL — FIXED SCROLL v2
-   The overlay IS the scroll container. Modal card starts at the very top.
-   No max-height, no overflow:hidden on the card — it grows freely.
+   ADD PRODUCT MODAL — FIXED MOBILE SCROLL
+   KEY FIX: Never lock body overflow. The overlay is the sole scroll container.
+   On mobile, -webkit-overflow-scrolling: touch is critical for momentum scroll.
    ========================================================================== */
 
 /* ── Overlay: the ONE scroll container ───────────────────────────────────── */
@@ -14,15 +14,15 @@
   background: rgba(0, 0, 0, 0.62);
   z-index: 9999;
 
-  /* Scrolls vertically — this is the ONLY scroller */
+  /* This is the ONLY scroller — body stays unlocked */
   overflow-y: scroll;
   overflow-x: hidden;
+
+  /* CRITICAL for iOS momentum/touch scrolling */
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 
-  /* Always starts at scrollTop 0 (forced in JS too) */
   scroll-behavior: auto;
-
-  /* Hidden until active */
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -37,16 +37,11 @@
 
 /* ── Content wrapper ─────────────────────────────────────────────────────── */
 .add-product-modal-content {
-  /* 
-    Top margin = topbar height (60px) + small gap.
-    This is where the card starts — near the very top of the page.
-  */
   margin: 68px auto 48px;
   width: 100%;
   max-width: 900px;
   padding: 0 1rem;
 
-  /* Slide-down entry — feels like it opens from the top */
   transform: translateY(-14px);
   opacity: 0;
   transition: transform 0.28s ease, opacity 0.28s ease;
@@ -70,11 +65,11 @@
   position: relative;
   padding: 1.75rem 1.5rem 2.5rem;
 
-  /*
-    CRITICAL: NO max-height, NO overflow:hidden.
-    The card grows to fit all its content.
-    Scrolling happens on the overlay, not here.
-  */
+  /* Flexbox for proper scrolling - matches ViewUsersModal */
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 4rem);
+  overflow: hidden;
 }
 
 /* Subtle shimmer */
@@ -127,7 +122,8 @@
 /* ── Header ───────────────────────────────────────────────────────────────── */
 .add-product-modal-header {
   margin-bottom: 1.5rem;
-  padding-right: 3.25rem; /* clear the ✕ button */
+  padding-right: 3.25rem;
+  flex-shrink: 0;
 }
 
 .add-product-modal-header h2 {
@@ -150,6 +146,7 @@
   display: flex;
   gap: 10px;
   margin-bottom: 1.5rem;
+  flex-shrink: 0;
 }
 
 .tab-button {
@@ -180,36 +177,39 @@
   background: rgba(255, 255, 255, 0.14);
   border-color: rgba(255, 255, 255, 0.32);
   color: #ffffff;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28),
-              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .tab-button svg { flex-shrink: 0; }
 
-/* ── Body: just a plain div, NO overflow ─────────────────────────────────── */
+/* ── Modal body — scrollable area with visible scrollbar ─────────────── */
 .add-product-modal-body {
-  /* No overflow, no max-height — content flows into the card,
-     card grows, overlay scrolls. That's it. */
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
+  margin: 0 -0.5rem;
+  padding: 0 0.5rem;
 }
 
-/* ── Scrollbar on the overlay ────────────────────────────────────────────── */
-.add-product-modal-overlay::-webkit-scrollbar {
+/* ── Scrollbar for body ───────────────────────────────────────────────── */
+.add-product-modal-body::-webkit-scrollbar {
   width: 6px;
 }
-.add-product-modal-overlay::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
+.add-product-modal-body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
 }
-.add-product-modal-overlay::-webkit-scrollbar-thumb {
+.add-product-modal-body::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 3px;
 }
-.add-product-modal-overlay::-webkit-scrollbar-thumb:hover {
+.add-product-modal-body::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.32);
 }
 
-/* Barcode Scanner Styles */
+/* ── Barcode Scanner ─────────────────────────────────────────────────────── */
 .scanner-overlay {
   position: absolute;
   top: 0;
@@ -242,29 +242,22 @@
 }
 
 .scanner-corner.top-left {
-  top: -3px;
-  left: -3px;
+  top: -3px; left: -3px;
   border-width: 5px 0 0 5px;
   border-radius: 8px 0 0 0;
 }
-
 .scanner-corner.top-right {
-  top: -3px;
-  right: -3px;
+  top: -3px; right: -3px;
   border-width: 5px 5px 0 0;
   border-radius: 0 8px 0 0;
 }
-
 .scanner-corner.bottom-left {
-  bottom: -3px;
-  left: -3px;
+  bottom: -3px; left: -3px;
   border-width: 0 0 5px 5px;
   border-radius: 0 0 0 8px;
 }
-
 .scanner-corner.bottom-right {
-  bottom: -3px;
-  right: -3px;
+  bottom: -3px; right: -3px;
   border-width: 0 5px 5px 0;
   border-radius: 0 0 8px 0;
 }
@@ -280,14 +273,8 @@
 }
 
 @keyframes scanLine {
-  0%, 100% {
-    top: 20%;
-    opacity: 0.5;
-  }
-  50% {
-    top: 80%;
-    opacity: 1;
-  }
+  0%, 100% { top: 20%; opacity: 0.5; }
+  50%       { top: 80%; opacity: 1; }
 }
 
 .scanner-hint {
@@ -306,52 +293,30 @@
   overflow: hidden;
 }
 
-/* Make video element responsive */
 .barcode-scanner-wrapper video {
   width: 100% !important;
   height: auto !important;
   display: block;
 }
 
-/* Mobile optimizations */
-@media (max-width: 640px) {
-  .scanner-frame {
-    width: 85%;
-    height: 100px;
-  }
-  
-  .scanner-hint {
-    font-size: 12px;
-  }
-}
-
 /* ── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .add-product-modal-overlay {
-    padding-bottom: env(safe-area-inset-bottom);
+    /* Extra bottom padding so last form elements aren't hidden behind
+       mobile browser chrome (address bar / home indicator) */
+    padding-bottom: env(safe-area-inset-bottom, 20px);
   }
-  
+
   .add-product-modal-content {
-    margin: 60px auto 32px;
+    /* Tighter top margin on mobile; still enough to clear the status bar */
+    margin: 56px auto 60px;
     padding: 0 0.5rem;
-    min-height: calc(100vh - 100px);
-    display: flex;
-    flex-direction: column;
   }
 
   .add-product-modal-container {
     padding: 1rem 0.75rem 2rem;
     border-radius: 1rem;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .add-product-modal-body {
-    flex: 1;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 80px;
+    max-height: 85vh;
   }
 
   .add-product-modal-header h2 { font-size: 1.2rem; }
@@ -373,14 +338,11 @@
     padding: 11px 12px;
     font-size: 0.85rem;
   }
-  
-  /* Make submit button always visible at bottom */
-  .add-product-modal-container button[type="submit"] {
-    position: sticky;
-    bottom: 0;
-    margin-top: auto;
-    z-index: 10;
-    background: #10b981;
-    padding: 14px;
+
+  .scanner-frame {
+    width: 85%;
+    height: 100px;
   }
+
+  .scanner-hint { font-size: 12px; }
 }

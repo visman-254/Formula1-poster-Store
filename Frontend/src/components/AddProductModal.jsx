@@ -12,36 +12,40 @@ const AddProductModal = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       setActiveTab("form");
-      document.body.style.overflow = "hidden";
+      // Lock body using position:fixed trick — this preserves mobile overlay scroll
+      // unlike overflow:hidden which kills touch events on the overlay
+      const scrollY = window.scrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
 
-      // Force scroll to top BEFORE the active class triggers the transition.
-      // Using both immediate set and rAF to cover all browsers.
-      if (overlayRef.current) {
-        overlayRef.current.scrollTop = 0;
-      }
       requestAnimationFrame(() => {
         if (overlayRef.current) {
           overlayRef.current.scrollTop = 0;
         }
       });
     } else {
-      document.body.style.overflow = "unset";
+      // Restore body scroll position
+      const scrollY = document.body.style.top;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      if (scrollY) window.scrollTo(0, parseInt(scrollY) * -1);
     }
 
     return () => {
-      document.body.style.overflow = "unset";
+      const scrollY = document.body.style.top;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      if (scrollY) window.scrollTo(0, parseInt(scrollY) * -1);
     };
   }, [isOpen]);
 
-  const handleClose = () => {
-    onClose();
-  };
+  const handleClose = () => onClose();
 
-  // Click on the dark backdrop (overlay itself) closes modal
   const handleOverlayClick = (e) => {
-    if (e.target === overlayRef.current) {
-      handleClose();
-    }
+    if (e.target === overlayRef.current) handleClose();
   };
 
   if (!isOpen) return null;
@@ -49,18 +53,27 @@ const AddProductModal = ({ isOpen, onClose }) => {
   return (
     <div
       ref={overlayRef}
-      className={`add-product-modal-overlay active`}
+      className="add-product-modal-overlay active"
       onClick={handleOverlayClick}
     >
       <div className="add-product-modal-content">
-        <GlassmorphicContainer className="add-product-modal-container">
+        {/*
+          Using a plain div instead of GlassmorphicContainer here.
+          GlassmorphicContainer may not forward className to its root element,
+          which would strip all our modal styles and make the form invisible.
+          The glassmorphic styling is applied directly via .add-product-modal-container CSS.
+        */}
+        <div className="add-product-modal-container">
           <button className="add-product-modal-close" onClick={handleClose}>
             <X size={22} />
           </button>
 
           <div className="add-product-modal-header">
             <h2>Add New Product</h2>
-            <p>Fill in the details below or import from CSV to add products to your store</p>
+            <p>
+              Fill in the details below or import from CSV to add products to
+              your store
+            </p>
           </div>
 
           <div className="add-product-modal-tabs">
@@ -87,7 +100,7 @@ const AddProductModal = ({ isOpen, onClose }) => {
               <ImportData />
             )}
           </div>
-        </GlassmorphicContainer>
+        </div>
       </div>
     </div>
   );

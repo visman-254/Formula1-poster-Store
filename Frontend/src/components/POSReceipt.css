@@ -2,6 +2,8 @@
 
 /* ============================================
    MAIN CONTAINER & LAYOUT
+   FIX: Changed from align-items:center (which clips overflow on mobile)
+   to flex-direction:column with padding so content flows and is scrollable.
 ============================================ */
 
 .receipt-container {
@@ -10,19 +12,33 @@
   background-size: cover;
   background-position: center;
   position: relative;
+
+  /* FIXED: was display:flex align-items:center which made content
+     vertically centered but unreachable below viewport on mobile.
+     Now we use a block/column flow that the browser can scroll. */
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+
+  /* Allow the page to scroll naturally — critical on mobile */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+
+  /* Padding instead of centering so buttons are always reachable */
+  padding: 40px 16px 60px;
+  box-sizing: border-box;
 }
 
 .receipt-overlay {
-  position: absolute;
+  position: fixed; /* fixed so it covers viewport even when scrolling */
   inset: 0;
   background: linear-gradient(
     180deg,
     rgba(10,10,10,0.45),
     rgba(10,10,10,0.6)
   );
+  pointer-events: none;
+  z-index: 0;
 }
 
 .receipt-wrap {
@@ -32,6 +48,8 @@
   flex-direction: column;
   align-items: center;
   gap: 24px;
+  width: 100%;
+  max-width: 500px;
 }
 
 /* ============================================
@@ -39,7 +57,8 @@
 ============================================ */
 
 .receipt-paper {
-  width: 450px;
+  width: 100%;
+  max-width: 450px;
   min-height: 700px;
   background: #fffef9 !important;
   padding: 40px 36px 48px;
@@ -61,9 +80,10 @@
       transparent 4px
     );
   background-size: 3px 3px, 100% 4px;
+  box-sizing: border-box;
 }
 
-/* Thermal ink density randomness */
+/* Thermal ink density */
 .receipt-paper * {
   text-shadow:
     0.4px 0 rgba(0,0,0,0.15),
@@ -71,7 +91,6 @@
   color: #000 !important;
 }
 
-/* Micro printer jitter */
 @keyframes printerJitter {
   0%   { transform: translateX(0) rotate(-1.3deg); }
   25%  { transform: translateX(0.15px) rotate(-1.3deg); }
@@ -84,7 +103,6 @@
   animation: printerJitter 6s infinite linear;
 }
 
-/* Horizontal micro banding (scanner / printer lines) */
 .receipt-paper::after {
   content: "";
   position: absolute;
@@ -111,7 +129,6 @@
   opacity: 0.6;
 }
 
-/* Torn edges illusion */
 .receipt-paper::before {
   content: "";
   position: absolute;
@@ -124,15 +141,12 @@
     rgba(0,0,0,0.08) 50%,
     transparent 100%
   );
+  top: -5px;
 }
-
-.receipt-paper::before { top: -5px; }
 
 /* ============================================
    RECEIPT CONTENT STYLES
 ============================================ */
-
-/* --- Header --- */
 
 .receipt-header {
   text-align: center;
@@ -155,8 +169,6 @@
   opacity: 0.85;
 }
 
-/* --- Meta Information --- */
-
 .receipt-meta {
   font-size: 0.9rem;
   line-height: 1.8;
@@ -171,421 +183,10 @@
   justify-content: space-between;
 }
 
-/* --- Items List --- */
-
 .receipt-items {
   margin: 20px 0;
 }
 
-.receipt-row {
-  display: block;
-  font-size: 0.95rem;
-  margin-bottom: 18px;
-  padding-bottom: 12px;
-  border-bottom: 1px dotted #ddd;
-}
-
-.item-details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.item-name {
-  font-weight: bold;
-  font-size: 1rem;
-  line-height: 1.4;
-  color: #000 !important;
-}
-
-.item-imei {
-  font-size: 0.8rem;
-  color: #333 !important;
-  font-family: monospace;
-  background: #f0f0f0;
-  padding: 5px 10px;
-  border-radius: 3px;
-  display: inline-block;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  text-align: center;
-  align-self: center;
-}
-
-.item-qty {
-  opacity: 0.85;
-  font-size: 0.9rem;
-  margin-bottom: 6px;
-}
-
-.item-total {
-  font-weight: bold;
-  font-size: 1.1rem;
-  text-align: center;
-  background: #f8f8f8;
-  padding: 8px;
-  border-radius: 4px;
-  margin-top: 4px;
-}
-
-/* --- Total Section --- */
-
-.receipt-total {
-  margin-top: 24px;
-  margin-bottom: 24px;
-  border-top: 2px dashed #222;
-  border-bottom: 2px dashed #222;
-  padding: 16px 12px;
-  text-align: center;
-  background: #f8f8f8;
-}
-
-.receipt-total span:first-child {
-  display: block;
-  font-size: 0.9rem;
-  font-weight: normal;
-  margin-bottom: 8px;
-  letter-spacing: 1.5px;
-  opacity: 0.8;
-}
-
-.receipt-total span:last-child {
-  display: block;
-  font-size: 1.5rem;
-  font-weight: bold;
-  letter-spacing: 0.5px;
-}
-
-/* --- Footer --- */
-
-.receipt-footer {
-  margin-top: 28px;
-  border-top: 1px dashed #555;
-  padding-top: 18px;
-  text-align: center;
-  font-size: 0.9rem;
-  opacity: 0.9;
-  line-height: 1.6;
-}
-
-.receipt-footer p {
-  margin: 8px 0;
-  color: #000 !important;
-  font-weight: 500;
-}
-
-.tiny {
-  font-size: 0.75rem;
-  opacity: 0.75;
-  margin-top: 12px;
-  display: block;
-}
-
-/* ============================================
-   ACTION BUTTONS
-============================================ */
-
-.receipt-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.btn-print,
-.btn-new-sale {
-  padding: 12px 26px;
-  border-radius: 999px;
-  border: none;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  font-family: system-ui, -apple-system, sans-serif;
-}
-
-.btn-print {
-  background: #111;
-  color: white;
-}
-
-.btn-print:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
-}
-
-.btn-new-sale {
-  background: rgba(255,255,255,0.85);
-  color: #000;
-}
-
-.btn-new-sale:hover {
-  background: white;
-  transform: translateY(-2px);
-}
-
-/* ============================================
-   THERMAL PRINTER PRINT STYLES
-============================================ */
-
-@media print {
-  /* Thermal printer page setup */
-  @page {
-    margin: 0;
-    size: 58mm auto; /* Standard thermal receipt width */
-  }
-  
-  /* Reset everything for printing */
-  * {
-    margin: 0 !important;
-    padding: 0 !important;
-    box-sizing: border-box !important;
-    background: transparent !important;
-    background-image: none !important;
-    box-shadow: none !important;
-    text-shadow: none !important;
-  }
-  
-  /* Hide non-print elements */
-  body *:not(.receipt-paper):not(.receipt-paper *) {
-    display: none !important;
-  }
-  
-  /* Body setup for thermal printing */
-  body {
-    width: 58mm !important;
-    max-width: 58mm !important;
-    min-width: 58mm !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    font-size: 12px !important;
-    line-height: 1.2 !important;
-    background: white !important;
-    color: black !important;
-    font-family: "Courier New", monospace !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-  
-  /* Thermal receipt styling */
-  .receipt-paper {
-    width: 58mm !important;
-    max-width: 58mm !important;
-    min-width: 58mm !important;
-    padding: 3mm !important;
-    margin: 0 !important;
-    background: white !important;
-    border: none !important;
-    border-radius: 0 !important;
-    transform: none !important;
-    animation: none !important;
-    filter: none !important;
-    box-shadow: none !important;
-    background-image: none !important;
-    page-break-inside: avoid !important;
-  }
-  
-  /* Remove decorative effects */
-  .receipt-paper::before,
-  .receipt-paper::after {
-    display: none !important;
-  }
-  
-  /* Receipt content adjustments for thermal */
-  .receipt-header {
-    text-align: center;
-    margin-bottom: 4px !important;
-    padding-bottom: 3px !important;
-    border-bottom: 1px dashed #000 !important;
-  }
-  
-  .receipt-header h1 {
-    font-size: 16px !important;
-    margin: 2px 0 !important;
-  }
-  
-  .receipt-header p {
-    font-size: 11px !important;
-    margin: 1px 0 !important;
-  }
-  
-  .receipt-meta {
-    margin-bottom: 6px !important;
-    padding-bottom: 4px !important;
-    border-bottom: 1px dashed #000 !important;
-    font-size: 11px !important;
-  }
-  
-  .receipt-meta p {
-    display: flex !important;
-    justify-content: space-between !important;
-    margin: 2px 0 !important;
-  }
-  
-  .receipt-items {
-    margin: 6px 0 !important;
-  }
-  
-  .receipt-row {
-    display: flex !important;
-    justify-content: space-between !important;
-    margin: 3px 0 !important;
-    padding-bottom: 3px !important;
-    border-bottom: 1px dotted #ccc !important;
-    font-size: 11px !important;
-  }
-  
-  .item-details {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-  
-  .item-name {
-    font-size: 11px !important;
-    white-space: normal !important;
-    word-break: break-word;
-  }
-  
-  .item-imei {
-    font-size: 9px !important;
-    background: none !important;
-    padding: 0 !important;
-    margin-left: 8px !important;
-  }
-  
-  .item-qty {
-    margin: 0 5px;
-    font-size: 11px !important;
-  }
-  
-  .item-total {
-    font-size: 11px !important;
-    min-width: 60px;
-    text-align: right;
-  }
-  
-  .receipt-total {
-    margin: 8px 0 !important;
-    padding: 6px 0 !important;
-    border-top: 2px dashed #000 !important;
-    border-bottom: 2px dashed #000 !important;
-    font-size: 13px !important;
-  }
-  
-  .receipt-footer {
-    margin-top: 8px !important;
-    padding-top: 4px !important;
-    border-top: 1px dashed #000 !important;
-    font-size: 10px !important;
-  }
-  
-  .tiny {
-    font-size: 9px !important;
-  }
-}
-
-/* ============================================
-   FORCE BLACK TEXT IN ALL MODES
-============================================ */
-
-/* Force black text in all contexts */
-.receipt-paper,
-.receipt-paper * {
-  color: #000 !important;
-}
-
-html.dark .receipt-paper,
-html.dark .receipt-paper * {
-  color: #000 !important;
-  filter: none !important;
-}
-/* Add these styles to your existing POSReceipt.css */
-
-/* Mobile print hint */
-.mobile-print-hint {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-top: 15px;
-  text-align: center;
-  font-size: 12px;
-  color: #e2e8f0;
-  grid-column: 1 / -1;
-  width: 100%;
-}
-
-.mobile-print-hint small {
-  opacity: 0.9;
-  line-height: 1.4;
-}
-
-/* Responsive receipt actions */
-@media (max-width: 768px) {
-  .receipt-actions {
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
-    max-width: 320px;
-  }
-  
-  .btn-print, .btn-new-sale {
-    width: 100%;
-    padding: 16px;
-    font-size: 16px;
-    border-radius: 12px;
-  }
-  
-  .receipt-paper {
-    width: 95%;
-    max-width: 400px;
-    padding: 30px 24px 40px;
-    margin: 0 auto;
-  }
-  
-  .item-name {
-    font-size: 0.95rem;
-  }
-  
-  .item-total {
-    font-size: 1rem;
-  }
-}
-
-/* Fix for small screens */
-@media (max-width: 480px) {
-  .receipt-paper {
-    padding: 24px 20px 36px;
-  }
-  
-  .receipt-header h1 {
-    font-size: 1.5rem;
-  }
-  
-  .receipt-total span:last-child {
-    font-size: 1.3rem;
-  }
-}
-
-/* Print media query updates */
-@media print {
-  .mobile-print-hint {
-    display: none !important;
-  }
-  
-  .receipt-actions {
-    display: none !important;
-  }
-  
-  /* Ensure QR code prints */
-  .receipt-qr {
-    width: 100px !important;
-    height: 100px !important;
-  }
-}
-
-/* Additional receipt row styling for better item display */
 .receipt-row {
   display: flex;
   justify-content: space-between;
@@ -631,7 +232,6 @@ html.dark .receipt-paper * {
   margin-left: 10px;
 }
 
-/* Receipt total styling */
 .receipt-total {
   display: flex;
   flex-direction: column;
@@ -641,6 +241,17 @@ html.dark .receipt-paper * {
   border-top: 2px dashed #000;
   border-bottom: 2px dashed #000;
   background: rgba(0,0,0,0.03);
+}
+
+.receipt-total-premium {
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: bold;
+  margin: 20px 0;
+  padding: 16px 0;
+  border-top: 2px dashed #000;
+  border-bottom: 2px dashed #000;
+  letter-spacing: 0.5px;
 }
 
 .receipt-total span:first-child {
@@ -657,23 +268,126 @@ html.dark .receipt-paper * {
   font-weight: bold;
   letter-spacing: 0.5px;
 }
-/* Add to POSReceipt.css */
+
+.receipt-footer {
+  margin-top: 28px;
+  border-top: 1px dashed #555;
+  padding-top: 18px;
+  text-align: center;
+  font-size: 0.9rem;
+  opacity: 0.9;
+  line-height: 1.6;
+}
+
+.receipt-footer p {
+  margin: 8px 0;
+  color: #000 !important;
+  font-weight: 500;
+}
+
+.tiny {
+  font-size: 0.75rem;
+  opacity: 0.75;
+  margin-top: 12px;
+  display: block;
+}
+
+/* ============================================
+   ACTION BUTTONS
+   FIX: width:100% so they fill the column and are easy to tap on mobile
+============================================ */
+
+.receipt-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 450px;
+}
+
+.btn-print,
+.btn-new-sale {
+  width: 100%;
+  padding: 16px 26px;
+  border-radius: 12px;
+  border: none;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-family: system-ui, -apple-system, sans-serif;
+  text-align: center;
+}
+
+.btn-print {
+  background: #111;
+  color: white;
+}
+
+.btn-print:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+}
+
+.btn-new-sale {
+  background: rgba(255,255,255,0.85);
+  color: #000;
+}
+
+.btn-new-sale:hover {
+  background: white;
+  transform: translateY(-2px);
+}
+
+/* Mobile print tips */
+.mobile-print-tips {
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+  padding: 16px;
+  color: #e2e8f0;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mobile-print-tips h4 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: #fff;
+}
+
+.mobile-print-tips ul {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.7;
+}
+
+.mobile-print-tips p.tiny {
+  color: rgba(255,255,255,0.6);
+  margin-top: 10px;
+}
+
+.print-method-info {
+  text-align: center;
+  color: rgba(255,255,255,0.5);
+  font-size: 12px;
+}
+
+/* Misc helpers */
+.mobile-print-hint,
 .desktop-print-hint {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   padding: 10px 12px;
-  margin-top: 15px;
   text-align: center;
   font-size: 12px;
   color: #e2e8f0;
   width: 100%;
-}
-
-.desktop-print-hint small {
-  opacity: 0.9;
-  line-height: 1.4;
+  box-sizing: border-box;
 }
 
 .desktop-print-hint kbd {
@@ -684,4 +398,186 @@ html.dark .receipt-paper * {
   font-family: monospace;
   font-size: 11px;
   margin: 0 2px;
+}
+
+/* Logo */
+.receipt-logo-premium {
+  display: block;
+  width: 90px;
+  margin: 0 auto 16px;
+}
+
+.receipt-divider {
+  text-align: center;
+  letter-spacing: 4px;
+  margin: 8px 0;
+  font-size: 0.85rem;
+  color: #444;
+}
+
+/* ============================================
+   FORCE BLACK TEXT
+============================================ */
+
+.receipt-paper,
+.receipt-paper * {
+  color: #000 !important;
+}
+
+html.dark .receipt-paper,
+html.dark .receipt-paper * {
+  color: #000 !important;
+  filter: none !important;
+}
+
+/* ============================================
+   THERMAL PRINTER PRINT STYLES
+============================================ */
+
+@media print {
+  @page {
+    margin: 0;
+    size: 58mm auto;
+  }
+
+  * {
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  body *:not(.receipt-paper):not(.receipt-paper *) {
+    display: none !important;
+  }
+
+  body {
+    width: 58mm !important;
+    max-width: 58mm !important;
+    min-width: 58mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    background: white !important;
+    color: black !important;
+    font-family: "Courier New", monospace !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .receipt-paper {
+    width: 58mm !important;
+    max-width: 58mm !important;
+    min-width: 58mm !important;
+    padding: 3mm !important;
+    margin: 0 !important;
+    background: white !important;
+    border: none !important;
+    border-radius: 0 !important;
+    transform: none !important;
+    animation: none !important;
+    filter: none !important;
+    box-shadow: none !important;
+    background-image: none !important;
+    page-break-inside: avoid !important;
+    min-height: unset !important;
+  }
+
+  .receipt-paper::before,
+  .receipt-paper::after {
+    display: none !important;
+  }
+
+  .receipt-actions,
+  .mobile-print-tips,
+  .mobile-print-hint,
+  .desktop-print-hint,
+  .print-method-info,
+  .receipt-overlay {
+    display: none !important;
+  }
+
+  .receipt-header {
+    text-align: center;
+    margin-bottom: 4px !important;
+    padding-bottom: 3px !important;
+    border-bottom: 1px dashed #000 !important;
+  }
+
+  .receipt-header h1 {
+    font-size: 16px !important;
+    margin: 2px 0 !important;
+  }
+
+  .receipt-meta {
+    margin-bottom: 6px !important;
+    padding-bottom: 4px !important;
+    border-bottom: 1px dashed #000 !important;
+    font-size: 11px !important;
+  }
+
+  .receipt-meta p {
+    display: flex !important;
+    justify-content: space-between !important;
+    margin: 2px 0 !important;
+  }
+
+  .receipt-items { margin: 6px 0 !important; }
+
+  .receipt-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    margin: 3px 0 !important;
+    padding-bottom: 3px !important;
+    border-bottom: 1px dotted #ccc !important;
+    font-size: 11px !important;
+  }
+
+  .item-name { font-size: 11px !important; }
+  .item-imei { font-size: 9px !important; background: none !important; padding: 0 !important; }
+  .item-total { font-size: 11px !important; }
+
+  .receipt-total,
+  .receipt-total-premium {
+    margin: 8px 0 !important;
+    padding: 6px 0 !important;
+    border-top: 2px dashed #000 !important;
+    border-bottom: 2px dashed #000 !important;
+    font-size: 13px !important;
+  }
+
+  .receipt-footer {
+    margin-top: 8px !important;
+    padding-top: 4px !important;
+    border-top: 1px dashed #000 !important;
+    font-size: 10px !important;
+  }
+}
+
+/* ============================================
+   RESPONSIVE (mobile fine-tuning only)
+   No layout changes needed — column flow already works on all sizes.
+============================================ */
+
+@media (max-width: 480px) {
+  .receipt-container {
+    padding: 24px 12px 80px; /* extra bottom so home-bar doesn't cover buttons */
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 20px));
+  }
+
+  .receipt-paper {
+    padding: 24px 20px 36px;
+  }
+
+  .receipt-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .receipt-total span:last-child {
+    font-size: 1.3rem;
+  }
 }
