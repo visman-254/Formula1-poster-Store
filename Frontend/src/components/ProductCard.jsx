@@ -7,7 +7,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { MoreVertical, SquarePen, CookingPot, Delete, X } from "lucide-react";
+import { MoreVertical, SquarePen, CookingPot, Delete, X, Package } from "lucide-react";
 import "./ProductCard.css";
 import API_BASE from "../config";
 
@@ -314,6 +314,8 @@ const EditProductModal = ({ product, onUpdated, setIsEditing, user, token }) => 
     const [updatingStock, setUpdatingStock] = useState(false);
     const [bundleComponents, setBundleComponents] = useState(product.bundle_products || []);
     const [bundleTotalPrice, setBundleTotalPrice] = useState(0);
+    const [batches, setBatches] = useState([]);
+    const [loadingBatches, setLoadingBatches] = useState(false);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -326,6 +328,28 @@ const EditProductModal = ({ product, onUpdated, setIsEditing, user, token }) => 
         };
         fetchCategories();
     }, []);
+
+    // Fetch batches when variant is selected
+    useEffect(() => {
+        if (selectedVariantId) {
+            const fetchBatches = async () => {
+                try {
+                    setLoadingBatches(true);
+                    const res = await axios.get(
+                        `${API_BASE}/api/products/variants/${selectedVariantId}/batches`,
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    setBatches(res.data || []);
+                } catch (err) {
+                    console.error("Error fetching batches:", err);
+                    setBatches([]);
+                } finally {
+                    setLoadingBatches(false);
+                }
+            };
+            fetchBatches();
+        }
+    }, [selectedVariantId, token]);
 
     // Calculate bundle total price
     useEffect(() => {
@@ -896,6 +920,48 @@ const EditProductModal = ({ product, onUpdated, setIsEditing, user, token }) => 
                                     </div>
                                 </div>
 
+                                {/* Batch Information Section */}
+                                {batches.length > 0 && (
+                                    <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                                        <h5 className="font-bold text-amber-700 dark:text-amber-300 mb-3 flex items-center gap-2">
+                                            <Package className="w-4 h-4" />
+                                            Stock Batches (FIFO - Oldest First)
+                                        </h5>
+                                        <div className="max-h-48 overflow-y-auto">
+                                            <table className="w-full text-sm">
+                                                <thead className="text-xs text-gray-500 dark:text-gray-400 sticky top-0 bg-amber-50 dark:bg-amber-900/20">
+                                                    <tr>
+                                                        <th className="text-left py-2">Batch</th>
+                                                        <th className="text-right py-2">Received</th>
+                                                        <th className="text-right py-2">Remaining</th>
+                                                        <th className="text-right py-2">Cost/Unit</th>
+                                                        <th className="text-right py-2">Total Value</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="text-gray-700 dark:text-gray-300">
+                                                    {batches.map((batch, idx) => (
+                                                        <tr key={batch.batch_id || idx} className="border-t border-amber-200 dark:border-amber-700">
+                                                            <td className="py-2 font-medium">#{idx + 1}</td>
+                                                            <td className="text-right py-2">{batch.quantity_received}</td>
+                                                            <td className="text-right py-2">{batch.remaining_quantity}</td>
+                                                            <td className="text-right py-2">Kshs {Number(batch.buying_price).toFixed(2)}</td>
+                                                            <td className="text-right py-2 font-medium">Kshs {(batch.remaining_quantity * batch.buying_price).toFixed(2)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 italic">
+                                            ✓ Oldest batches are sold first (FIFO). Set your Selling Price above based on these costs.
+                                        </p>
+                                    </div>
+                                )}
+                                {selectedVariantId && loadingBatches && (
+                                    <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
+                                        <p className="text-sm text-gray-500">Loading batch information...</p>
+                                    </div>
+                                )}
+
                                 <div className="space-y-2 mt-4">
                                     <Label className="text-black dark:text-white">Replace Variant Image (optional)</Label>
                                     <Input 
@@ -1023,11 +1089,44 @@ const ReceiveStockModal = ({ product, onUpdated, setIsReceivingStock, token }) =
     const [selectedVariantId, setSelectedVariantId] = useState(product.variants?.[0]?.variant_id || '');
     const [receiveForm, setReceiveForm] = useState({ quantityReceived: "", buyingPrice: "" });
     const [busy, setBusy] = useState(false);
+    const [batches, setBatches] = useState([]);
+    const [avgCost, setAvgCost] = useState(0);
+    const [loadingBatches, setLoadingBatches] = useState(false);
 
     const selectedVariant = product.variants?.find(v => v.variant_id.toString() === selectedVariantId.toString());
     
     const stockValue = Number(selectedVariant?.stock || 0);
     const isBackordered = stockValue < 0;
+
+    // Fetch batches when variant is selected
+    useEffect(() => {
+        if (selectedVariantId) {
+            const fetchBatches = async () => {
+                try {
+                    setLoadingBatches(true);
+                    const res = await axios.get(
+                        `${API_BASE}/api/products/variants/${selectedVariantId}/batches`,
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    setBatches(res.data || []);
+                    
+                    // Also get average cost
+                    const avgRes = await axios.get(
+                        `${API_BASE}/api/products/variants/${selectedVariantId}/average-cost`,
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    setAvgCost(avgRes.data.averageCost || 0);
+                } catch (err) {
+                    console.error("Error fetching batches:", err);
+                    setBatches([]);
+                    setAvgCost(0);
+                } finally {
+                    setLoadingBatches(false);
+                }
+            };
+            fetchBatches();
+        }
+    }, [selectedVariantId, token]);
 
     const handleReceiveFormChange = (e) => {
         const { name, value } = e.target;
@@ -1183,6 +1282,50 @@ const ReceiveStockModal = ({ product, onUpdated, setIsReceivingStock, token }) =
                                     </p>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {/* Batch Information Section */}
+                    {selectedVariantId && batches.length > 0 && (
+                        <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                            <h5 className="font-bold text-purple-700 dark:text-purple-300 mb-2 flex items-center gap-2">
+                                <Package className="w-4 h-4" />
+                                Current Batches (FIFO):
+                            </h5>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                Average Cost: <span className="font-bold text-purple-600 dark:text-purple-400">Kshs {avgCost.toFixed(2)}</span>
+                            </p>
+                            <div className="max-h-40 overflow-y-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="text-xs text-gray-500 dark:text-gray-400">
+                                        <tr>
+                                            <th className="text-left py-1">Batch</th>
+                                            <th className="text-right py-1">Qty</th>
+                                            <th className="text-right py-1">Cost</th>
+                                            <th className="text-right py-1">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-gray-700 dark:text-gray-300">
+                                        {batches.map((batch, idx) => (
+                                            <tr key={batch.batch_id || idx} className="border-t border-purple-200 dark:border-purple-700">
+                                                <td className="py-1">#{idx + 1}</td>
+                                                <td className="text-right py-1">{batch.remaining_quantity}</td>
+                                                <td className="text-right py-1">Kshs {Number(batch.buying_price).toFixed(2)}</td>
+                                                <td className="text-right py-1 font-medium">Kshs {(batch.remaining_quantity * batch.buying_price).toFixed(2)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p className="text-xs text-purple-600 dark:text-purple-400 mt-2 italic">
+                                ✓ Oldest batches are sold first (FIFO)
+                            </p>
+                        </div>
+                    )}
+
+                    {selectedVariantId && loadingBatches && (
+                        <div className="p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
+                            <p className="text-sm text-gray-500">Loading batch information...</p>
                         </div>
                     )}
 

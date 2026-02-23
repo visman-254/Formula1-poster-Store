@@ -27,6 +27,8 @@ import {
   toggleProductVisibility,
 } from "../controllers/productController.js";
 
+import { getBatchesForVariant, getAverageCostFromBatches } from "../services/product.js";
+
 import { verifyToken, verifyAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -70,6 +72,40 @@ router.post(
   verifyToken, 
   verifyAdmin, 
   receiveStockForVariant 
+);
+
+// Get all batches for a variant
+router.get(
+  "/variants/:variantId/batches",
+  verifyToken,
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const { variantId } = req.params;
+      const batches = await getBatchesForVariant(variantId);
+      res.json(batches);
+    } catch (err) {
+      console.error("Error fetching batches:", err);
+      res.status(500).json({ error: "Failed to fetch batches" });
+    }
+  }
+);
+
+// Get average cost from batches
+router.get(
+  "/variants/:variantId/average-cost",
+  verifyToken,
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const { variantId } = req.params;
+      const avgCost = await getAverageCostFromBatches(variantId);
+      res.json({ averageCost: avgCost });
+    } catch (err) {
+      console.error("Error calculating average cost:", err);
+      res.status(500).json({ error: "Failed to calculate average cost" });
+    }
+  }
 );
 
 router.put(

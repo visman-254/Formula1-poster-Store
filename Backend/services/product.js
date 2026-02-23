@@ -677,7 +677,7 @@ export const receiveStockForVariant = async (variantId, quantityReceived, buying
 
     // Get current variant data
     const [variantRows] = await connection.execute(
-      'SELECT stock, buying_price FROM product_variants WHERE variant_id = ?',
+      'SELECT stock FROM product_variants WHERE variant_id = ?',
       [variantId]
     );
     
@@ -686,20 +686,17 @@ export const receiveStockForVariant = async (variantId, quantityReceived, buying
     }
     
     const currentStock = variantRows[0].stock || 0;
-    const currentAvgPrice = variantRows[0].buying_price || 0;
-    
-    // Calculate new average price
-    const totalValue = (currentStock * currentAvgPrice) + (quantityReceived * buyingPrice);
     const newTotalStock = currentStock + quantityReceived;
-    const newAvgPrice = newTotalStock > 0 ? totalValue / newTotalStock : 0;
     
-    // Update variant stock and average price
+    // Update variant stock only - do NOT update buying_price
+    // Batches now track individual purchase prices for FIFO
+    // The variant.buying_price should be set manually in Edit Product if needed
     await connection.execute(
-      'UPDATE product_variants SET stock = ?, buying_price = ? WHERE variant_id = ?',
-      [newTotalStock, newAvgPrice, variantId]
+      'UPDATE product_variants SET stock = ? WHERE variant_id = ?',
+      [newTotalStock, variantId]
     );
     
-    // Create batch record
+    // Create batch record with the specific buying price for this batch
     await connection.execute(
       'INSERT INTO product_batches (variant_id, quantity_received, buying_price, remaining_quantity) VALUES (?, ?, ?, ?)',
       [variantId, quantityReceived, buyingPrice, quantityReceived]
@@ -894,6 +891,28 @@ export const updateBatchRemaining = async (batchId, remainingQuantity) => {
     );
   } catch (err) {
     console.error("Error updating batch remaining:", err);
+    throw err;
+  }
+};
+
+export const getAverageCostFromBatches = async (variantId) => {
+  try {
+    const [rows] = await db.execute(
+      `SELECT 
+        SUM(remaining_quantity * buying_price) as total_value,
+        SUM(remaining_quantity) as total_quantity
+      FROM product_batches 
+      WHERE variant_id = ? AND remaining_quantity > 0`,
+      [variantId]
+    );
+    
+    if (rows.length === 0 || rows[0].total_quantity === 0) {
+      return 0;
+    }
+    
+    return rows[0].total_value / rows[0].total_quantity;
+  } catch (err) {
+    console.error("Error calculating average cost from batches:", err);
     throw err;
   }
 };
