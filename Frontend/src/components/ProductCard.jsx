@@ -303,7 +303,7 @@ const EditProductModal = ({ product, onUpdated, setIsEditing, user, token }) => 
     const [form, setForm] = useState({
         name: product?.title || "",
         description: product?.description || "",
-        categoryName: "",
+        categoryName: product?.category_name || "",
         image: null,
     });
     const [categories, setCategories] = useState([]);
@@ -708,15 +708,33 @@ const EditProductModal = ({ product, onUpdated, setIsEditing, user, token }) => 
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-black dark:text-white">Category</Label>
-                                <Select onValueChange={(value) => setForm(prev => ({...prev, categoryName: value}))}>
+                                <Select 
+                                    onValueChange={(value) => setForm(prev => ({...prev, categoryName: value}))}
+                                    value={form.categoryName || product.category_name}
+                                >
                                     <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white">
                                         <SelectValue placeholder="Select a category" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {categories.map(category => (
-                                            <SelectItem key={category.category_id} value={category.category_name}>
-                                                {category.category_name}
-                                            </SelectItem>
+                                            <React.Fragment key={category.category_id}>
+                                                <SelectItem 
+                                                    key={category.category_id} 
+                                                    value={category.category_name}
+                                                    className="font-semibold"
+                                                >
+                                                    {category.category_name}
+                                                </SelectItem>
+                                                {category.subcategories?.map(sub => (
+                                                    <SelectItem 
+                                                        key={sub.category_id} 
+                                                        value={sub.category_name}
+                                                        className="pl-6 text-gray-600 dark:text-gray-400"
+                                                    >
+                                                        ↳ {sub.category_name}
+                                                    </SelectItem>
+                                                ))}
+                                            </React.Fragment>
                                         ))}
                                     </SelectContent>
                                 </Select>
