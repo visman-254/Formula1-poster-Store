@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { Filter } from "lucide-react";
 
 import "./OrderItems.css";
 
@@ -35,15 +36,25 @@ const OrderItems = () => {
   const { orders, refetch } = useOrders(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [orderTypeFilter, setOrderTypeFilter] = useState("all"); // all | pos | online
+  const [statusFilter, setStatusFilter] = useState("all"); // all | pending | paid | shipped | delivered | cancelled
 
-  // Filter orders by search query and type
+  // Filter orders by search query, type and status
   const filteredOrders = useMemo(() => {
     let filtered = orders;
 
+    // Filter by order type first
     if (orderTypeFilter === "pos") {
       filtered = filtered.filter((o) => o.order_type === "pos");
     } else if (orderTypeFilter === "online") {
       filtered = filtered.filter((o) => o.order_type === "online");
+    }
+
+    // Then filter by status
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((o) => {
+        const orderStatus = o.order_type === "pos" ? "delivered" : o.status;
+        return orderStatus === statusFilter;
+      });
     }
 
     const needle = searchQuery.trim().toLowerCase();
@@ -55,7 +66,7 @@ const OrderItems = () => {
       (order.user?.username || "").toLowerCase().includes(needle) ||
       (order.user?.email || "").toLowerCase().includes(needle)
     );
-  }, [orders, searchQuery, orderTypeFilter]);
+  }, [orders, searchQuery, orderTypeFilter, statusFilter]);
 
   // Update order status
   const handleStatusChange = async (orderId, newStatus) => {
@@ -124,8 +135,25 @@ const OrderItems = () => {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="flex-1"
         />
+        <div className="flex items-center gap-2">
+          <Filter className="text-gray-400 h-4 w-4" />
+          <Select value={statusFilter} onValueChange={setStatusFilter} className="w-40">
+            <SelectTrigger className="bg-white dark:bg-gray-900">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="processing">Processing</SelectItem>
+              <SelectItem value="shipped">Shipped</SelectItem>
+              <SelectItem value="delivered">Delivered</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <Select value={orderTypeFilter} onValueChange={setOrderTypeFilter} className="w-40">
-          <SelectTrigger>
+          <SelectTrigger className="bg-white dark:bg-gray-900">
             <SelectValue placeholder="Filter by type" />
           </SelectTrigger>
           <SelectContent>
@@ -184,9 +212,9 @@ const OrderItems = () => {
                       <Select
                         defaultValue={displayStatus}
                         onValueChange={(val) => handleStatusChange(order.id, val)}
-                        className="select"
+                        className="select bg-black"
                       >
-                        <SelectTrigger className="select-trigger">
+                        <SelectTrigger className="select-trigger bg-black">
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                         <SelectContent>

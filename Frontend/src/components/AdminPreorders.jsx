@@ -20,7 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { X, Phone, Mail, User, Calendar, Edit, Trash2, Search } from "lucide-react";
+import { X, Phone, Mail, User, Calendar, Edit, Trash2, Search, Filter } from "lucide-react";
 import API_BASE from "../config";
 import "./AdminPreorders.css";
 
@@ -30,6 +30,7 @@ const AdminPreorders = () => {
   const [preorders, setPreorders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [editingNotes, setEditingNotes] = useState(null);
   const [notesText, setNotesText] = useState("");
 
@@ -55,12 +56,22 @@ const AdminPreorders = () => {
     }
   };
 
-  // Filter preorders based on search query
+  // Filter preorders based on search query and status
   const filteredPreorders = useMemo(() => {
-    if (!searchQuery.trim()) return preorders;
+    let filtered = preorders;
+    
+    // Filter by status first
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(preorder => 
+        preorder.status && preorder.status.toLowerCase() === statusFilter.toLowerCase()
+      );
+    }
+    
+    // Then filter by search query
+    if (!searchQuery.trim()) return filtered;
     
     const query = searchQuery.toLowerCase();
-    return preorders.filter(preorder => {
+    return filtered.filter(preorder => {
       return (
         preorder.name.toLowerCase().includes(query) ||
         preorder.email.toLowerCase().includes(query) ||
@@ -70,7 +81,7 @@ const AdminPreorders = () => {
         (preorder.status && preorder.status.toLowerCase().includes(query))
       );
     });
-  }, [preorders, searchQuery]);
+  }, [preorders, searchQuery, statusFilter]);
 
   const handleStatusChange = async (preorderId, newStatus) => {
     try {
@@ -182,6 +193,7 @@ const AdminPreorders = () => {
 
   const clearSearch = () => {
     setSearchQuery("");
+    setStatusFilter("all");
   };
 
   if (!user || user.role !== 'admin') {
@@ -209,8 +221,8 @@ const AdminPreorders = () => {
       </div>
 
       {/* Search Bar - Real-time filtering */}
-      <div className="search-section mb-6">
-        <div className="relative max-w-md">
+      <div className="search-section mb-6 flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             placeholder="Search preorders by name, email, phone, device, or status..."
@@ -227,17 +239,36 @@ const AdminPreorders = () => {
             </button>
           )}
         </div>
-        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          {searchQuery && filteredPreorders.length > 0 && (
-            <span>Showing {filteredPreorders.length} of {preorders.length} preorders</span>
-          )}
-          {searchQuery && filteredPreorders.length === 0 && (
-            <span>No preorders found for "{searchQuery}"</span>
-          )}
-          {!searchQuery && preorders.length > 0 && (
-            <span>Type to filter {preorders.length} preorders</span>
-          )}
+        
+        {/* Status Filter Dropdown */}
+        <div className="flex items-center gap-2">
+          <Filter className="text-gray-400 h-4 w-4" />
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="confirmed">Confirmed</SelectItem>
+              <SelectItem value="fulfilled">Fulfilled</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+      </div>
+
+      {/* Filter info text */}
+      <div className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+        {(statusFilter !== "all" || searchQuery) && filteredPreorders.length > 0 && (
+          <span>Showing {filteredPreorders.length} of {preorders.length} preorders</span>
+        )}
+        {filteredPreorders.length === 0 && (statusFilter !== "all" || searchQuery) && (
+          <span>No preorders found</span>
+        )}
+        {statusFilter === "all" && !searchQuery && preorders.length > 0 && (
+          <span>Showing all {preorders.length} preorders</span>
+        )}
       </div>
 
       {filteredPreorders.length === 0 ? (

@@ -1,15 +1,14 @@
-/* styles/Select.css */
+/* OrderItems.css */
 
-/* Trigger button */
+/* ── Select trigger ── */
 .select-trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 0.75rem;
-  
   border-radius: 0.5rem;
-  background-color: #ffffff; /* white */
-  color: #111827; /* gray-900 */
+  background-color: #ffffff;
+  color: #111827;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -17,8 +16,8 @@
 }
 
 .select-trigger:hover {
-  border-color: #67738f; /* blue-600 */
-  background-color: #f9fafb; /* gray-50 */
+  border-color: #67738f;
+  background-color: #f9fafb;
 }
 
 .select-trigger:focus {
@@ -27,23 +26,19 @@
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.4);
 }
 
-/* Value text */
 .select-value {
-  color: #111827; /* gray-900 */
+  color: #111827;
 }
 
-/* Dropdown menu */
 .select-content {
   background-color: #ffffff;
-
   border-radius: 0.5rem;
   padding: 0.25rem;
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
-/* Items */
 .select-content [data-state="checked"] {
-  background-color: #2563eb; /* blue-600 */
+  background-color: #2563eb;
   color: #ffffff;
 }
 
@@ -54,57 +49,115 @@
 }
 
 .select-content [role="option"]:hover {
-  background-color: #f3f4f6; /* gray-100 */
+  background-color: #f3f4f6;
 }
 
+/* ══════════════════════════════════════
+   MOBILE ≤ 768px
+══════════════════════════════════════ */
 @media (max-width: 768px) {
+
+  /* --- Filter bar: stack vertically --- */
+  .order-items-root .flex.flex-col.md\:flex-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+  }
+
+  .order-items-root .flex.flex-col.md\:flex-row > * {
+    width: 100% !important;
+  }
+
+  /* Filter selects: full width, sensible height */
+  .order-items-root .flex.flex-col.md\:flex-row [class*="SelectTrigger"],
+  .order-items-root .flex.flex-col.md\:flex-row .select-trigger {
+    width: 100% !important;
+    height: 40px !important;
+    max-height: 40px !important;
+    font-size: 0.9rem !important;
+  }
+
+  /* --- "Update Status" row: stack label above select --- */
+  .order-items-root .mb-4.flex.items-center.gap-2 {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.4rem !important;
+  }
+
+  /* THE MAIN FIX: kill the white background on the status select trigger */
+  /* Target every possible way Radix/Tailwind sets a bg on this element */
+  .order-items-root .mb-4 button[role="combobox"],
+  .order-items-root .mb-4 [data-radix-select-trigger],
+  .order-items-root .mb-4 [class*="SelectTrigger"],
+  .order-items-root .mb-4 .select-trigger {
+    background-color: transparent !important;
+    background: transparent !important;
+    color: inherit !important;
+    width: 100% !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    padding: 0 0.75rem !important;
+    font-size: 0.875rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 0.5rem !important;
+  }
+
+  /* Also kill it on the filter bar selects */
+  .order-items-root button[role="combobox"] {
+    background-color: transparent !important;
+    background: transparent !important;
+    color: inherit !important;
+  }
+
+  /* --- Table: scrollable so content isn't cut off --- */
+  .order-items-root .order-items-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .order-items-table thead,
+  .order-items-table tbody,
+  .order-items-table tr {
+    display: table-row-group;
+  }
+
   .order-items-table thead {
-    border: none;
-    clip: rect(0 0 0 0);
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    padding: 0;
-    position: absolute;
-    width: 1px;
+    display: table-header-group;
   }
 
   .order-items-table tr {
-    display: block;
-    border-bottom: 2px solid #ddd;
-    margin-bottom: 10px;
+    display: table-row;
   }
 
-  .order-items-table td {
-    display: block;
-    text-align: right;
-    border-bottom: 1px dotted #ccc;
-    padding-left: 50%;
-    position: relative;
-  }
-
-  .order-items-table td::before {
-    content: attr(data-label);
-    position: absolute;
-    left: 6px;
-    width: 45%;
-    padding-right: 10px;
+  .order-items-table td,
+  .order-items-table th {
+    display: table-cell;
     white-space: nowrap;
-    text-align: left;
-    font-weight: bold;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
   }
 
-  .order-items-table td:last-child {
-    border-bottom: 0;
-  }
-  
-  .order-items-table .flex {
-    display: flex;
+  .order-items-table td > .flex {
+    display: flex !important;
     align-items: center;
-    justify-content: flex-end; /* Align items to the right to match other cells */
+    gap: 0.4rem;
+    min-width: 120px;
   }
 
-  .order-items-table .flex img {
-    margin-right: 10px;
+  .order-items-table .font-mono {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  /* ScrollArea: don't clip */
+  .order-items-root [data-radix-scroll-area-viewport] {
+    height: auto !important;
+    overflow: visible !important;
   }
 }

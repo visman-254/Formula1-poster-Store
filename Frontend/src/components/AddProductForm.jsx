@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import API_BASE from "../config";
@@ -420,7 +421,21 @@ const AddProductForm = () => {
 
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
-            <Input id="description" name="description" value={productData.description} onChange={handleProductChange} />
+            <Textarea 
+              id="description" 
+              name="description" 
+              value={productData.description} 
+              onChange={handleProductChange}
+              placeholder="Enter product features (each line will become a bullet point)
+Example:
+Product features
+13mm Speakers
+Stereo sound
+Bluetooth 5.3"
+              rows={6}
+              className="bg-transparent dark:bg-transparent border border-gray-300 dark:border-gray-700 text-black dark:text-white resize-none"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400">Each new line will be displayed as a bullet point on the product page</p>
           </div>
 
           <div className="border-t pt-4 mt-4">
@@ -537,7 +552,7 @@ const AddProductForm = () => {
                             </div>
                             <button
                               type="button"
-                              className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md flex items-center justify-center gap-2"
+                              className="w-full py-2 px-3 bg-transparent dark:bg-transparent hover:bg-black text-white text-sm font-medium rounded-md flex items-center justify-center gap-2"
                               onClick={() => openImeiModal(index)}
                             >
                               <Camera size={18} />

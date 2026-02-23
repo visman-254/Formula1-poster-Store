@@ -347,9 +347,38 @@ const ProductDetail = () => {
               )}
             </div>
             
-            <p className="text-slate-600 dark:text-gray-300 text-base sm:text-lg leading-relaxed">
-              {product.description}
-            </p>
+            
+            <div className="text-slate-600 dark:text-gray-300 text-base sm:text-lg leading-relaxed">
+              {product.description.split('\n').map((line, index) => {
+                const trimmed = line.trim();
+                if (index === 0 && !trimmed.startsWith('•') && !trimmed.startsWith('-')) {
+                  // First line - treat as title
+                  return (
+                    <p key={index} className="font-bold text-lg mb-2">
+                      {trimmed}
+                    </p>
+                  );
+                }
+                if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
+                  // Already a bullet point
+                  return (
+                    <p key={index} className="ml-4 mb-1">
+                      {trimmed}
+                    </p>
+                  );
+                }
+                if (trimmed === '') {
+                  // Empty line
+                  return <br key={index} />;
+                }
+                // Convert to bullet point
+                return (
+                  <p key={index} className="ml-4 mb-1">
+                    • {trimmed}
+                  </p>
+                );
+              })}
+            </div>
 
             {/* Bundle Products List */}
             {product.is_bundle && product.bundle_products && product.bundle_products.length > 0 && (
