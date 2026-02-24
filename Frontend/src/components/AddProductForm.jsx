@@ -459,7 +459,7 @@ Bluetooth 5.3"
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <Button type="button" onClick={handleAddBundleItem}>Add</Button>
+                            <Button type="button" className="cursor-pointer" onClick={handleAddBundleItem}>Add</Button>
                         </div>
 
                         <div className="space-y-2">
@@ -476,7 +476,7 @@ Bluetooth 5.3"
                                           <Label htmlFor={`qty-${item.variant_id}`}>Quantity</Label>
                                           <Input id={`qty-${item.variant_id}`} type="number" min="1" value={item.quantity} onChange={(e) => handleBundleItemQuantityChange(item.variant_id, e.target.value)} />
                                         </div>
-                                        <Button type="button" variant="destructive" size="sm" onClick={() => removeBundleItem(item.variant_id)}>X</Button>
+                                        <Button type="button" variant="destructive" size="sm" className="cursor-pointer" onClick={() => removeBundleItem(item.variant_id)}>X</Button>
                                     </div>
                                 ))}
                             </div>
@@ -495,7 +495,7 @@ Bluetooth 5.3"
                       <div key={index} className="border p-4 rounded-md mb-4 relative">
                         <h4 className="text-md font-semibold mb-2">Variant {index + 1}</h4>
                         {variants.length > 1 && (
-                          <Button type="button" variant="destructive" size="sm" onClick={() => removeVariant(index)} className="absolute top-2 right-2">Remove</Button>
+                          <Button type="button" variant="destructive" size="sm" className="cursor-pointer absolute top-2 right-2" onClick={() => removeVariant(index)}>Remove</Button>
                         )}
                         <div className="grid grid-cols-2 gap-4">
                           
@@ -552,11 +552,11 @@ Bluetooth 5.3"
                             </div>
                             <button
                               type="button"
-                              className="w-full py-2 px-3 bg-transparent dark:bg-transparent hover:bg-black text-white text-sm font-medium rounded-md flex items-center justify-center gap-2"
+                              className="w-full py-2 px-3 bg-transparent dark:bg-transparent hover:bg-black text-white text-sm font-medium rounded-md flex items-center justify-center gap-2 border border-grey-200 dark:border-gray-400"
                               onClick={() => openImeiModal(index)}
                             >
                               <Camera size={18} />
-                              📷 Scan Barcode/IMEI
+                               Scan Barcode/IMEI
                             </button>
                             <Input 
                               id={'imeis-' + index}
@@ -579,12 +579,12 @@ Bluetooth 5.3"
                         </div>
                       </div>
                     ))}
-                    <Button type="button" variant="outline" onClick={addVariant}>Add Another Variant</Button>
+                    <Button type="button" variant="outline" className="cursor-pointer" onClick={addVariant}>Add Another Variant</Button>
                 </div>
             )}
           </div>
 
-          <Button type="submit"  className="text-black bg-stone-500 hover:bg-stone-600 focus:ring-4 focus:outline-none focus:ring-stone-300">Add Product</Button>
+          <Button type="submit" className="cursor-pointer text-black bg-stone-500 hover:bg-stone-600 focus:ring-4 focus:outline-none focus:ring-stone-300">Add Product</Button>
         </form>
       </CardContent>
 
@@ -629,8 +629,8 @@ Bluetooth 5.3"
               </p>
             )}
             <div className="flex gap-2 mt-4 justify-end">
-              <Button variant="outline" onClick={closeImeiModal}>Close</Button>
-              <Button onClick={saveImeis} disabled={imeiLoading}>
+              <Button variant="outline" className="cursor-pointer" onClick={closeImeiModal}>Close</Button>
+              <Button className="cursor-pointer" onClick={saveImeis} disabled={imeiLoading}>
                 {imeiLoading ? 'Saving...' : 'Save IMEIs'}
               </Button>
             </div>

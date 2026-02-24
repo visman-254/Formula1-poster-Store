@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import ProductCard from "./ProductCard";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import GlassmorphicContainer from "./GlassmorphicContainer";
 import API_BASE from "../config";
 
 const ProductGrids = () => {
@@ -76,55 +78,59 @@ const ProductGrids = () => {
   if (loading) return <div className="p-4 text-black dark:text-white">Loading products…</div>;
 
   return (
-    <div className="bg-white dark:bg-black min-h-screen">
-      <Input
-        placeholder="Search products..."
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        className="mb-4 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-      />
+    <GlassmorphicContainer>
+      <Card className="bg-transparent border-0 shadow-none">
+        <CardContent className="p-0">
+          <Input
+            placeholder="Search products..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="mb-4 bg-white/50 dark:bg-black/50 border-gray-300 dark:border-gray-600 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+          />
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-          <thead className="bg-gray-50 dark:bg-gray-900">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Product
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Price
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Stock
-              </th>
-              <th scope="col" className="relative px-6 py-3">
-                <span className="sr-only">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-black divide-y divide-gray-200 dark:divide-gray-800">
-            {filtered.length > 0 ? (
-              filtered.map((product) => (
-                product && (
-                  <ProductCard
-                    key={product.product_id}
-                    product={product}
-                    onDeleted={handleDeleted}
-                    onUpdated={handleUpdated}
-                  />
-                )
-              ))
-            ) : (
-              <tr>
-                <td colSpan="4" className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
-                  No products found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200/50 dark:divide-gray-700/50">
+              <thead className="bg-transparent">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Product
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Price
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Stock
+                  </th>
+                  <th scope="col" className="relative px-6 py-3">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-transparent divide-y divide-gray-200/50 dark:divide-gray-700/50">
+                {filtered.length > 0 ? (
+                  filtered.map((product) => (
+                    product && (
+                      <ProductCard
+                        key={product.product_id}
+                        product={product}
+                        onDeleted={handleDeleted}
+                        onUpdated={handleUpdated}
+                      />
+                    )
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4" className="text-center py-4 text-sm text-gray-600 dark:text-gray-400">
+                      No products found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </GlassmorphicContainer>
   );
 };
 

@@ -8,6 +8,7 @@ import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { MoreVertical, SquarePen, CookingPot, Delete, X, Package } from "lucide-react";
+import { toast } from "sonner";
 import "./ProductCard.css";
 import API_BASE from "../config";
 
@@ -660,9 +661,10 @@ const EditProductModal = ({ product, onUpdated, setIsEditing, user, token }) => 
 
             onUpdated?.(updatedProduct);
             setIsEditing(false);
+            toast.success(`"${product.title}" has been updated successfully`);
         } catch (err) {
             console.error("Update error:", err.response?.data || err);
-            alert(err.response?.data?.error || "Failed to update product/variant");
+            toast.error(err.response?.data?.error || "Failed to update product/variant");
         } finally {
             setBusy(false);
         }
@@ -1157,15 +1159,15 @@ const ReceiveStockModal = ({ product, onUpdated, setIsReceivingStock, token }) =
         const buyingPrice = Number(receiveForm.buyingPrice);
     
         if (!selectedVariantId) {
-            alert("Please select a product variant.");
+            toast.error("Please select a product variant.");
             return;
         }
         if (quantity <= 0 || isNaN(quantity)) {
-            alert("Quantity received must be a positive number.");
+            toast.error("Quantity received must be a positive number.");
             return;
         }
         if (buyingPrice <= 0 || isNaN(buyingPrice)) {
-            alert("Buying price must be a positive number.");
+            toast.error("Buying price must be a positive number.");
             return;
         }
     
@@ -1180,10 +1182,10 @@ const ReceiveStockModal = ({ product, onUpdated, setIsReceivingStock, token }) =
             onUpdated?.(res.data.product);
             setReceiveForm({ quantityReceived: "", buyingPrice: "" });
             setIsReceivingStock(false);
-            alert(res.data.message || "Stock successfully received.");
+            toast.success(`Stock received: ${quantity} units added to "${product.title}"`);
         } catch (err) {
             console.error("Receive Stock Error:", err.response?.data || err);
-            alert(err.response?.data?.error || "Failed to receive stock");
+            toast.error(err.response?.data?.error || "Failed to receive stock");
         } finally {
             setBusy(false);
         }
@@ -1457,7 +1459,9 @@ const ProductCard = ({ product, onDeleted, onUpdated }) => {
     }
 
     const handleDelete = async () => {
-        if (!window.confirm(`Delete "${product.title}"?`)) return;
+        const confirmMessage = `⚠️ ARE YOU SURE YOU WANT TO DELETE THIS PRODUCT?\n\nProduct: ${product.title}\n\nThis action cannot be undone. All product details, variants, and stock information will be permanently removed from your inventory.`;
+        
+        if (!window.confirm(confirmMessage)) return;
         
         try {
             setBusy(true);
@@ -1465,8 +1469,9 @@ const ProductCard = ({ product, onDeleted, onUpdated }) => {
                 headers: { Authorization: `Bearer ${token}` },
             });
             onDeleted?.(product.product_id);
+            toast.success(`"${product.title}" has been deleted successfully`);
         } catch (err) {
-            alert(err.response?.data?.error || "Failed to delete product");
+            toast.error(err.response?.data?.error || "Failed to delete product");
         } finally {
             setBusy(false);
         }
@@ -1487,7 +1492,7 @@ const ProductCard = ({ product, onDeleted, onUpdated }) => {
 
     return (
         <>
-            <tr className="lg:hidden product-card-mobile bg-white dark:bg-black hover:bg-gray-50 dark:hover:bg-gray-900">
+            <tr className="lg:hidden product-card-mobile bg-white dark:bg-transparent hover:bg-gray-50 dark:hover:bg-gray-900">
                 <td colSpan="4" className="p-0 border-none">
                     <div className="p-2"> 
                         <div className="flex gap-2">
@@ -1549,7 +1554,8 @@ const ProductCard = ({ product, onDeleted, onUpdated }) => {
                         {showMobileMenu && (
                             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800 space-y-2">
                                 <Button 
-                                    className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white justify-start"
+                                    title="Edit product details"
+                                    className="cursor-pointer w-full bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white justify-start"
                                     onClick={() => {
                                         setIsEditing(true);
                                         setShowMobileMenu(false);
@@ -1559,7 +1565,8 @@ const ProductCard = ({ product, onDeleted, onUpdated }) => {
                                     Update Details
                                 </Button>
                                 <Button
-                                    className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white justify-start"
+                                    title="Receive stock for this product"
+                                    className="cursor-pointer w-full bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white justify-start"
                                     onClick={() => {
                                         setIsReceivingStock(true);
                                         setShowMobileMenu(false);
@@ -1569,7 +1576,8 @@ const ProductCard = ({ product, onDeleted, onUpdated }) => {
                                     Receive Stock
                                 </Button>
                                 <Button 
-                                    className="w-full bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white justify-start"
+                                    title="Delete this product"
+                                    className="cursor-pointer w-full bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white justify-start"
                                     onClick={handleDelete} 
                                     disabled={busy} 
                                 >
@@ -1629,24 +1637,27 @@ const ProductCard = ({ product, onDeleted, onUpdated }) => {
                 </td>
                 <td className="px-2 py-2 whitespace-nowrap text-right text-xs font-medium">
                     <div className="flex flex-col gap-1">
-                        <div className="flex gap-1">
+                        <div className="flex gap-1  justify-end">
                             <Button 
                                 size="sm"
-                                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-2 py-1 h-7"
+                                title="Edit product details"
+                                className="cursor-pointer bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white px-2 py-1 h-7"
                                 onClick={() => setIsEditing(true)}
                             >
                                 <SquarePen className="w-3 h-3" />
                             </Button>
                             <Button
                                 size="sm"
-                                className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white px-2 py-1 h-7"
+                                title="Receive stock"
+                                className="cursor-pointer bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white px-2 py-1 h-7"
                                 onClick={() => setIsReceivingStock(true)}
                             >
                                 <CookingPot className="w-3 h-3" />
                             </Button>
                             <Button 
                                 size="sm"
-                                className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white px-2 py-1 h-7"
+                                title="Delete product"
+                                className="cursor-pointer bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white px-2 py-1 h-7"
                                 onClick={handleDelete} 
                                 disabled={busy}
                             >

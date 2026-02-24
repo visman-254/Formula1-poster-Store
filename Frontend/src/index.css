@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 html{
-  font-size: 75%;
+  font-size: 80%;
 }
 
 :root {
@@ -58,6 +58,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  width: 100%;
   background-color: var(--background);
   color: var(--foreground);
 }
