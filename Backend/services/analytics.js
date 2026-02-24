@@ -1,5 +1,6 @@
 
 import db from "../config/db.js";
+import { calculateInventoryValue } from "./product.js";
 
 
 export const getTotalRevenue = async () => {
@@ -543,6 +544,9 @@ export const getDashboardStats = async () => {
       SELECT COUNT(*) AS total_users FROM users WHERE role = 'customer'
     `);
 
+    // Get inventory value using WAC (Weighted Average Cost)
+    const inventoryValueWAC = await calculateInventoryValue();
+
     return {
       revenue: {
         total: Number(total_revenue) || 0,
@@ -572,6 +576,9 @@ export const getDashboardStats = async () => {
       },
       users: {
         total: Number(total_users) || 0,
+      },
+      inventory: {
+        valueWAC: Number(inventoryValueWAC) || 0,
       },
     };
   } catch (err) {

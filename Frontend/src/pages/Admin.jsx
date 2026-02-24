@@ -46,6 +46,7 @@ import ProductAnalytics from "../components/ProductAnalytics";
 import ImportData from "../components/ImportData";
 import ManageIMEIs from "../components/ManageIMEIs";
 import GlassmorphicContainer from "../components/GlassmorphicContainer";
+import BatchInventory from "../components/BatchInventory";
 
 import OrderTypeDailyComparison from "../components/OrderTypeDailyComparison";
 import SalesByOrderType from "../components/SalesByOrderType";
@@ -55,7 +56,7 @@ import POSMonthlySales from "../components/POSMonthlySales";
 import OnlineMonthlySales from "../components/OnlineMonthlySales";
 
 import { useNavigate } from "react-router-dom";
-import { exportOrders, exportProducts, exportInventory, exportUsers } from "../api/exportApi";
+import { exportOrders, exportProducts, exportInventory, exportUsers, exportBatches } from "../api/exportApi";
 import "./Admin.css";
 
 export default function AdminPage() {
@@ -88,6 +89,7 @@ export default function AdminPage() {
           { value: "delete",        label: "Categories",     icon: <Delete size={16} /> },
           { value: "uncategorized", label: "Uncategorized",  icon: <HeartCrack size={16} /> },
           { value: "imei",          label: "IMEI Tracking",  icon: <Barcode size={16} /> },
+          { value: "batch-inventory", label: "Batch Inventory", icon: <Package size={16} /> },
         ];
       case "Orders & Sales":
         return [
@@ -105,6 +107,7 @@ export default function AdminPage() {
           { value: "export-orders",    label: "Export Orders",    icon: <FileDown size={16} /> },
           { value: "export-products",  label: "Export Products",  icon: <FileDown size={16} /> },
           { value: "export-inventory", label: "Export Inventory", icon: <FileDown size={16} /> },
+          { value: "export-batches",  label: "Export Batches",  icon: <FileDown size={16} /> },
           { value: "export-users",     label: "Export Users",     icon: <FileDown size={16} /> },
           { value: "import-data",      label: "Import Data",      icon: <Upload size={16} /> },
         ];
@@ -423,6 +426,17 @@ export default function AdminPage() {
                 </div>
               </GlassmorphicContainer>
             )}
+            {activeTab === "export-batches" && (
+              <GlassmorphicContainer>
+                <div className="export-section">
+                  <h2>Export Batches to Excel</h2>
+                  <p>Download all individual batches with their own buying prices and quantities.</p>
+                  <button className="export-btn" onClick={() => handleExport("batches", exportBatches)} disabled={exportLoading === "batches"}>
+                    {exportLoading === "batches" ? "Exporting…" : "Download Batches Excel"}
+                  </button>
+                </div>
+              </GlassmorphicContainer>
+            )}
             {activeTab === "export-users" && (
               <GlassmorphicContainer>
                 <div className="export-section">
@@ -448,6 +462,9 @@ export default function AdminPage() {
             )}
             {activeTab === "imei" && (
               <GlassmorphicContainer><ManageIMEIs /></GlassmorphicContainer>
+            )}
+            {activeTab === "batch-inventory" && (
+              <GlassmorphicContainer><BatchInventory /></GlassmorphicContainer>
             )}
 
             {activeTab === "analytics" && (

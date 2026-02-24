@@ -47,6 +47,11 @@ export const exportInventory = async () => {
   return downloadExcel('/export/inventory', 'inventory');
 };
 
+// Export batches with individual prices
+export const exportBatches = async () => {
+  return downloadExcel('/export/batches', 'batches');
+};
+
 // Export order items (optionally filtered by orderId)
 export const exportOrderItems = async (orderId = null) => {
   return downloadExcel('/export/order-items', 'order_items', { orderId });

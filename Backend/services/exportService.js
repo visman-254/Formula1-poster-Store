@@ -139,6 +139,60 @@ export const exportProductsToExcel = async () => {
   return await workbook.xlsx.writeBuffer();
 };
 
+// Export all batches to Excel (detailed batch-level view)
+export const exportBatchesToExcel = async () => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Batches');
+
+  worksheet.columns = [
+    { header: 'Batch ID', key: 'batch_id', width: 10 },
+    { header: 'Product', key: 'title', width: 30 },
+    { header: 'Color', key: 'color', width: 15 },
+    { header: 'Batch Date', key: 'created_at', width: 15 },
+    { header: 'Original Qty', key: 'quantity', width: 12 },
+    { header: 'Remaining Qty', key: 'remaining_quantity', width: 15 },
+    { header: 'Unit Buying Price', key: 'buying_price', width: 18 },
+    { header: 'Batch Value', key: 'batch_value', width: 15 },
+  ];
+
+  const [batches] = await db.execute(`
+    SELECT pb.batch_id, pb.quantity, pb.remaining_quantity, pb.buying_price, pb.created_at,
+           p.title, pv.color
+    FROM product_batches pb
+    JOIN product_variants pv ON pb.variant_id = pv.variant_id
+    JOIN products p ON pv.product_id = p.product_id
+    WHERE pb.remaining_quantity > 0
+    ORDER BY pb.created_at DESC
+  `);
+
+  batches.forEach(batch => {
+    worksheet.addRow({
+      batch_id: batch.batch_id,
+      title: batch.title,
+      color: batch.color,
+      created_at: new Date(batch.created_at).toISOString().slice(0, 10),
+      quantity: batch.quantity,
+      remaining_quantity: batch.remaining_quantity,
+      buying_price: Number(batch.buying_price) || 0,
+      batch_value: (batch.remaining_quantity || 0) * (Number(batch.buying_price) || 0),
+    });
+  });
+
+  // Format currency columns
+  worksheet.getColumn(7).numFmt = '#,##0.00';
+  worksheet.getColumn(8).numFmt = '#,##0.00';
+  
+  // Style header row
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE0E0E0' }
+  };
+
+  return await workbook.xlsx.writeBuffer();
+};
+
 // Export inventory to Excel with stock values
 export const exportInventoryToExcel = async () => {
   const workbook = new ExcelJS.Workbook();
@@ -163,8 +217,42 @@ export const exportInventoryToExcel = async () => {
     WHERE p.is_deleted = FALSE
   `);
 
+  // Get all batches to calculate WAC (Weighted Average Cost)
+  const [batches] = await db.execute(`
+    SELECT variant_id, remaining_quantity, buying_price
+    FROM product_batches
+    WHERE remaining_quantity > 0
+  `);
+
+  // Calculate WAC for each variant
+  const wacByVariant = {};
+  batches.forEach(batch => {
+    if (!wacByVariant[batch.variant_id]) {
+      wacByVariant[batch.variant_id] = { totalCost: 0, totalQty: 0 };
+    }
+    wacByVariant[batch.variant_id].totalCost += (batch.remaining_quantity * batch.buying_price);
+    wacByVariant[batch.variant_id].totalQty += batch.remaining_quantity;
+  });
+
+  // Calculate WAC for each variant
+  Object.keys(wacByVariant).forEach(variantId => {
+    const data = wacByVariant[variantId];
+    wacByVariant[variantId] = data.totalQty > 0 ? data.totalCost / data.totalQty : 0;
+  });
+
+  // Calculate total remaining stock from batches for each variant
+  const stockFromBatches = {};
+  batches.forEach(batch => {
+    if (!stockFromBatches[batch.variant_id]) {
+      stockFromBatches[batch.variant_id] = 0;
+    }
+    stockFromBatches[batch.variant_id] += batch.remaining_quantity;
+  });
+
   rows.forEach(row => {
-    const stockValue = (row.stock || 0) * (row.buying_price || 0);
+    const wac = wacByVariant[row.variant_id] || row.buying_price || 0;
+    const batchStock = stockFromBatches[row.variant_id] || 0;
+    const stockValue = batchStock * wac;
     worksheet.addRow({
       variant_id: row.variant_id,
       title: row.title,

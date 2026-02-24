@@ -4,7 +4,8 @@ import {
   exportProductsToExcel, 
   exportInventoryToExcel,
   exportOrderItemsToExcel,
-  exportUsersToExcel 
+  exportUsersToExcel,
+  exportBatchesToExcel 
 } from '../services/exportService.js';
 
 const router = express.Router();
@@ -85,6 +86,21 @@ router.get('/export/users', async (req, res) => {
   } catch (error) {
     console.error('Export users error:', error);
     res.status(500).json({ message: 'Failed to export users' });
+  }
+});
+
+// GET /api/export/batches
+// Export all batches with individual prices
+router.get('/export/batches', async (req, res) => {
+  try {
+    const buffer = await exportBatchesToExcel();
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=batches_${Date.now()}.xlsx`);
+    res.send(buffer);
+  } catch (error) {
+    console.error('Export batches error:', error);
+    res.status(500).json({ message: 'Failed to export batches' });
   }
 });
 

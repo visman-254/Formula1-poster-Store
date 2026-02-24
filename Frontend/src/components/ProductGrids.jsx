@@ -101,6 +101,12 @@ const ProductGrids = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Stock
                   </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    WAC
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Stock Value
+                  </th>
                   <th scope="col" className="relative px-6 py-3">
                     <span className="sr-only">Actions</span>
                   </th>
@@ -120,7 +126,7 @@ const ProductGrids = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="text-center py-4 text-sm text-gray-600 dark:text-gray-400">
+                    <td colSpan="6" className="text-center py-4 text-sm text-gray-600 dark:text-gray-400">
                       No products found
                     </td>
                   </tr>

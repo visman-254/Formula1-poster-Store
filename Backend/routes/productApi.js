@@ -27,7 +27,7 @@ import {
   toggleProductVisibility,
 } from "../controllers/productController.js";
 
-import { getBatchesForVariant, getAverageCostFromBatches } from "../services/product.js";
+import { getBatchesForVariant, getAverageCostFromBatches, getAllBatches } from "../services/product.js";
 
 import { verifyToken, verifyAdmin } from "../middleware/authMiddleware.js";
 
@@ -86,6 +86,22 @@ router.get(
       res.json(batches);
     } catch (err) {
       console.error("Error fetching batches:", err);
+      res.status(500).json({ error: "Failed to fetch batches" });
+    }
+  }
+);
+
+// Get all batches with product details (for batch inventory view)
+router.get(
+  "/batches/all",
+  verifyToken,
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const batches = await getAllBatches();
+      res.json(batches);
+    } catch (err) {
+      console.error("Error fetching all batches:", err);
       res.status(500).json({ error: "Failed to fetch batches" });
     }
   }

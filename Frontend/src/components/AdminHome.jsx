@@ -85,6 +85,7 @@ export default function AdminHome({ onNavigate }) {
         pendingPreorders: data.preorders?.total || 0,
         totalProducts: data.products?.total || 0,
         totalUsers: data.users?.total || 0,
+        inventoryValueWAC: data.inventory?.valueWAC || 0,
       });
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
@@ -177,6 +178,14 @@ export default function AdminHome({ onNavigate }) {
       color: "users",
       isViewUsers: true,
       buttonLabel: "View Users",
+    },
+    {
+      title: "Inventory Value (WAC)",
+      value: formatCurrency(stats.inventoryValueWAC),
+      icon: <Package size={24} />,
+      subtitle: "Weighted Average Cost",
+      color: "products",
+      buttonLabel: "View Inventory",
     },
   ];
 

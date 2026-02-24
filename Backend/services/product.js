@@ -147,6 +147,7 @@ export const getProducts = async () => {
 
 export const getProductsAdmin = async () => {
     try {
+        // First get all products and variants
         const [rows] = await db.execute(`
             SELECT 
                 p.*, 
@@ -165,6 +166,38 @@ export const getProductsAdmin = async () => {
             LEFT JOIN categories c ON p.category_id = c.category_id
             WHERE p.is_deleted = FALSE
         `);
+        
+        // Get all batches to calculate WAC for each variant
+        const [batches] = await db.execute(`
+            SELECT variant_id, remaining_quantity, buying_price
+            FROM product_batches
+            WHERE remaining_quantity > 0
+        `);
+        
+        // Calculate WAC for each variant
+        const wacByVariant = {};
+        batches.forEach(batch => {
+            if (!wacByVariant[batch.variant_id]) {
+                wacByVariant[batch.variant_id] = { totalCost: 0, totalQty: 0 };
+            }
+            wacByVariant[batch.variant_id].totalCost += (batch.remaining_quantity * batch.buying_price);
+            wacByVariant[batch.variant_id].totalQty += batch.remaining_quantity;
+        });
+        
+        // Calculate WAC values
+        Object.keys(wacByVariant).forEach(variantId => {
+            const data = wacByVariant[variantId];
+            wacByVariant[variantId] = data.totalQty > 0 ? data.totalCost / data.totalQty : 0;
+        });
+        
+        // Calculate total remaining stock from batches for each variant
+        const stockFromBatches = {};
+        batches.forEach(batch => {
+            if (!stockFromBatches[batch.variant_id]) {
+                stockFromBatches[batch.variant_id] = 0;
+            }
+            stockFromBatches[batch.variant_id] += batch.remaining_quantity;
+        });
         
         // Modify groupProducts to include imei_count in variants
         const productMap = new Map();
@@ -188,6 +221,8 @@ export const getProductsAdmin = async () => {
             if (row.variant_id) {
                 const existing = productMap.get(row.product_id).variants.find(v => v.variant_id === row.variant_id);
                 if (!existing) {
+                    const wac = wacByVariant[row.variant_id] || 0;
+                    const batchStock = stockFromBatches[row.variant_id] || 0;
                     productMap.get(row.product_id).variants.push({
                         variant_id: row.variant_id,
                         color: row.color,
@@ -195,6 +230,8 @@ export const getProductsAdmin = async () => {
                         stock: row.stock,
                         image: row.image,
                         buying_price: row.buying_price,
+                        wac: wac,
+                        stock_value: batchStock * wac,
                         profit_margin: row.profit_margin,
                         discount: row.discount,
                         imei_count: row.imei_count || 0
@@ -281,6 +318,23 @@ export const createProduct = async ({ title, description, category_id, variants,
                     variant.image || null
                 ]
             );
+            
+            // If variant has stock > 0 and buying_price > 0, create a batch record
+            const stock = variant.stock === undefined ? 1 : variant.stock;
+            const buyingPrice = variant.buying_price || 0;
+            if (stock > 0 && buyingPrice > 0) {
+                // Get the last inserted variant_id
+                const [variantResult] = await connection.execute(
+                    "SELECT LAST_INSERT_ID() as variant_id"
+                );
+                const newVariantId = variantResult[0].variant_id;
+                
+                // Create initial batch record
+                await connection.execute(
+                    "INSERT INTO product_batches (variant_id, quantity_received, buying_price, remaining_quantity) VALUES (?, ?, ?, ?)",
+                    [newVariantId, stock, buyingPrice, stock]
+                );
+            }
         }
 
         await connection.commit();
@@ -719,6 +773,59 @@ export const receiveStockForVariant = async (variantId, quantityReceived, buying
   }
 };
 
+// Calculate Weighted Average Cost (WAC) for a variant
+export const calculateWAC = async (variantId) => {
+  try {
+    const [batches] = await db.execute(
+      `SELECT remaining_quantity, buying_price 
+       FROM product_batches 
+       WHERE variant_id = ? AND remaining_quantity > 0`,
+      [variantId]
+    );
+
+    if (batches.length === 0) {
+      return 0;
+    }
+
+    let totalCost = 0;
+    let totalQty = 0;
+
+    batches.forEach(batch => {
+      totalCost += batch.remaining_quantity * batch.buying_price;
+      totalQty += batch.remaining_quantity;
+    });
+
+    return totalQty > 0 ? totalCost / totalQty : 0;
+  } catch (err) {
+    console.error("Error calculating WAC:", err);
+    return 0;
+  }
+};
+
+// Calculate total inventory value using WAC
+export const calculateInventoryValue = async () => {
+  try {
+    const [variants] = await db.execute(`
+      SELECT pv.variant_id, pv.stock
+      FROM product_variants pv
+      JOIN products p ON pv.product_id = p.product_id
+      WHERE p.is_deleted = FALSE
+    `);
+
+    let totalValue = 0;
+
+    for (const variant of variants) {
+      const wac = await calculateWAC(variant.variant_id);
+      totalValue += variant.stock * wac;
+    }
+
+    return totalValue;
+  } catch (err) {
+    console.error("Error calculating inventory value:", err);
+    return 0;
+  }
+};
+
 
 export const getBackorderedProducts = async () => {
   try {
@@ -879,6 +986,32 @@ export const getBatchesForVariant = async (variantId) => {
     return rows;
   } catch (err) {
     console.error("Error fetching batches:", err);
+    throw err;
+  }
+};
+
+// Get all batches with product details (including sold out batches)
+export const getAllBatches = async () => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT 
+        pb.batch_id,
+        pb.variant_id,
+        pb.quantity_received,
+        pb.remaining_quantity,
+        pb.buying_price,
+        pb.date_received,
+        pv.product_id,
+        pv.color,
+        p.title as product_title
+      FROM product_batches pb
+      JOIN product_variants pv ON pb.variant_id = pv.variant_id
+      JOIN products p ON pv.product_id = p.product_id
+      ORDER BY pb.date_received DESC
+    `);
+    return rows;
+  } catch (err) {
+    console.error("Error fetching all batches:", err);
     throw err;
   }
 };

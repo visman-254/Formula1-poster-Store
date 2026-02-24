@@ -1635,6 +1635,12 @@ const ProductCard = ({ product, onDeleted, onUpdated }) => {
                             : `${stockValue.toFixed(0)}`}
                     </span>
                 </td>
+                <td className="px-2 py-2 whitespace-nowrap text-black dark:text-white text-xs">
+                    Kshs {displayVariant.wac ? Number(displayVariant.wac).toFixed(0) : '0'}
+                </td>
+                <td className="px-2 py-2 whitespace-nowrap text-black dark:text-white text-xs">
+                    Kshs {displayVariant.stock_value ? Number(displayVariant.stock_value).toFixed(0) : '0'}
+                </td>
                 <td className="px-2 py-2 whitespace-nowrap text-right text-xs font-medium">
                     <div className="flex flex-col gap-1">
                         <div className="flex gap-1  justify-end">
