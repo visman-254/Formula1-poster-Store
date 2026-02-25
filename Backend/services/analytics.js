@@ -15,7 +15,7 @@ export const getTotalRevenue = async () => {
     return rows[0].total_revenue || 0;
   } catch (err) {
     console.error("Error fetching total revenue:", err);
-    throw err;
+    return 0;
   }
 };
 
@@ -434,7 +434,7 @@ export const getDashboardStats = async () => {
 
     // Get total profit (all time) - actual profit (using variant buying_price as fallback)
     const [[{ total_profit }]] = await db.execute(`
-      SELECT SUM((oi.price - CASE WHEN oi.unit_buying_price > 0 THEN oi.unit_buying_price ELSE pv.buying_price END - oi.unit_discount) * oi.quantity) AS total_profit
+      SELECT SUM((oi.price - COALESCE(NULLIF(oi.unit_buying_price, 0), pv.buying_price) - COALESCE(oi.unit_discount, 0)) * oi.quantity) AS total_profit
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       JOIN product_variants pv ON oi.variant_id = pv.variant_id
@@ -462,7 +462,7 @@ export const getDashboardStats = async () => {
 
     // Get today's profit - using Nairobi timezone (UTC+3) and variant buying_price as fallback
     const [[{ today_profit }]] = await db.execute(`
-      SELECT COALESCE(SUM((oi.price - CASE WHEN oi.unit_buying_price > 0 THEN oi.unit_buying_price ELSE pv.buying_price END - oi.unit_discount) * oi.quantity), 0) AS today_profit
+      SELECT COALESCE(SUM((oi.price - COALESCE(NULLIF(oi.unit_buying_price, 0), pv.buying_price) - COALESCE(oi.unit_discount, 0)) * oi.quantity), 0) AS today_profit
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       JOIN product_variants pv ON oi.variant_id = pv.variant_id
@@ -481,7 +481,7 @@ export const getDashboardStats = async () => {
 
     // Get yesterday's profit for trend calculation - using variant buying_price as fallback
     const [[{ yesterday_profit }]] = await db.execute(`
-      SELECT COALESCE(SUM((oi.price - CASE WHEN oi.unit_buying_price > 0 THEN oi.unit_buying_price ELSE pv.buying_price END - oi.unit_discount) * oi.quantity), 0) AS yesterday_profit
+      SELECT COALESCE(SUM((oi.price - COALESCE(NULLIF(oi.unit_buying_price, 0), pv.buying_price) - COALESCE(oi.unit_discount, 0)) * oi.quantity), 0) AS yesterday_profit
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       JOIN product_variants pv ON oi.variant_id = pv.variant_id
@@ -583,6 +583,40 @@ export const getDashboardStats = async () => {
     };
   } catch (err) {
     console.error("Error fetching dashboard stats:", err);
-    throw err;
+    // Return default values instead of throwing to prevent 500 errors
+    return {
+      revenue: {
+        total: 0,
+        today: 0,
+        yesterday: 0,
+      },
+      profit: {
+        total: 0,
+        today: 0,
+        yesterday: 0,
+      },
+      orders: {
+        total: 0,
+        today: 0,
+        yesterday: 0,
+      },
+      lowStock: {
+        low: 0,
+        outOfStock: 0,
+      },
+      preorders: {
+        total: 0,
+        today: 0,
+      },
+      products: {
+        total: 0,
+      },
+      users: {
+        total: 0,
+      },
+      inventory: {
+        valueWAC: 0,
+      },
+    };
   }
 };
