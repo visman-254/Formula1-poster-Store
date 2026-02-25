@@ -89,24 +89,25 @@ export default function AdminHome({ onNavigate }) {
       });
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
-      // Set default values on error
+      // Set default values on error - showing actual zeros when no data
       setStats({
-        totalRevenue: 125000,
-        todayRevenue: 5200,
-        yesterdayRevenue: 4800,
-        totalProfit: 25000,
-        todayProfit: 1040,
-        yesterdayProfit: 960,
-        revenueGrowth: 8.3,
-        totalOrders: 89,
-        todayOrders: 12,
-        yesterdayOrders: 10,
-        ordersGrowth: 20,
-        lowStockCount: 5,
-        outOfStockCount: 2,
-        pendingPreorders: 12,
-        totalProducts: 156,
-        totalUsers: 3,
+        totalRevenue: 0,
+        todayRevenue: 0,
+        yesterdayRevenue: 0,
+        totalProfit: 0,
+        todayProfit: 0,
+        yesterdayProfit: 0,
+        revenueGrowth: 0,
+        totalOrders: 0,
+        todayOrders: 0,
+        yesterdayOrders: 0,
+        ordersGrowth: 0,
+        lowStockCount: 0,
+        outOfStockCount: 0,
+        pendingPreorders: 0,
+        totalProducts: 0,
+        totalUsers: 0,
+        inventoryValueWAC: 0,
       });
     } finally {
       setLoading(false);
