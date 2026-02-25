@@ -6,8 +6,8 @@ const BatchInventory = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('summary');
   const [migrating, setMigrating] = useState(false);
+  const [expandedRows, setExpandedRows] = useState({});
 
   const token = localStorage.getItem('token');
 
@@ -84,6 +84,13 @@ const BatchInventory = () => {
   const totalRemaining = filteredProducts.reduce((sum, p) => sum + p.totalRemaining, 0);
   const totalValue = filteredProducts.reduce((sum, p) => sum + p.totalValue, 0);
 
+  const toggleRow = (key) => {
+    setExpandedRows(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -115,21 +122,6 @@ const BatchInventory = () => {
           >
             {migrating ? 'Migrating...' : 'Migrate Existing Products'}
           </button>
-          {viewMode === 'summary' ? (
-            <button
-              onClick={() => setViewMode('detailed')}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-            >
-              View Individual Batches Details
-            </button>
-          ) : (
-            <button
-              onClick={() => setViewMode('summary')}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-            >
-              Back to Summary
-            </button>
-          )}
           <input
             type="text"
             placeholder="Search product or variant..."
@@ -157,9 +149,9 @@ const BatchInventory = () => {
       </div>
 
       {/* Products Table - Monochrome */}
-      <div className="overflow-x-auto bg-white border border-gray-300 rounded-lg shadow-sm">
+      <div className="overflow-x-auto bg-white border border-gray-300 rounded-lg shadow-sm max-h-[70vh] overflow-y-auto">
         <table className="w-full text-sm text-left">
-          <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-300">
+          <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-300 sticky top-0 z-10">
             <tr>
               <th className="px-4 py-3 font-medium">#</th>
               <th className="px-4 py-3 font-medium">Product</th>
@@ -168,92 +160,87 @@ const BatchInventory = () => {
               <th className="px-4 py-3 font-medium text-right">WAC</th>
               <th className="px-4 py-3 font-medium text-right">Stock Value</th>
               <th className="px-4 py-3 font-medium text-center">Batches</th>
+              <th className="px-4 py-3 font-medium text-center">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
+                <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
                   No products found
                 </td>
               </tr>
             ) : (
-              filteredProducts.map((product, index) => (
-                <tr key={`${product.product_id}-${product.color}`} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-600">{index + 1}</td>
-                  <td className="px-4 py-3 font-medium text-gray-800">{product.product_title || 'Unknown'}</td>
-                  <td className="px-4 py-3">
-                    <span className="px-2 py-1 bg-gray-200 rounded text-xs text-gray-700">
-                      {product.color || 'Default'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-800">{product.totalRemaining}</td>
-                  <td className="px-4 py-3 text-right text-gray-700">Kshs {product.wac.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right font-medium text-gray-800">Kshs {product.totalValue.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="px-2 py-1 bg-gray-200 text-gray-700 rounded text-xs">
-                      {product.batches.length}
-                    </span>
-                  </td>
-                </tr>
-              ))
+              filteredProducts.map((product, index) => {
+                const rowKey = `${product.product_id}-${product.color}`;
+                const isExpanded = expandedRows[rowKey];
+                return (
+                  <React.Fragment key={rowKey}>
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-gray-600">{index + 1}</td>
+                      <td className="px-4 py-3 font-medium text-gray-800">{product.product_title || 'Unknown'}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-1 bg-gray-200 rounded text-xs text-gray-700">
+                          {product.color || 'Default'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-gray-800">{product.totalRemaining}</td>
+                      <td className="px-4 py-3 text-right text-gray-700">Kshs {product.wac.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-medium text-gray-800">Kshs {product.totalValue.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="px-2 py-1 bg-gray-200 text-gray-700 rounded text-xs">
+                          {product.batches.length}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => toggleRow(rowKey)}
+                          className="px-3 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-700"
+                        >
+                          {isExpanded ? 'Hide' : 'View'} Batches
+                        </button>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan="8" className="px-4 py-3 bg-gray-50">
+                          <div className="ml-4 border-l-2 border-gray-300 pl-4">
+                            <p className="text-xs font-semibold text-gray-600 mb-2">Batch Details:</p>
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="text-gray-500 border-b border-gray-200">
+                                  <th className="px-2 py-1 text-left font-medium">Batch ID</th>
+                                  <th className="px-2 py-1 text-right font-medium">Received</th>
+                                  <th className="px-2 py-1 text-right font-medium">Remaining</th>
+                                  <th className="px-2 py-1 text-right font-medium">Unit Cost</th>
+                                  <th className="px-2 py-1 text-right font-medium">Value</th>
+                                  <th className="px-2 py-1 text-left font-medium">Date</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {product.batches.map((batch) => (
+                                  <tr key={batch.batch_id} className="border-b border-gray-100">
+                                    <td className="px-2 py-1 text-gray-700">#{batch.batch_id}</td>
+                                    <td className="px-2 py-1 text-right text-gray-600">{batch.quantity_received}</td>
+                                    <td className="px-2 py-1 text-right font-medium text-gray-800">{batch.remaining_quantity}</td>
+                                    <td className="px-2 py-1 text-right text-gray-700">Kshs {Number(batch.buying_price).toLocaleString()}</td>
+                                    <td className="px-2 py-1 text-right font-medium text-gray-800">Kshs {(batch.remaining_quantity * batch.buying_price).toLocaleString()}</td>
+                                    <td className="px-2 py-1 text-gray-500">{new Date(batch.date_received).toLocaleDateString()}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
-
-      {/* Toggle to Detailed View - Removed, now handled by button above */}
-
-      {viewMode === 'detailed' && (
-        <div className="mt-6">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-lg font-semibold text-gray-800">Individual Batch Details</h3>
-            <button
-              onClick={() => setViewMode('summary')}
-              className="text-gray-500 hover:text-gray-700 text-sm"
-            >
-              ← Back to Summary
-            </button>
-          </div>
-          
-          <div className="overflow-x-auto bg-white border border-gray-300 rounded-lg shadow-sm">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-300">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Batch ID</th>
-                  <th className="px-4 py-3 font-medium">Product</th>
-                  <th className="px-4 py-3 font-medium">Variant</th>
-                  <th className="px-4 py-3 font-medium text-right">Received</th>
-                  <th className="px-4 py-3 font-medium text-right">Remaining</th>
-                  <th className="px-4 py-3 font-medium text-right">Unit Cost</th>
-                  <th className="px-4 py-3 font-medium text-right">Value</th>
-                  <th className="px-4 py-3 font-medium">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {batches.map((batch) => (
-                  <tr key={batch.batch_id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-800">#{batch.batch_id}</td>
-                    <td className="px-4 py-3 text-gray-700">{batch.product_title || 'Unknown'}</td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-1 bg-gray-200 rounded text-xs text-gray-700">
-                        {batch.color || 'Default'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right text-gray-600">{batch.quantity_received}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-800">{batch.remaining_quantity}</td>
-                    <td className="px-4 py-3 text-right text-gray-700">Kshs {Number(batch.buying_price).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right font-medium text-gray-800">
-                      Kshs {(batch.remaining_quantity * batch.buying_price).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">{new Date(batch.date_received).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
