@@ -25,6 +25,7 @@ import {
   updateStockForVariant,
   updateVariantColor,
   toggleProductVisibility,
+  migrateProductsToBatches,
 } from "../controllers/productController.js";
 
 import { getBatchesForVariant, getAverageCostFromBatches, getAllBatches } from "../services/product.js";
@@ -72,6 +73,14 @@ router.post(
   verifyToken, 
   verifyAdmin, 
   receiveStockForVariant 
+);
+
+// Migrate existing products to batches (admin only)
+router.post(
+  "/migrate-to-batches",
+  verifyToken,
+  verifyAdmin,
+  migrateProductsToBatches
 );
 
 // Get all batches for a variant

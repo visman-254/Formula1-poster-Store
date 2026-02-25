@@ -742,9 +742,7 @@ export const receiveStockForVariant = async (variantId, quantityReceived, buying
     const currentStock = variantRows[0].stock || 0;
     const newTotalStock = currentStock + quantityReceived;
     
-    // Update variant stock only - do NOT update buying_price
-    // Batches now track individual purchase prices for FIFO
-    // The variant.buying_price should be set manually in Edit Product if needed
+    // Update variant stock
     await connection.execute(
       'UPDATE product_variants SET stock = ? WHERE variant_id = ?',
       [newTotalStock, variantId]
@@ -755,6 +753,30 @@ export const receiveStockForVariant = async (variantId, quantityReceived, buying
       'INSERT INTO product_batches (variant_id, quantity_received, buying_price, remaining_quantity) VALUES (?, ?, ?, ?)',
       [variantId, quantityReceived, buyingPrice, quantityReceived]
     );
+    
+    // Calculate new WAC and update buying_price in product_variants
+    const [batches] = await connection.execute(
+      `SELECT remaining_quantity, buying_price 
+       FROM product_batches 
+       WHERE variant_id = ? AND remaining_quantity > 0`,
+      [variantId]
+    );
+    
+    if (batches.length > 0) {
+      let totalCost = 0;
+      let totalQty = 0;
+      batches.forEach(batch => {
+        totalCost += batch.remaining_quantity * batch.buying_price;
+        totalQty += batch.remaining_quantity;
+      });
+      const newWAC = totalQty > 0 ? totalCost / totalQty : 0;
+      
+      // Update the variant's buying_price to WAC
+      await connection.execute(
+        'UPDATE product_variants SET buying_price = ? WHERE variant_id = ?',
+        [newWAC, variantId]
+      );
+    }
     
     await connection.commit();
     
@@ -1025,6 +1047,62 @@ export const updateBatchRemaining = async (batchId, remainingQuantity) => {
   } catch (err) {
     console.error("Error updating batch remaining:", err);
     throw err;
+  }
+};
+
+// Migrate existing products to batch records
+// Creates a batch for each variant that has stock but no batch records
+export const migrateExistingProductsToBatches = async () => {
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+    
+    // Find all variants with stock > 0 that don't have any batch records
+    const [variantsWithoutBatches] = await connection.execute(`
+      SELECT pv.variant_id, pv.product_id, pv.stock, pv.buying_price, p.title
+      FROM product_variants pv
+      JOIN products p ON pv.product_id = p.product_id
+      WHERE pv.stock > 0
+      AND p.is_deleted = FALSE
+      AND NOT EXISTS (
+        SELECT 1 FROM product_batches pb 
+        WHERE pb.variant_id = pv.variant_id 
+        AND pb.remaining_quantity > 0
+      )
+    `);
+    
+    let created = 0;
+    let skipped = 0;
+    
+    for (const variant of variantsWithoutBatches) {
+      if (variant.stock > 0 && variant.buying_price > 0) {
+        // Create a batch record with current stock and buying_price
+        await connection.execute(
+          `INSERT INTO product_batches (variant_id, quantity_received, buying_price, remaining_quantity) 
+           VALUES (?, ?, ?, ?)`,
+          [variant.variant_id, variant.stock, variant.buying_price, variant.stock]
+        );
+        created++;
+        console.log(`Created batch for variant ${variant.variant_id} (${variant.title}): ${variant.stock} units @ ${variant.buying_price}`);
+      } else {
+        skipped++;
+      }
+    }
+    
+    await connection.commit();
+    
+    return {
+      success: true,
+      created,
+      skipped,
+      message: `Migration complete: Created ${created} batch(es), skipped ${skipped} (no stock or no buying price)`
+    };
+  } catch (err) {
+    await connection.rollback();
+    console.error("Error migrating products to batches:", err);
+    throw err;
+  } finally {
+    connection.release();
   }
 };
 

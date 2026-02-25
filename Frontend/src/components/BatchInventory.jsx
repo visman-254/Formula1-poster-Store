@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchAllBatches } from '../api/batchApi';
+import { fetchAllBatches, migrateProductsToBatches } from '../api/batchApi';
 
 const BatchInventory = () => {
   const [batches, setBatches] = useState([]);
@@ -7,8 +7,27 @@ const BatchInventory = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('summary');
+  const [migrating, setMigrating] = useState(false);
 
   const token = localStorage.getItem('token');
+
+  const handleMigrate = async () => {
+    if (!window.confirm('This will create batch records for all products that have stock but no batches. Continue?')) {
+      return;
+    }
+    try {
+      setMigrating(true);
+      const result = await migrateProductsToBatches(token);
+      alert(result.message);
+      // Reload batches
+      const data = await fetchAllBatches(token);
+      setBatches(data);
+    } catch (err) {
+      alert('Migration failed: ' + err.message);
+    } finally {
+      setMigrating(false);
+    }
+  };
 
   useEffect(() => {
     const loadBatches = async () => {
@@ -88,13 +107,37 @@ const BatchInventory = () => {
         <h2 className="text-xl font-semibold text-gray-800">
           Batch Inventory - Remaining Stock by Product
         </h2>
-        <input
-          type="text"
-          placeholder="Search product or variant..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 w-full md:w-64"
-        />
+        <div className="flex flex-wrap gap-2 items-center">
+          <button
+            onClick={handleMigrate}
+            disabled={migrating}
+            className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:bg-amber-400"
+          >
+            {migrating ? 'Migrating...' : 'Migrate Existing Products'}
+          </button>
+          {viewMode === 'summary' ? (
+            <button
+              onClick={() => setViewMode('detailed')}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+            >
+              View Individual Batches Details
+            </button>
+          ) : (
+            <button
+              onClick={() => setViewMode('summary')}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+            >
+              Back to Summary
+            </button>
+          )}
+          <input
+            type="text"
+            placeholder="Search product or variant..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 w-full md:w-64"
+          />
+        </div>
       </div>
 
       {/* Summary Cards - Grey/White/Black */}
@@ -159,17 +202,7 @@ const BatchInventory = () => {
         </table>
       </div>
 
-      {/* Toggle to Detailed View */}
-      {viewMode === 'summary' && filteredProducts.length > 0 && (
-        <div className="mt-4 text-center">
-          <button
-            onClick={() => setViewMode('detailed')}
-            className="text-gray-600 hover:text-gray-800 text-sm underline"
-          >
-            View Individual Batches Details
-          </button>
-        </div>
-      )}
+      {/* Toggle to Detailed View - Removed, now handled by button above */}
 
       {viewMode === 'detailed' && (
         <div className="mt-6">

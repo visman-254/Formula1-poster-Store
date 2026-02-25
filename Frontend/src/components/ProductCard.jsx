@@ -377,11 +377,9 @@ const EditProductModal = ({ product, onUpdated, setIsEditing, user, token }) => 
 
     useEffect(() => {
         if (selectedVariant) {
-            const finalPrice = calculateSellingPrice(
-                selectedVariant.buying_price,
-                selectedVariant.profit_margin,
-                selectedVariant.discount
-            );
+            // Use the stored price from database as the selling price
+            // Only recalculate if user has manually changed values
+            const storedPrice = selectedVariant.price || 0;
             setVariantForm({
                 variant_id: selectedVariant.variant_id,
                 buying_price: selectedVariant.buying_price || "",
@@ -389,7 +387,7 @@ const EditProductModal = ({ product, onUpdated, setIsEditing, user, token }) => 
                 discount: selectedVariant.discount || "",
                 variant_image: null,
                 color: selectedVariant.color || "",
-                final_price: finalPrice
+                final_price: storedPrice // Use stored price, not calculated
             });
             setStockUpdateForm({
                 newStockQuantity: selectedVariant.stock || ""
@@ -887,7 +885,7 @@ const EditProductModal = ({ product, onUpdated, setIsEditing, user, token }) => 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="buying_price" className="text-black dark:text-white">Buying Price</Label>
+                                            <Label htmlFor="buying_price" className="text-black dark:text-white">Buying Price (Cost)</Label>
                                             <Input
                                                 id="buying_price"
                                                 name="buying_price"
@@ -897,9 +895,14 @@ const EditProductModal = ({ product, onUpdated, setIsEditing, user, token }) => 
                                                 required
                                                 className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white"
                                             />
+                                            {selectedVariant?.wac > 0 && (
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                    WAC: Kshs {Number(selectedVariant.wac).toFixed(2)} | Stock Value: Kshs {Number(selectedVariant.stock_value || 0).toFixed(2)}
+                                                </p>
+                                            )}
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="profit_margin" className="text-black dark:text-white">Profit Margin (Cash)</Label>
+                                            <Label htmlFor="profit_margin" className="text-black dark:text-white">Profit Margin (Selling - Cost)</Label>
                                             <Input
                                                 id="profit_margin"
                                                 name="profit_margin"
@@ -909,6 +912,9 @@ const EditProductModal = ({ product, onUpdated, setIsEditing, user, token }) => 
                                                 required
                                                 className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white"
                                             />
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                Current: Kshs {Number(variantForm.final_price - variantForm.buying_price).toFixed(2)}
+                                            </p>
                                         </div>
                                     </div>
                                     

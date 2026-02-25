@@ -18,6 +18,7 @@ import {
   permanentlyDeleteProduct,
    updateStockForVariant as updateStockForVariantService,
    toggleProductVisibility as toggleProductVisibilityService,
+  migrateExistingProductsToBatches,
 } from "../services/product.js";
 
 import { addProductImages } from "../services/gallery.js";
@@ -491,6 +492,19 @@ export const receiveStockForVariant = async (req, res) => {
   } catch (err) {
     console.error("Error receiving stock for variant:", err);
     res.status(500).json({ error: err.message || "Failed to receive stock" });
+  }
+};
+
+// Migration controller - creates batch records for existing products
+export const migrateProductsToBatches = async (req, res) => {
+  try {
+    if (req.user?.role !== "admin") return res.status(403).json({ error: "Admin only" });
+
+    const result = await migrateExistingProductsToBatches();
+    res.json(result);
+  } catch (err) {
+    console.error("Error migrating products to batches:", err);
+    res.status(500).json({ error: err.message || "Failed to migrate products" });
   }
 };
 
