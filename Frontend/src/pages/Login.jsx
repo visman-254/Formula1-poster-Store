@@ -18,6 +18,7 @@ const location = useLocation();
 
 const [showPassword, setShowPassword] = useState(false);
 const [expiredMessage, setExpiredMessage] = useState("");
+const [loading, setLoading] = useState(false);
 
 useEffect(() => {
 const msg = sessionStorage.getItem("expiredMessage");
@@ -34,6 +35,7 @@ validateLogin
 
 const handleLogin = async (formValues) => {
 try {
+setLoading(true);
 const result = await login(formValues);
 if (!result.success) {
 toast.error(result.message || "Invalid username or password");
@@ -43,6 +45,8 @@ navigate(result.user.role === "admin" ? "/admin" : "/");
 } catch (err) {
 console.error("Login failed", err);
 toast.error("Invalid username or password");
+} finally {
+setLoading(false);
 }
 };
 
@@ -103,8 +107,8 @@ return ( <div className="login-container">
 
           
 
-          <Button type="submit" className="login-button w-full dark:text-white">
-            Login
+          <Button type="submit" className="login-button w-full dark:text-white" disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
           </Button>
         </form>
         <div className="mt-4 text-center text-sm">
