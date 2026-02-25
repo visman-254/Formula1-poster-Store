@@ -17,6 +17,7 @@ import { FaBoxOpen } from "react-icons/fa6";
 import { HiUsers } from "react-icons/hi2";
 import { GiArrowed } from "react-icons/gi";
 import { GiArrowWings } from "react-icons/gi";
+import { toast } from "sonner";
 import AnalyticsDay from "./AnalyticsDay";
 import AnalyticsProfit from "./AnalyticsProfit";
 import AdminProductAnalytics from "./AdminProductAnalytics";
@@ -89,6 +90,8 @@ export default function AdminHome({ onNavigate }) {
       });
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
+      // Show error toast notification
+      toast.error("Failed to load dashboard stats. Showing zero values.");
       // Set default values on error - showing actual zeros when no data
       setStats({
         totalRevenue: 0,
