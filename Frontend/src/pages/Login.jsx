@@ -8,6 +8,7 @@ import { useUser } from "../context/UserContext";
 import { useForm } from "../hooks/useForm";
 import { validateLogin } from "../utils/validators";
 import { Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 import "./Login.css";
 
 export default function Login() {
@@ -33,11 +34,15 @@ validateLogin
 
 const handleLogin = async (formValues) => {
 try {
-const loggedInUser = await login(formValues);
-navigate(loggedInUser.role === "admin" ? "/admin" : "/");
+const result = await login(formValues);
+if (!result.success) {
+toast.error(result.message || "Invalid username or password");
+return;
+}
+navigate(result.user.role === "admin" ? "/admin" : "/");
 } catch (err) {
 console.error("Login failed", err);
-alert("Invalid username or password");
+toast.error("Invalid username or password");
 }
 };
 
