@@ -111,7 +111,7 @@ const BatchInventory = () => {
   return (
     <div className="batch-inventory">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <h2 className="text-xl font-semibold text-gray-800">
+        <h2 className="text-xl font-semibold text-gray-100">
           Batch Inventory - Remaining Stock by Product
         </h2>
         <div className="flex flex-wrap gap-2 items-center">
