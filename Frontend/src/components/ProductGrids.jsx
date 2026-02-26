@@ -5,11 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import GlassmorphicContainer from "./GlassmorphicContainer";
 import API_BASE from "../config";
+import { ScanBarcode, X } from "lucide-react";
+import StockReceivePage from "./StockReceivePage";
 
 const ProductGrids = () => {
   const [products, setProducts] = useState([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showScanModal, setShowScanModal] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -81,12 +84,25 @@ const ProductGrids = () => {
     <GlassmorphicContainer>
       <Card className="bg-transparent border-0 shadow-none">
         <CardContent className="p-0">
-          <Input
-            placeholder="Search products..."
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="mb-4 bg-white/50 dark:bg-black/50 border-gray-300 dark:border-gray-600 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-          />
+          {/* Header with Search and Scan Button */}
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex-1">
+              <Input
+                placeholder="Search products..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                className="bg-white/50 dark:bg-black/50 border-gray-300 dark:border-gray-600 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+              />
+            </div>
+            <button
+              onClick={() => setShowScanModal(true)}
+              className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+              title="Scan SKU to receive stock"
+            >
+              <ScanBarcode className="h-4 w-4" />
+              Scan SKU
+            </button>
+          </div>
 
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200/50 dark:divide-gray-700/50">
@@ -136,6 +152,28 @@ const ProductGrids = () => {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Stock Receive Modal */}
+      {showScanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-xl">
+            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Receive Stock by SKU/Barcode
+              </h2>
+              <button
+                onClick={() => setShowScanModal(false)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[calc(90vh-60px)]">
+              <StockReceivePage />
+            </div>
+          </div>
+        </div>
+      )}
     </GlassmorphicContainer>
   );
 };

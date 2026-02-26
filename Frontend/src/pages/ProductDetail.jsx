@@ -10,6 +10,8 @@ const ProductDetail = () => {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
+  const [selectedStorage, setSelectedStorage] = useState(null);
+  const [selectedRam, setSelectedRam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { addToCart } = useCart();
@@ -37,6 +39,13 @@ const ProductDetail = () => {
         
         if (productData.variants?.length > 0) {
           setSelectedVariant(productData.variants[0]);
+          // Initialize storage and ram from first variant
+          if (productData.variants[0].storage) {
+            setSelectedStorage(productData.variants[0].storage);
+          }
+          if (productData.variants[0].ram) {
+            setSelectedRam(productData.variants[0].ram);
+          }
         }
       } catch (err) {
         console.error("Error fetching product:", err);
@@ -168,7 +177,52 @@ const ProductDetail = () => {
   // Handle variant selection
   const handleVariantSelect = useCallback((variant) => {
     setSelectedVariant(variant);
+    // Also update storage and ram selection
+    if (variant.storage) setSelectedStorage(variant.storage);
+    if (variant.ram) setSelectedRam(variant.ram);
   }, []);
+
+  // Get unique storage values from variants
+  const uniqueStorages = useMemo(() => {
+    if (!product?.variants) return [];
+    const storages = [...new Set(product.variants.map(v => v.storage).filter(s => s))];
+    return storages.sort((a, b) => {
+      const aNum = parseInt(a) || 0;
+      const bNum = parseInt(b) || 0;
+      return aNum - bNum;
+    });
+  }, [product?.variants]);
+
+  // Get unique RAM values from variants
+  const uniqueRams = useMemo(() => {
+    if (!product?.variants) return [];
+    const rams = [...new Set(product.variants.map(v => v.ram).filter(r => r))];
+    return rams.sort((a, b) => {
+      const aNum = parseInt(a) || 0;
+      const bNum = parseInt(b) || 0;
+      return aNum - bNum;
+    });
+  }, [product?.variants]);
+
+  // Check if product has storage/ram variants (different from just color)
+  const hasStorageRamVariants = uniqueStorages.length > 0 || uniqueRams.length > 0;
+
+  // Filter variants based on selected storage and ram
+  const filteredVariants = useMemo(() => {
+    if (!product?.variants) return [];
+    return product.variants.filter(variant => {
+      if (selectedStorage && variant.storage !== selectedStorage) return false;
+      if (selectedRam && variant.ram !== selectedRam) return false;
+      return true;
+    });
+  }, [product?.variants, selectedStorage, selectedRam]);
+
+  // Auto-select first variant when storage/ram changes
+  useEffect(() => {
+    if (filteredVariants.length > 0 && (!selectedVariant || !filteredVariants.find(v => v.variant_id === selectedVariant.variant_id))) {
+      setSelectedVariant(filteredVariants[0]);
+    }
+  }, [filteredVariants]);
 
   // Handle add to cart
   const handleAddToCart = useCallback(() => {
@@ -422,32 +476,128 @@ const ProductDetail = () => {
             {/* Variant Selection - Only show for non-bundle products */}
             {!product.is_bundle && product.variants && product.variants.length > 0 && (
               <div className="flex flex-col items-center lg:items-start gap-3">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                  Select Color:
-                </h3>
-                <div className="modern-color-picker" role="radiogroup" aria-label="Product color options">
-                  {product.variants.map((variant) => {
-                    const isSelected = selectedVariant.variant_id === variant.variant_id;
-                    return (
-                      <button
-                        key={variant.variant_id}
-                        onClick={() => handleVariantSelect(variant)}
-                        className={`color-diamond ${isSelected ? "is-selected" : ""}`}
-                        style={{ 
-                          background: variant.color.toLowerCase()
-                        }}
-                        title={variant.color}
-                        aria-label={`Select ${variant.color} variant`}
-                        role="radio"
-                        aria-checked={isSelected}
-                      >
-                        {isSelected && (
-                          <span className="selection-indicator" aria-hidden="true">✓</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                {/* Storage and RAM Selection - If product has storage/ram variants */}
+                {hasStorageRamVariants && (
+                  <div className="w-full space-y-3">
+                    {/* Storage Selection */}
+                    {uniqueStorages.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                          Select Storage:
+                        </h3>
+                        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Storage options">
+                          {uniqueStorages.map((storage) => (
+                            <button
+                              key={storage}
+                              onClick={() => setSelectedStorage(storage)}
+                              className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                                selectedStorage === storage
+                                  ? 'border-blue-500 bg-blue-500 text-white'
+                                  : 'border-gray-300 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500'
+                              }`}
+                              aria-label={`Select ${storage} storage`}
+                              aria-checked={selectedStorage === storage}
+                              role="radio"
+                            >
+                              {storage}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* RAM Selection */}
+                    {uniqueRams.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                          Select RAM:
+                        </h3>
+                        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="RAM options">
+                          {uniqueRams.map((ram) => (
+                            <button
+                              key={ram}
+                              onClick={() => setSelectedRam(ram)}
+                              className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                                selectedRam === ram
+                                  ? 'border-blue-500 bg-blue-500 text-white'
+                                  : 'border-gray-300 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500'
+                              }`}
+                              aria-label={`Select ${ram} RAM`}
+                              aria-checked={selectedRam === ram}
+                              role="radio"
+                            >
+                              {ram}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Color Selection - Show if there are colors or no storage/ram */}
+                {(!hasStorageRamVariants || (uniqueStorages.length === 0 && uniqueRams.length === 0)) && (
+                  <>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                      Select Color:
+                    </h3>
+                    <div className="modern-color-picker" role="radiogroup" aria-label="Product color options">
+                      {product.variants.map((variant) => {
+                        const isSelected = selectedVariant?.variant_id === variant.variant_id;
+                        return (
+                          <button
+                            key={variant.variant_id}
+                            onClick={() => handleVariantSelect(variant)}
+                            className={`color-diamond ${isSelected ? "is-selected" : ""}`}
+                            style={{ 
+                              background: variant.color?.toLowerCase() || '#ccc'
+                            }}
+                            title={variant.color || 'Default'}
+                            aria-label={`Select ${variant.color} variant`}
+                            role="radio"
+                            aria-checked={isSelected}
+                          >
+                            {isSelected && (
+                              <span className="selection-indicator" aria-hidden="true">✓</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+
+                {/* Color Selection - Show after storage/ram if product has both */}
+                {hasStorageRamVariants && filteredVariants.length > 0 && uniqueStorages.length > 0 && uniqueRams.length > 0 && (
+                  <>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                      Select Color:
+                    </h3>
+                    <div className="modern-color-picker" role="radiogroup" aria-label="Product color options">
+                      {filteredVariants.map((variant) => {
+                        const isSelected = selectedVariant?.variant_id === variant.variant_id;
+                        return (
+                          <button
+                            key={variant.variant_id}
+                            onClick={() => handleVariantSelect(variant)}
+                            className={`color-diamond ${isSelected ? "is-selected" : ""}`}
+                            style={{ 
+                              background: variant.color?.toLowerCase() || '#ccc'
+                            }}
+                            title={variant.color || 'Default'}
+                            aria-label={`Select ${variant.color} variant`}
+                            role="radio"
+                            aria-checked={isSelected}
+                          >
+                            {isSelected && (
+                              <span className="selection-indicator" aria-hidden="true">✓</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

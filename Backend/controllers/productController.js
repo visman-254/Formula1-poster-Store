@@ -515,7 +515,7 @@ export const updateVariantById = async (req, res) => {
     }
 
     const { variantId } = req.params;
-    const { buying_price, profit_margin, discount, price } = req.body;
+    const { buying_price, profit_margin, discount, price, storage, ram, product_code } = req.body;
     const image = req.file;
 
     const fieldsToUpdate = {};
@@ -523,6 +523,9 @@ export const updateVariantById = async (req, res) => {
     if (profit_margin) fieldsToUpdate.profit_margin = profit_margin;
     if (discount) fieldsToUpdate.discount = discount;
     if (price) fieldsToUpdate.price = price;
+    if (storage !== undefined) fieldsToUpdate.storage = storage;
+    if (ram !== undefined) fieldsToUpdate.ram = ram;
+    if (product_code !== undefined) fieldsToUpdate.product_code = product_code;
     if (image) fieldsToUpdate.image = `uploads/images/${image.filename}`;
 
     if (Object.keys(fieldsToUpdate).length === 0) {

@@ -65,6 +65,8 @@ const AddProductForm = () => {
   const [variants, setVariants] = useState([
     {
       color: "#000000", 
+      storage: "", // Storage (e.g., 128GB, 256GB)
+      ram: "", // RAM (e.g., 4GB, 8GB)
       buying_price: "",
       profit_margin: "",
       discount: "",
@@ -73,6 +75,7 @@ const AddProductForm = () => {
       imagePreview: null,
       final_price: "0",
       imeis: "", // IMEI numbers for this variant (comma or newline separated)
+      product_code: "", // SKU/Barcode for this variant
     },
   ]);
   
@@ -170,6 +173,8 @@ const AddProductForm = () => {
       ...variants,
       {
         color: "#000000", 
+        storage: "",
+        ram: "",
         buying_price: "",
         profit_margin: "",
         discount: "",
@@ -525,8 +530,95 @@ Bluetooth 5.3"
                           </div>
 
                           <div className="space-y-2">
+                            <Label htmlFor={`storage-${index}`}>Storage</Label>
+                            <Input 
+                              id={`storage-${index}`} 
+                              name="storage" 
+                              type="text" 
+                              value={variant.storage || ''} 
+                              onChange={(e) => handleVariantChange(index, e)} 
+                              placeholder="e.g., 256GB"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor={`ram-${index}`}>RAM</Label>
+                            <Input 
+                              id={`ram-${index}`} 
+                              name="ram" 
+                              type="text" 
+                              value={variant.ram || ''} 
+                              onChange={(e) => handleVariantChange(index, e)} 
+                              placeholder="e.g., 8GB"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
                             <Label htmlFor={`stock-${index}`}>Stock</Label>
                             <Input id={`stock-${index}`} name="stock" type="number" value={variant.stock} onChange={(e) => handleVariantChange(index, e)} required />
+                          </div>
+                          
+                          {/* SKU/Barcode Input */}
+                          <div className="space-y-2">
+                            <Label htmlFor={`product_code-${index}`}>SKU / Barcode (Optional)</Label>
+                            <div className="flex gap-2">
+                              <Input 
+                                id={`product_code-${index}`} 
+                                name="product_code" 
+                                type="text" 
+                                value={variant.product_code || ''} 
+                                onChange={(e) => handleVariantChange(index, e)} 
+                                placeholder="e.g., S26-BLK-256-8GB"
+                                className="font-mono text-sm"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  // Auto-generate SKU based on product name, color, storage, and RAM
+                                  const prefix = productData.title ? productData.title.substring(0, 4).toUpperCase().replace(/[^A-Z0-9]/g, '') : 'PRD';
+                                  
+                                  // Handle color - could be hex code like #000000 or color name
+                                  let colorCode = '';
+                                  if (variant.color) {
+                                    if (variant.color.startsWith('#')) {
+                                      // It's a hex code - convert to color name
+                                      const hexColors = {
+                                        '#000000': 'BLK', '#007bff': 'BLU', '#ff0000': 'RED', 
+                                        '#00ff00': 'GRN', '#ffff00': 'YLW', '#ff00ff': 'MGN',
+                                        '#00ffff': 'CYN', '#ffffff': 'WHT', '#808080': 'GRY',
+                                        '#ffa500': 'ORN', '#800080': 'PUR', '#ffc0cb': 'PNK'
+                                      };
+                                      colorCode = hexColors[variant.color] || 'CL';
+                                    } else {
+                                      // It's a color name
+                                      colorCode = variant.color.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, '');
+                                    }
+                                  }
+                                  colorCode = colorCode || 'NO';
+                                  
+                                  console.log('[SKU Generate] Color value:', variant.color, '-> Color code:', colorCode);
+                                  
+                                  const storageCode = variant.storage ? variant.storage.toUpperCase().replace(/[^A-Z0-9]/g, '') : '';
+                                  const ramCode = variant.ram ? variant.ram.toUpperCase().replace(/[^A-Z0-9]/g, '') : '';
+                                  
+                                  // Build SKU: PREFIX-COLOR-STORAGE-RAM (e.g., S26-BLK-256-8GB)
+                                  let generatedCode = `${prefix}-${colorCode}`;
+                                  if (storageCode) generatedCode += `-${storageCode}`;
+                                  if (ramCode) generatedCode += `-${ramCode}`;
+                                  
+                                  console.log('[SKU Generate] Final SKU:', generatedCode);
+                                  
+                                  const newVariants = [...variants];
+                                  newVariants[index].product_code = generatedCode;
+                                  setVariants(newVariants);
+                                }}
+                                title="Auto-generate SKU"
+                              >
+                                Generate
+                              </Button>
+                            </div>
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor={`buying_price-${index}`}>Buying Price</Label>

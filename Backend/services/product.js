@@ -124,7 +124,7 @@ const groupProducts = async (rows) => {
 export const getProducts = async () => {
     try {
         const [rows] = await db.execute(`
-            SELECT p.*, c.category_name, pv.variant_id, pv.color, pv.price, pv.stock, pv.image, pv.buying_price, pv.profit_margin, pv.discount
+            SELECT p.*, c.category_name, pv.variant_id, pv.color, pv.storage, pv.ram, pv.price, pv.stock, pv.image, pv.buying_price, pv.profit_margin, pv.discount, pv.product_code
             FROM products p
             LEFT JOIN product_variants pv ON p.product_id = pv.product_id
             LEFT JOIN categories c ON p.category_id = c.category_id
@@ -154,12 +154,15 @@ export const getProductsAdmin = async () => {
                 c.category_name, 
                 pv.variant_id, 
                 pv.color, 
+                pv.storage,
+                pv.ram,
                 pv.price, 
                 pv.stock, 
                 pv.image, 
                 pv.buying_price, 
                 pv.profit_margin, 
                 pv.discount,
+                pv.product_code,
                 (SELECT COUNT(*) FROM imei_tracking it WHERE it.variant_id = pv.variant_id) as imei_count
             FROM products p
             LEFT JOIN product_variants pv ON p.product_id = pv.product_id
@@ -250,7 +253,7 @@ export const getProductsAdmin = async () => {
 export const getProductById = async (id) => {
     try {
         const [rows] = await db.execute(`
-            SELECT p.*, c.category_name, pv.variant_id, pv.color, pv.price, pv.stock, pv.image, pv.buying_price, pv.profit_margin, pv.discount
+            SELECT p.*, c.category_name, pv.variant_id, pv.color, pv.storage, pv.ram, pv.price, pv.stock, pv.image, pv.buying_price, pv.profit_margin, pv.discount, pv.product_code
             FROM products p
             LEFT JOIN product_variants pv ON p.product_id = pv.product_id
             LEFT JOIN categories c ON p.category_id = c.category_id
@@ -270,7 +273,7 @@ export const getProductById = async (id) => {
 export const getProductByVariantId = async (variantId) => {
     try {
         const [rows] = await db.execute(`
-            SELECT p.*, c.category_name, pv.variant_id, pv.color, pv.price, pv.stock, pv.image, pv.buying_price, pv.profit_margin, pv.discount
+            SELECT p.*, c.category_name, pv.variant_id, pv.color, pv.storage, pv.ram, pv.price, pv.stock, pv.image, pv.buying_price, pv.profit_margin, pv.discount, pv.product_code
             FROM products p
             JOIN product_variants pv ON p.product_id = pv.product_id
             LEFT JOIN categories c ON p.category_id = c.category_id
@@ -306,35 +309,25 @@ export const createProduct = async ({ title, description, category_id, variants,
 
         for (const variant of variantsToInsert) {
             await connection.execute(
-                "INSERT INTO product_variants (product_id, color, price, buying_price, profit_margin, discount, stock, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO product_variants (product_id, color, storage, ram, price, buying_price, profit_margin, discount, stock, image, product_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     productId,
                     variant.color || (is_bundle ? 'Bundle' : 'Default'),
+                    variant.storage || null,
+                    variant.ram || null,
                     variant.price || 0,
                     variant.buying_price || 0,
                     variant.profit_margin || 0,
                     variant.discount || 0,
                     variant.stock === undefined ? 1 : variant.stock,
-                    variant.image || null
+                    variant.image || null,
+                    variant.product_code || null
                 ]
             );
             
-            // If variant has stock > 0 and buying_price > 0, create a batch record
-            const stock = variant.stock === undefined ? 1 : variant.stock;
-            const buyingPrice = variant.buying_price || 0;
-            if (stock > 0 && buyingPrice > 0) {
-                // Get the last inserted variant_id
-                const [variantResult] = await connection.execute(
-                    "SELECT LAST_INSERT_ID() as variant_id"
-                );
-                const newVariantId = variantResult[0].variant_id;
-                
-                // Create initial batch record
-                await connection.execute(
-                    "INSERT INTO product_batches (variant_id, quantity_received, buying_price, remaining_quantity) VALUES (?, ?, ?, ?)",
-                    [newVariantId, stock, buyingPrice, stock]
-                );
-            }
+            // NOTE: Batch creation is now handled when receiving stock via Scan SKU
+            // We don't create batches automatically when adding a product anymore
+            // This allows all variants to be received in one batch
         }
 
         await connection.commit();

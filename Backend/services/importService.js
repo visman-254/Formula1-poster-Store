@@ -373,3 +373,117 @@ export const importInventoryFromCSV = async (csvData) => {
 
   return results;
 };
+
+// Import inventory by product_code (barcode) from CSV
+// Also supports adding IMEI numbers for individual unit tracking
+export const importInventoryByBarcode = async (csvData) => {
+  console.log('========== STARTING BARCODE-BASED IMPORT ==========');
+  
+  const lines = csvData.trim().split('\n');
+  const dataLines = lines.slice(1); // Skip header
+  
+  const results = {
+    success: 0,
+    failed: 0,
+    errors: [],
+    imeiAdded: 0
+  };
+
+  console.log(`Processing ${dataLines.length} rows from CSV`);
+
+  for (let rowIndex = 0; rowIndex < dataLines.length; rowIndex++) {
+    const line = dataLines[rowIndex];
+    
+    try {
+      const values = parseCSVLine(line);
+      
+      // CSV Format: product_code, stock, buying_price, imei_number (optional)
+      if (values.length < 2) {
+        results.failed++;
+        results.errors.push(`Row ${rowIndex + 1}: Not enough columns`);
+        continue;
+      }
+
+      const [productCode, stock, buyingPrice, imeiNumber] = values;
+      
+      if (!productCode) {
+        results.failed++;
+        results.errors.push(`Row ${rowIndex + 1}: Missing product code`);
+        continue;
+      }
+
+      // Find variant by product_code
+      const [variant] = await db.execute(
+        'SELECT pv.*, p.title FROM product_variants pv JOIN products p ON pv.product_id = p.product_id WHERE pv.product_code = ?',
+        [productCode.trim()]
+      );
+
+      if (variant.length === 0) {
+        results.failed++;
+        results.errors.push(`Row ${rowIndex + 1}: Product code "${productCode}" not found`);
+        continue;
+      }
+
+      const variantData = variant[0];
+      console.log(`Found variant: ${variantData.title} - ${variantData.color}`);
+
+      // Update stock if provided
+      if (stock !== undefined && stock !== '') {
+        const newStock = parseInt(stock);
+        await db.execute(
+          'UPDATE product_variants SET stock = stock + ? WHERE variant_id = ?',
+          [newStock, variantData.variant_id]
+        );
+        console.log(`  Added ${newStock} to stock (new total will be calculated)`);
+      }
+
+      // Update buying_price if provided
+      if (buyingPrice !== undefined && buyingPrice !== '') {
+        const newBuyingPrice = parseFloat(buyingPrice);
+        const profit = variantData.price - newBuyingPrice;
+        await db.execute(
+          'UPDATE product_variants SET buying_price = ?, profit_margin = ? WHERE variant_id = ?',
+          [newBuyingPrice, profit, variantData.variant_id]
+        );
+        console.log(`  Updated buying price to ${newBuyingPrice}`);
+      }
+
+      // Add IMEI if provided (for individual unit tracking)
+      if (imeiNumber && imeiNumber.trim()) {
+        const imei = imeiNumber.trim();
+        
+        // Check if IMEI already exists
+        const [existingImei] = await db.execute(
+          'SELECT imei_id FROM imei_tracking WHERE imei_number = ?',
+          [imei]
+        );
+
+        if (existingImei.length === 0) {
+          await db.execute(
+            'INSERT INTO imei_tracking (variant_id, imei_number, status) VALUES (?, ?, "available")',
+            [variantData.variant_id, imei]
+          );
+          results.imeiAdded++;
+          console.log(`  Added IMEI: ${imei}`);
+        } else {
+          console.log(`  IMEI ${imei} already exists, skipping`);
+        }
+      }
+
+      results.success++;
+      console.log(`✓ Row ${rowIndex + 1} processed successfully`);
+
+    } catch (error) {
+      console.error(`✗ Error row ${rowIndex + 1}:`, error.message);
+      results.failed++;
+      results.errors.push(`Row ${rowIndex + 1}: ${error.message}`);
+    }
+  }
+
+  console.log('\n========== BARCODE IMPORT COMPLETE ==========');
+  console.log(`✓ Success: ${results.success} items`);
+  console.log(`✓ IMEI added: ${results.imeiAdded}`);
+  console.log(`✗ Failed: ${results.failed} items`);
+  
+  return results;
+};

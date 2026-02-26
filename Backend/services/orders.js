@@ -34,6 +34,8 @@ const groupOrders = (rows, isAdmin = false) => {
         name: row.product_name,
         image: row.product_image,
         color: row.color,
+        storage: row.storage,
+        ram: row.ram,
         quantity: row.quantity,
         price: row.price,
         unit_buying_price: row.unit_buying_price,
@@ -79,7 +81,9 @@ export const getOrders = async (user_id) => {
       oi.product_name AS product_name, 
       oi.product_image AS product_image, 
       oi.imei_serial,
-      pv.color
+      pv.color,
+      pv.storage,
+      pv.ram
     FROM orders o
     LEFT JOIN order_items oi ON o.id = oi.order_id
     LEFT JOIN product_variants pv ON oi.variant_id = pv.variant_id
@@ -120,6 +124,8 @@ export const giveAllOrders = async () => {
       oi.product_image AS product_image,
       oi.imei_serial,
       pv.color,
+      pv.storage,
+      pv.ram,
       mt.phone AS mpesa_phone,
       mt.merchant_request_id AS mpesa_merchant_request_id
     FROM orders o

@@ -25,6 +25,7 @@ const PendingPayments = lazy(() => import("./pages/pendingpayments"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const PreOrderForm = lazy(() => import("./components/PreOrderForm")); // Add this import
 const POSPage = lazy(() => import("./components/POSPage")); // POS Checkout
+const StockReceivePage = lazy(() => import("./components/StockReceivePage")); // Stock Receive by SKU
 
 function App() {
   const location = useLocation();
@@ -67,6 +68,14 @@ function App() {
                     <POSPage />
                   </POSRoute>
                 } />
+                <Route
+                  path="/receive-stock"
+                  element={
+                    <AdminRoute>
+                      <StockReceivePage />
+                    </AdminRoute>
+                  }
+                />
                 <Route
                   path="/admin"
                   element={

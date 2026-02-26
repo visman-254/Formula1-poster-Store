@@ -7,10 +7,11 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { MoreVertical, SquarePen, CookingPot, Delete, X, Package } from "lucide-react";
+import { MoreVertical, SquarePen, CookingPot, Delete, X, Package, ScanBarcode, Camera } from "lucide-react";
 import { toast } from "sonner";
 import "./ProductCard.css";
 import API_BASE from "../config";
+import { lookupByBarcode, generateBarcode } from "../api/importApi";
 
 const calculateSellingPrice = (buying_price, profit_margin, discount) => {
     const bp = Number(buying_price) || 0;
@@ -21,7 +22,16 @@ const calculateSellingPrice = (buying_price, profit_margin, discount) => {
 
 const getVariantDisplay = (product, variant) => {
     if (variant.color && variant.color !== 'Default') {
-        return `${product.title} (${variant.color})`;
+        let display = `${product.title} (${variant.color})`;
+        if (variant.storage) display += ` ${variant.storage}`;
+        if (variant.ram) display += ` / ${variant.ram}`;
+        return display;
+    }
+    if (variant.storage || variant.ram) {
+        let display = `${product.title}`;
+        if (variant.storage) display += ` ${variant.storage}`;
+        if (variant.ram) display += ` / ${variant.ram}`;
+        return display;
     }
     return `${product.title} (Variant #${variant.variant_id})`;
 };
@@ -1118,6 +1128,16 @@ const ReceiveStockModal = ({ product, onUpdated, setIsReceivingStock, token }) =
     const [batches, setBatches] = useState([]);
     const [avgCost, setAvgCost] = useState(0);
     const [loadingBatches, setLoadingBatches] = useState(false);
+    
+    // Barcode scanning state
+    const [scanMode, setScanMode] = useState(false);
+    const [barcodeInput, setBarcodeInput] = useState('');
+    const [scannedProduct, setScannedProduct] = useState(null);
+    const [scanning, setScanning] = useState(false);
+    const [imeiNumbers, setImeiNumbers] = useState([]);
+    const [currentImei, setCurrentImei] = useState('');
+    const [loadingBarcode, setLoadingBarcode] = useState(false);
+    const [barcodeError, setBarcodeError] = useState(null);
 
     const selectedVariant = product.variants?.find(v => v.variant_id.toString() === selectedVariantId.toString());
     
@@ -1159,6 +1179,58 @@ const ReceiveStockModal = ({ product, onUpdated, setIsReceivingStock, token }) =
         setReceiveForm(prev => ({ ...prev, [name]: value }));
     };
 
+    // Handle barcode scan lookup
+    const handleBarcodeLookup = async () => {
+        if (!barcodeInput.trim()) return;
+        
+        setLoadingBarcode(true);
+        setBarcodeError(null);
+        
+        try {
+            const result = await lookupByBarcode(barcodeInput.trim(), token);
+            
+            if (result.found) {
+                if (result.type === 'product_code') {
+                    setScannedProduct(result.variant);
+                    setSelectedVariantId(result.variant.variant_id);
+                    setReceiveForm(prev => ({ ...prev, buyingPrice: result.variant.buying_price || '' }));
+                } else if (result.type === 'imei') {
+                    // It's an IMEI - show the variant info
+                    setScannedProduct({
+                        ...result.imei,
+                        product_name: result.imei.product_name,
+                        color: result.imei.color
+                    });
+                    setSelectedVariantId(result.imei.variant_id);
+                    setReceiveForm(prev => ({ ...prev, buyingPrice: result.imei.buying_price || '' }));
+                    toast.info(`IMEI found: ${result.imei.imei_number}`);
+                }
+            } else {
+                setBarcodeError('Product not found. Make sure the SKU/IMEI exists or generate one first.');
+            }
+        } catch (err) {
+            console.error('Barcode lookup error:', err);
+            setBarcodeError('Failed to lookup barcode: ' + err.message);
+        } finally {
+            setLoadingBarcode(false);
+        }
+    };
+
+    // Handle adding IMEI
+    const handleAddImei = () => {
+        if (currentImei.trim() && !imeiNumbers.includes(currentImei.trim())) {
+            setImeiNumbers([...imeiNumbers, currentImei.trim()]);
+            setCurrentImei('');
+        }
+    };
+
+    // Handle remove IMEI
+    const handleRemoveImei = (index) => {
+        const updated = [...imeiNumbers];
+        updated.splice(index, 1);
+        setImeiNumbers(updated);
+    };
+
     const handleReceiveStock = async (e) => {
         e.preventDefault();
         const quantity = Number(receiveForm.quantityReceived);
@@ -1181,14 +1253,32 @@ const ReceiveStockModal = ({ product, onUpdated, setIsReceivingStock, token }) =
             setBusy(true);
             const res = await axios.post(
                 `${API_BASE}/api/products/variants/${selectedVariantId}/receive-stock`,
-                { quantityReceived: quantity, buyingPrice: buyingPrice },
+                { quantityReceived: quantity, buyingPrice: buyingPrice, imeis: imeiNumbers },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
     
+            // Add IMEIs if provided
+            if (imeiNumbers.length > 0) {
+                try {
+                    const imeiText = imeiNumbers.join('\n');
+                    await axios.post(
+                        `${API_BASE}/api/imei/${selectedVariantId}/bulk`,
+                        { imeiText },
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                } catch (imeiErr) {
+                    console.warn('Failed to add IMEIs:', imeiErr.message);
+                }
+            }
+    
+            const productTitle = scannedProduct?.product_name || product.title;
             onUpdated?.(res.data.product);
             setReceiveForm({ quantityReceived: "", buyingPrice: "" });
+            setImeiNumbers([]);
+            setScannedProduct(null);
+            setBarcodeInput('');
             setIsReceivingStock(false);
-            toast.success(`Stock received: ${quantity} units added to "${product.title}"`);
+            toast.success(`Stock received: ${quantity} units added to "${productTitle}"${imeiNumbers.length > 0 ? ` and ${imeiNumbers.length} IMEIs tracked` : ''}`);
         } catch (err) {
             console.error("Receive Stock Error:", err.response?.data || err);
             toast.error(err.response?.data?.error || "Failed to receive stock");
@@ -1212,12 +1302,76 @@ const ReceiveStockModal = ({ product, onUpdated, setIsReceivingStock, token }) =
 
     return ReactDOM.createPortal(
         <div className="modal-overlay">
-            <div className="modal-content bg-white dark:bg-black dark:text-white border dark:border-gray-800">
+            <div className="modal-content bg-white dark:bg-black dark:text-white border dark:border-gray-800 max-w-4xl">
                 <h2 className="text-2xl font-bold mb-4 text-black dark:text-white">Receive Stock</h2>
                 <form
                     onSubmit={handleReceiveStock}
                     className="space-y-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-800"
                 >
+                    {/* Barcode Scanning Section */}
+                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-lg font-bold text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                                <ScanBarcode className="w-5 h-5" />
+                                Scan IMEI to Add Unit (Optional)
+                            </h4>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    setScanMode(!scanMode);
+                                    setScannedProduct(null);
+                                    setBarcodeInput('');
+                                    setBarcodeError(null);
+                                }}
+                                className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                            >
+                                {scanMode ? 'Hide' : 'Show'} Scanner
+                            </Button>
+                        </div>
+                        
+                        <p className="text-sm text-amber-600 dark:text-amber-400 mb-3">
+                            Scan an IMEI to auto-select the variant and track that specific unit. SKU is optional.
+                        </p>
+                        
+                        <div className="flex gap-2 mb-3">
+                            <Input
+                                type="text"
+                                value={barcodeInput}
+                                onChange={(e) => setBarcodeInput(e.target.value)}
+                                placeholder="Enter or scan IMEI number..."
+                                className="flex-1 bg-white dark:bg-gray-800 border-amber-300 dark:border-amber-700"
+                                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleBarcodeLookup())}
+                            />
+                            <Button
+                                type="button"
+                                onClick={handleBarcodeLookup}
+                                disabled={loadingBarcode || !barcodeInput.trim()}
+                                className="bg-amber-600 hover:bg-amber-700 text-white"
+                            >
+                                {loadingBarcode ? 'Searching...' : 'Search'}
+                            </Button>
+                        </div>
+                        
+                        {barcodeError && (
+                            <div className="p-2 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded text-red-600 dark:text-red-400 text-sm">
+                                {barcodeError}
+                            </div>
+                        )}
+                        
+                        {scannedProduct && (
+                            <div className="p-3 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded-lg">
+                                <p className="font-bold text-green-700 dark:text-green-300">
+                                    ✓ Found: {scannedProduct.product_name}
+                                </p>
+                                <p className="text-sm text-green-600 dark:text-green-400">
+                                    Variant: {scannedProduct.color} | Current Stock: {scannedProduct.stock || 0}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
                     <h4 className="text-lg font-bold text-blue-600 dark:text-blue-400">
                         Select Variant to Receive Stock
                     </h4>

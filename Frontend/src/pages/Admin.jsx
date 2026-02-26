@@ -47,6 +47,8 @@ import ImportData from "../components/ImportData";
 import ManageIMEIs from "../components/ManageIMEIs";
 import GlassmorphicContainer from "../components/GlassmorphicContainer";
 import BatchInventory from "../components/BatchInventory";
+import StandaloneBarcodeScanner from "../components/StandaloneBarcodeScanner";
+import StockReceivePage from "../components/StockReceivePage";
 
 import OrderTypeDailyComparison from "../components/OrderTypeDailyComparison";
 import SalesByOrderType from "../components/SalesByOrderType";
@@ -66,7 +68,20 @@ export default function AdminPage() {
   const [user, setUser] = useState(null);
   const [adminBackground, setAdminBackground] = useState(null);
   const [exportLoading, setExportLoading] = useState(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const navigate = useNavigate();
+
+  // Handle product found from scanner
+  const handleScannerProductFound = (result) => {
+    if (result) {
+      // Navigate to products and show that product
+      setActiveCategory("Products & Inventory");
+      setActiveTab("products");
+      // The products page would need to handle scrolling to the product
+      // For now just close scanner and go to products
+      setScannerOpen(false);
+    }
+  };
 
   const {
     newOrdersCount,
@@ -90,6 +105,7 @@ export default function AdminPage() {
           { value: "uncategorized", label: "Uncategorized",  icon: <HeartCrack size={16} /> },
           { value: "imei",          label: "IMEI Tracking",  icon: <Barcode size={16} /> },
           { value: "batch-inventory", label: "Batch Inventory", icon: <Package size={16} /> },
+          // Scan SKU is now in All Products page - removed from sidebar
         ];
       case "Orders & Sales":
         return [
@@ -466,6 +482,11 @@ export default function AdminPage() {
             {activeTab === "batch-inventory" && (
               <GlassmorphicContainer><BatchInventory /></GlassmorphicContainer>
             )}
+            {activeTab === "scan-sku" && (
+              <GlassmorphicContainer>
+                <StockReceivePage />
+              </GlassmorphicContainer>
+            )}
 
             {activeTab === "analytics" && (
               <GlassmorphicContainer>
@@ -564,6 +585,14 @@ export default function AdminPage() {
           </main>
         </div>
       </div>
+      
+      {/* Barcode Scanner Popup */}
+      {scannerOpen && (
+        <StandaloneBarcodeScanner 
+          onClose={() => setScannerOpen(false)}
+          onProductFound={handleScannerProductFound}
+        />
+      )}
     </div>
   );
 }

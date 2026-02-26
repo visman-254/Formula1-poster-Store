@@ -255,6 +255,12 @@ const OrderItems = () => {
                                     {item.color && (
                                       <span className="text-sm text-gray-500">({item.color})</span>
                                     )}
+                                    {item.storage && (
+                                      <span className="text-sm text-gray-500">{item.storage}</span>
+                                    )}
+                                    {item.ram && (
+                                      <span className="text-sm text-gray-500">/ {item.ram}</span>
+                                    )}
                                   </TableCell>
                                   <TableCell>
                                     {item.imei_serial ? (
