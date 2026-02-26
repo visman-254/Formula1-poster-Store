@@ -224,8 +224,12 @@ export const getProductsAdmin = async () => {
             if (row.variant_id) {
                 const existing = productMap.get(row.product_id).variants.find(v => v.variant_id === row.variant_id);
                 if (!existing) {
-                    const wac = wacByVariant[row.variant_id] || 0;
-                    const batchStock = stockFromBatches[row.variant_id] || 0;
+                    // Use WAC from batches if available, otherwise use buying_price from product_variants
+                    const wac = wacByVariant[row.variant_id] || row.buying_price || 0;
+                    // Use stock from product_variants table (the actual current stock)
+                    const variantStock = row.stock || 0;
+                    // Stock value = stock * buying_price (actual stock value)
+                    const stockValue = variantStock * (row.buying_price || 0);
                     productMap.get(row.product_id).variants.push({
                         variant_id: row.variant_id,
                         color: row.color,
@@ -234,7 +238,7 @@ export const getProductsAdmin = async () => {
                         image: row.image,
                         buying_price: row.buying_price,
                         wac: wac,
-                        stock_value: batchStock * wac,
+                        stock_value: stockValue,
                         profit_margin: row.profit_margin,
                         discount: row.discount,
                         imei_count: row.imei_count || 0

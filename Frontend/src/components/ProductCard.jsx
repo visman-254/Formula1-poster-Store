@@ -1606,6 +1606,10 @@ const ProductCard = ({ product, onDeleted, onUpdated }) => {
         }
     };
 
+    
+    // Calculate total stock from all variants
+    const totalStock = product.variants?.reduce((sum, v) => sum + (Number(v.stock) || 0), 0) || 0;
+    
     const displayVariant = product.variants?.[0];
 
     if (!displayVariant) {
@@ -1646,7 +1650,7 @@ const ProductCard = ({ product, onDeleted, onUpdated }) => {
     const discountedPrice = Number(displayVariant.price) || 0;
     const hasDiscount = Number(displayVariant.discount) > 0;
     
-    const stockValue = Number(displayVariant.stock || 0);
+    const stockValue = Number(totalStock || 0);
     const stockColor = stockValue < 0 ? "bg-red-600" : stockValue <= 5 ? "bg-yellow-600" : "bg-green-600";
     const isBackordered = stockValue < 0;
 
@@ -1799,7 +1803,8 @@ const ProductCard = ({ product, onDeleted, onUpdated }) => {
                     Kshs {displayVariant.wac ? Number(displayVariant.wac).toFixed(0) : '0'}
                 </td>
                 <td className="px-2 py-2 whitespace-nowrap text-black dark:text-white text-xs">
-                    Kshs {displayVariant.stock_value ? Number(displayVariant.stock_value).toFixed(0) : '0'}
+                    {/* Total stock value from all variants */}
+                    Kshs {product.variants?.reduce((sum, v) => sum + (Number(v.stock_value) || 0), 0).toFixed(0) || '0'}
                 </td>
                 <td className="px-2 py-2 whitespace-nowrap text-right text-xs font-medium">
                     <div className="flex flex-col gap-1">

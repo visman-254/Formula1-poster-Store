@@ -251,17 +251,18 @@ export const exportInventoryToExcel = async () => {
 
   rows.forEach(row => {
     const wac = wacByVariant[row.variant_id] || row.buying_price || 0;
-    const batchStock = stockFromBatches[row.variant_id] || 0;
-    const stockValue = batchStock * wac;
+    // Use actual stock from product_variants, not batch stock
+    const variantStock = row.stock || 0;
+    const stockValue = variantStock * (row.buying_price || 0);
     worksheet.addRow({
       variant_id: row.variant_id,
       title: row.title,
       color: row.color,
-      stock: row.stock || 0,
+      stock: variantStock,
       buying_price: row.buying_price ? Number(row.buying_price) : 0,
       price: row.price ? Number(row.price) : 0,
       stock_value: stockValue,
-      low_stock: row.stock < 5 ? 'LOW' : 'OK',
+      low_stock: variantStock < 5 ? 'LOW' : 'OK',
     });
   });
 
