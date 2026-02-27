@@ -50,6 +50,9 @@ export const getFullOrderDetails = async (order_id) => {
         p.title AS product_name,
         pv.image AS product_image,
         pv.color,
+        pv.storage,
+        pv.ram,
+        pv.product_code,
         p.is_bundle,
         p.bundle_of,
         mt.phone AS mpesa_phone,
@@ -75,7 +78,7 @@ export const getFullOrderDetails = async (order_id) => {
       for (const component of bundleComponents) {
         // Get details for each component
         const [compRows] = await db.execute(
-          `SELECT p.title AS product_name, pv.image AS product_image, pv.color, pv.buying_price, pv.discount
+          `SELECT p.title AS product_name, pv.image AS product_image, pv.color, pv.storage, pv.ram, pv.product_code, pv.buying_price, pv.discount
            FROM product_variants pv
            JOIN products p ON pv.product_id = p.product_id
            WHERE pv.variant_id = ?`,
@@ -88,6 +91,9 @@ export const getFullOrderDetails = async (order_id) => {
             name: comp.product_name,
             image: comp.product_image,
             color: comp.color,
+            storage: comp.storage,
+            ram: comp.ram,
+            product_code: comp.product_code,
             quantity: component.quantity * r.quantity, // Multiply by bundle quantity
             price: (r.price / bundleComponents.reduce((sum, c) => sum + c.quantity, 0)) * component.quantity, // Pro-rate price
             unit_buying_price: comp.buying_price,
@@ -104,6 +110,9 @@ export const getFullOrderDetails = async (order_id) => {
         name: r.product_name,
         image: r.product_image,
         color: r.color,
+        storage: r.storage,
+        ram: r.ram,
+        product_code: r.product_code,
         quantity: r.quantity,
         price: r.price,
         unit_buying_price: r.unit_buying_price,
@@ -146,6 +155,9 @@ export const getOrdersByUser = async (user_id) => {
         p.title AS product_name,
         pv.image AS product_image,
         pv.color,
+        pv.storage,
+        pv.ram,
+        pv.product_code,
         p.is_bundle,
         p.bundle_of
       FROM orders o
@@ -174,7 +186,7 @@ export const getOrdersByUser = async (user_id) => {
         const bundleComponents = JSON.parse(r.bundle_of);
         for (const component of bundleComponents) {
           const [compRows] = await db.execute(
-            `SELECT p.title AS product_name, pv.image AS product_image, pv.color, pv.buying_price, pv.discount
+            `SELECT p.title AS product_name, pv.image AS product_image, pv.color, pv.storage, pv.ram, pv.product_code, pv.buying_price, pv.discount
              FROM product_variants pv
              JOIN products p ON pv.product_id = p.product_id
              WHERE pv.variant_id = ?`,
@@ -187,6 +199,9 @@ export const getOrdersByUser = async (user_id) => {
               name: comp.product_name,
               image: comp.product_image,
               color: comp.color,
+              storage: comp.storage,
+              ram: comp.ram,
+              product_code: comp.product_code,
               quantity: component.quantity * r.quantity,
               price: (r.price / bundleComponents.reduce((sum, c) => sum + c.quantity, 0)) * component.quantity,
               unit_buying_price: comp.buying_price,
@@ -202,6 +217,9 @@ export const getOrdersByUser = async (user_id) => {
           name: r.product_name,
           image: r.product_image,
           color: r.color,
+          storage: r.storage,
+          ram: r.ram,
+          product_code: r.product_code,
           quantity: r.quantity,
           price: r.price,
           unit_buying_price: r.unit_buying_price,

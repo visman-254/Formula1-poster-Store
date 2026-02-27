@@ -179,7 +179,7 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
                 const priceSource = selectedVariant || {};
                 const originalPrice = (Number(priceSource.price) || 0) + (Number(priceSource.discount) || 0);
                 const hasDiscount = Number(priceSource.discount) > 0;
-                const isAdded = addedMap[product.product_id];
+                const isBundle = product.is_bundle;
 
                 return (
                   <div key={product.product_id} className="samsung-card">
@@ -218,21 +218,14 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
                         </div>
                       </div>
                     </Link>
-
-                    <div className="samsung-card-footer">
-                      <button
-                        className={`samsung-atc-btn ${isAdded ? "atc-success" : ""}`}
-                        onClick={() => handleAddToCart(product)}
-                      >
-                        {isAdded ? (
-                          <>
-                            <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                            Added
-                          </>
-                        ) : (
-                          "Add to Cart"
-                        )}
-                      </button>
+                    
+                    {/* View Details Button */}
+                    <div className="samsung-card-actions">
+                      <Link to={`/products/${product.product_id}`}>
+                        <Button className="w-full" size="sm">
+                          View Details
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 );

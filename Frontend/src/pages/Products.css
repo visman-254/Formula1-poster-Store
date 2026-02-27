@@ -358,6 +358,30 @@
   padding: 8px 14px 14px;
 }
 
+/* Card actions - View Details button */
+.samsung-card-actions {
+  padding: 0 14px 14px;
+}
+
+.samsung-card-actions .btn {
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: var(--sam-radius-sm);
+  border: none;
+  background: var(--sam-blue);
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.samsung-card-actions .btn:hover {
+  background: var(--sam-blue-light);
+}
+
 /* ══════════════════════════════════════════════════════════════
    ADD TO CART BUTTON
 ══════════════════════════════════════════════════════════════ */

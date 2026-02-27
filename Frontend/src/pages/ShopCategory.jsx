@@ -160,44 +160,18 @@ const ShopCategory = () => {
 
                 const originalPrice = (Number(selectedVariant.price) || 0) + (Number(selectedVariant.discount) || 0);
                 const hasDiscount = Number(selectedVariant.discount) > 0;
-                const isAdded = addedMap[product.product_id];
+                const isBundle = product.is_bundle;
 
                 return (
                   <div key={product.product_id} className="samsung-card">
-                    {/* Color Picker - only show if variants have colors */}
-                    {product.variants.some(v => v.color) && (
-                      <div className="samsung-color-picker">
-                        {product.variants.filter(v => v.color).map((variant) => {
-                          const isSelected = selectedVariant.variant_id === variant.variant_id;
-                        return (
-                          <button
-                            key={variant.variant_id}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleVariantChange(product.product_id, variant);
-                            }}
-                            className={`swatch-dot ${isSelected ? "swatch-active" : ""}`}
-                            style={{ background: variant.color?.toLowerCase() || "#ccc" }}
-                            title={variant.color}
-                          >
-                            {isSelected && (
-                              <svg viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            )}
-                          </button>
-                        );
-                        })}
-                      </div>
-                    )}
-
                     {!!hasDiscount && (
                       <div className="samsung-sale-badge">
                         <Tag className="badge-icon" />
                         SALE
                       </div>
                     )}
+
+                    <Link to={`/products/${product.product_id}`} className="samsung-card-link">
 
                     <Link to={`/products/${product.product_id}`} className="samsung-card-link">
                       <div className="samsung-card-img">
@@ -228,22 +202,6 @@ const ShopCategory = () => {
                         </div>
                       </div>
                     </Link>
-
-                    <div className="samsung-card-footer">
-                      <button
-                        className={`samsung-atc-btn ${isAdded ? "atc-success" : ""}`}
-                        onClick={() => handleAddToCart(product)}
-                      >
-                        {isAdded ? (
-                          <>
-                            <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                            Added
-                          </>
-                        ) : (
-                          "Add to Cart"
-                        )}
-                      </button>
-                    </div>
                   </div>
                 );
               })

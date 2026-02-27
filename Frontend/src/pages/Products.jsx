@@ -213,32 +213,6 @@ const Products = () => {
                   </span>
                 )}
 
-                {/* COLOR PICKER */}
-                {!isBundle && (
-                  <div className="absolute top-3 right-3 z-10">
-                    <div className="square-color-picker">
-                      {product.variants.map((variant) => (
-                        <button
-                          key={variant.variant_id}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleVariantChange(product.product_id, variant);
-                          }}
-                          className={`color-square ${
-                            selectedVariant.variant_id === variant.variant_id
-                              ? "is-selected"
-                              : ""
-                          }`}
-                          style={{
-                            backgroundColor: variant.color?.toLowerCase(),
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 <Link to={`/products/${product.product_id}`}>
                   <CardHeader>
                     <CardTitle className="text-sm line-clamp-2 h-10">
@@ -272,14 +246,17 @@ const Products = () => {
                   </CardContent>
                 </Link>
 
-                <CardFooter className="p-3 pt-1">
-                  <Button
-                    className="modern-cart-btn"
-                    onClick={() => handleAddToCart(product)}
-                  >
-                    Add to cart
-                  </Button>
-                </CardFooter>
+                {/* Only show Add to Cart for bundles - non-bundles go to ProductDetail */}
+                {isBundle && (
+                  <CardFooter className="p-3 pt-1">
+                    <Button
+                      className="modern-cart-btn"
+                      onClick={() => handleAddToCart(product)}
+                    >
+                      Add to cart
+                    </Button>
+                  </CardFooter>
+                )}
               </Card>
             );
           })}
