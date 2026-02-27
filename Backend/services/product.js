@@ -62,9 +62,12 @@ const groupProducts = async (rows) => {
     for (const product of productMap.values()) {
         for (const variant of variantRows) {
             if (variant.product_id === product.product_id) {
+                // FIX: Include storage and ram in the variant object
                 product.variants.push({
                     variant_id: variant.variant_id,
                     color: variant.color,
+                    storage: variant.storage,  // ← Add this line
+                    ram: variant.ram,          // ← Add this line
                     price: variant.price,
                     stock: variant.stock,
                     image: variant.image,

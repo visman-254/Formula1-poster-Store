@@ -32,13 +32,12 @@ const ShopCategory = () => {
   const [selectedCategory, setSelectedCategory] = useState(category);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [addedMap, setAddedMap] = useState({});
 
-  // Update selected category when URL param changes
   useEffect(() => {
     setSelectedCategory(category);
   }, [category]);
 
-  // Fetch products and categories
   useEffect(() => {
     const fetchCategoryProducts = async () => {
       setLoading(true);
@@ -47,15 +46,12 @@ const ShopCategory = () => {
         if (!selectedCategory) {
           res = await axios.get(`${API_BASE}/api/products`);
         } else {
-          res = await axios.get(
-            `${API_BASE}/api/products/category/name/${selectedCategory}`
-          );
+          res = await axios.get(`${API_BASE}/api/products/category/name/${selectedCategory}`);
         }
 
         setAllProducts(res.data);
         setFilteredProducts(res.data);
 
-        // Initialize default selected variants
         const initialVariants = {};
         res.data.forEach((product) => {
           if (product.variants?.length > 0) {
@@ -72,14 +68,12 @@ const ShopCategory = () => {
 
     fetchCategoryProducts();
 
-    // Fetch all categories for the sidebar
     axios
       .get(`${API_BASE}/api/products/categories`)
       .then((res) => setCategories(res.data))
       .catch((err) => console.error("Error fetching categories:", err));
   }, [selectedCategory]);
 
-  // Search filter
   useEffect(() => {
     if (!searchQuery.trim()) {
       setFilteredProducts(allProducts);
@@ -92,20 +86,18 @@ const ShopCategory = () => {
     }
   }, [searchQuery, allProducts]);
 
-  // Handlers
   const handleSearchChange = (e) => setSearchQuery(e.target.value);
 
   const handleVariantChange = (productId, variant) => {
-    setSelectedVariants((prev) => ({
-      ...prev,
-      [productId]: variant,
-    }));
+    setSelectedVariants((prev) => ({ ...prev, [productId]: variant }));
   };
 
   const handleAddToCart = (product) => {
     const selectedVariant = selectedVariants[product.product_id];
     if (selectedVariant) {
       addToCart({ ...product, ...selectedVariant });
+      setAddedMap((prev) => ({ ...prev, [product.product_id]: true }));
+      setTimeout(() => setAddedMap((prev) => ({ ...prev, [product.product_id]: false })), 1800);
     }
   };
 
@@ -114,57 +106,50 @@ const ShopCategory = () => {
   };
 
   return (
-    <div className="products-container">
-      {/* Search Section */}
-      <div className="search-section mb-4 px-4 md:px-8">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 h-3.5 w-3.5" />
-            <Input
-              type="text"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={handleSearchChange}
-              className="pl-8 pr-3 py-1 h-8 text-sm border border-gray-300 rounded-md focus:border-transparent dark:border-gray-600 dark:text-white w-48"
-            />
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-            {filteredProducts.length} {filteredProducts.length === 1 ? "item" : "items"}
-            {searchQuery && ` for "${searchQuery}"`}
-            {!searchQuery && ` in ${selectedCategory || "All Categories"}`}
-          </div>
+    <div className="samsung-products-page">
+      {/* Search Bar */}
+      <div className="samsung-search-bar">
+        <div className="search-input-wrap">
+          <Search className="search-icon-inner" />
+          <input
+            type="text"
+            placeholder="Search products…"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            className="samsung-search-input"
+          />
+          {searchQuery && (
+            <button className="search-clear" onClick={() => setSearchQuery("")}>✕</button>
+          )}
         </div>
+        <span className="results-count">
+          <span className="results-num">{filteredProducts.length}</span>
+          {filteredProducts.length === 1 ? " item" : " items"}
+          {searchQuery && <span className="results-query"> for &ldquo;{searchQuery}&rdquo;</span>}
+          {!searchQuery && <span> in {selectedCategory || "All Categories"}</span>}
+        </span>
       </div>
 
-      <div className="flex">
-        <SideMenu
-          onCategorySelect={handleCategorySelect}
-          selectedCategory={selectedCategory}
-        />
+      <div className="samsung-layout">
+        <SideMenu onCategorySelect={handleCategorySelect} selectedCategory={selectedCategory} />
 
-        <div className="flex-grow">
+        <div className="samsung-grid-wrap">
           {/* Promotional Banner */}
-          <PromotionalBanner displayLocation="shop_category_top" />
+          <div className="samsung-banner-inner">
+            <PromotionalBanner displayLocation="shop_category_top" />
+          </div>
 
-          {/* Updated grid to use pos-products-grid */}
-          <div className="pos-products-grid">
+          <div className="samsung-product-grid">
             {loading ? (
               Array.from({ length: 8 }).map((_, i) => (
-                <Card key={i} className="modern-card border-none bg-white dark:bg-black">
-                  <div className="pos-product-image-wrapper">
-                    <Skeleton className="w-full h-full" />
+                <div key={i} className="samsung-card-skeleton">
+                  <Skeleton className="skel-img" />
+                  <div className="skel-body">
+                    <Skeleton className="skel-title" />
+                    <Skeleton className="skel-price" />
+                    <Skeleton className="skel-btn" />
                   </div>
-                  <CardHeader>
-                    <Skeleton className="h-4 w-3/4 mb-2" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </CardHeader>
-                  <CardContent className="p-0 px-3 pb-2">
-                    <Skeleton className="h-4 w-1/3" />
-                  </CardContent>
-                  <CardFooter className="p-3 pt-1">
-                    <Skeleton className="h-9 w-full rounded-md" />
-                  </CardFooter>
-                </Card>
+                </div>
               ))
             ) : filteredProducts.length > 0 ? (
               filteredProducts.map((product) => {
@@ -173,51 +158,49 @@ const ShopCategory = () => {
                 const selectedVariant = selectedVariants[product.product_id];
                 if (!selectedVariant) return null;
 
-                const originalPrice =
-                  (Number(selectedVariant.price) || 0) +
-                  (Number(selectedVariant.discount) || 0);
+                const originalPrice = (Number(selectedVariant.price) || 0) + (Number(selectedVariant.discount) || 0);
                 const hasDiscount = Number(selectedVariant.discount) > 0;
+                const isAdded = addedMap[product.product_id];
 
                 return (
-                  <Card
-                    key={product.product_id}
-                    className="modern-card relative transition-all duration-300 ease-in-out hover:scale-105 border-none bg-white dark:bg-black group"
-                  >
-                    {/* Color Picker */}
-                    <div className="absolute top-3 right-3 z-10">
-                      <div className="square-color-picker">
-                        {product.variants.map((variant) => {
-                          const isSelected =
-                            selectedVariant.variant_id === variant.variant_id;
-                          return (
-                            <button
-                              key={variant.variant_id}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleVariantChange(product.product_id, variant);
-                              }}
-                              className={`color-square ${isSelected ? "is-selected" : ""}`}
-                              style={{ backgroundColor: variant.color.toLowerCase() }}
-                              title={variant.color}
-                            >
-                              <div className="color-filter"></div>
-                              {isSelected && <span className="selection-check">✓</span>}
-                            </button>
-                          );
+                  <div key={product.product_id} className="samsung-card">
+                    {/* Color Picker - only show if variants have colors */}
+                    {product.variants.some(v => v.color) && (
+                      <div className="samsung-color-picker">
+                        {product.variants.filter(v => v.color).map((variant) => {
+                          const isSelected = selectedVariant.variant_id === variant.variant_id;
+                        return (
+                          <button
+                            key={variant.variant_id}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleVariantChange(product.product_id, variant);
+                            }}
+                            className={`swatch-dot ${isSelected ? "swatch-active" : ""}`}
+                            style={{ background: variant.color?.toLowerCase() || "#ccc" }}
+                            title={variant.color}
+                          >
+                            {isSelected && (
+                              <svg viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </button>
+                        );
                         })}
                       </div>
-                    </div>
+                    )}
 
-                    {hasDiscount && (
-                      <div className="absolute top-3 left-3 z-10 bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                        <Tag className="w-3 h-3" />
+                    {!!hasDiscount && (
+                      <div className="samsung-sale-badge">
+                        <Tag className="badge-icon" />
                         SALE
                       </div>
                     )}
 
-                    <Link to={`/products/${product.product_id}`}>
-                      <div className="pos-product-image-wrapper">
+                    <Link to={`/products/${product.product_id}`} className="samsung-card-link">
+                      <div className="samsung-card-img">
                         <CompressedImage
                           src={selectedVariant.image}
                           alt={product.title}
@@ -227,65 +210,57 @@ const ShopCategory = () => {
                           quality={0.8}
                         />
                       </div>
-                      
-                      <CardHeader>
-                        <CardTitle className="text-sm font-medium line-clamp-2 h-10 overflow-hidden">
-                          {product.title}
-                        </CardTitle>
-                        <CardDescription className="product-description">
-                          <DescriptionText description={product.description} />
-                        </CardDescription>
-                      </CardHeader>
 
-                      <CardContent className="card-price font-semibold p-0 px-3 pb-2">
-                        {hasDiscount ? (
-                          <>
-                            <span className="text-muted-foreground text-sm line-through">
-                              Kshs {Number(originalPrice).toFixed(2)}
-                            </span>
-                            <span className="text-gray-600 dark:text-gray-300 ml-2">
-                              Kshs {Number(selectedVariant.price).toFixed(2)}
-                            </span>
-                          </>
-                        ) : (
-                          <span>Kshs {Number(selectedVariant.price).toFixed(2)}</span>
-                        )}
-                      </CardContent>
+                      <div className="samsung-card-body">
+                        <h3 className="samsung-card-title">{product.title}</h3>
+                        <p className="samsung-card-desc">
+                          <DescriptionText description={product.description} />
+                        </p>
+                        <div className="samsung-card-price">
+                          {hasDiscount ? (
+                            <>
+                              <span className="price-original">Kshs {Number(originalPrice).toFixed(2)}</span>
+                              <span className="price-current">Kshs {Number(selectedVariant.price).toFixed(2)}</span>
+                            </>
+                          ) : (
+                            <span className="price-current">Kshs {Number(selectedVariant.price).toFixed(2)}</span>
+                          )}
+                        </div>
+                      </div>
                     </Link>
 
-                    <CardFooter className="card-foter p-3 pt-1">
-                      <Button
-                        className="modern-cart-btn"
+                    <div className="samsung-card-footer">
+                      <button
+                        className={`samsung-atc-btn ${isAdded ? "atc-success" : ""}`}
                         onClick={() => handleAddToCart(product)}
                       >
-                        Add to cart
-                      </Button>
-                    </CardFooter>
-                  </Card>
+                        {isAdded ? (
+                          <>
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                            Added
+                          </>
+                        ) : (
+                          "Add to Cart"
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 );
               })
             ) : (
-              <div className="col-span-full text-center py-12">
-                <div className="max-w-md mx-auto">
-                  <Search className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    No products found
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {searchQuery
-                      ? `No products found matching "${searchQuery}". Try a different search term.`
-                      : `No products available in ${selectedCategory}.`}
-                  </p>
-                  {searchQuery && (
-                    <Button
-                      variant="outline"
-                      className="mt-4"
-                      onClick={() => setSearchQuery("")}
-                    >
-                      Clear search
-                    </Button>
-                  )}
-                </div>
+              <div className="samsung-empty">
+                <Search className="empty-icon" />
+                <p className="empty-title">No products found</p>
+                <p className="empty-sub">
+                  {searchQuery
+                    ? `No results matching "${searchQuery}"`
+                    : `No products available in ${selectedCategory}.`}
+                </p>
+                {searchQuery && (
+                  <button className="empty-clear-btn" onClick={() => setSearchQuery("")}>
+                    Clear search
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -305,11 +280,7 @@ const DescriptionText = ({ description }) => {
     <span>
       {expanded ? description : shortDesc}
       {!isShort && (
-        <button
-          type="button"
-          onClick={() => setExpanded(!expanded)}
-          className="see-more-btn"
-        >
+        <button type="button" onClick={() => setExpanded(!expanded)} className="see-more-btn">
           {expanded ? " See less" : " ...See more"}
         </button>
       )}

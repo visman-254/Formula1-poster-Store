@@ -10,6 +10,7 @@ const ProductDetail = () => {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
+  const [selectedColor, setSelectedColor] = useState(null);
   const [selectedStorage, setSelectedStorage] = useState(null);
   const [selectedRam, setSelectedRam] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,32 +21,22 @@ const ProductDetail = () => {
   const [galleryLoading, setGalleryLoading] = useState(true);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [addedToCart, setAddedToCart] = useState(false);
 
-  // Fetch product data
   useEffect(() => {
     window.scrollTo(0, 0);
-    
     const fetchProduct = async () => {
-      if (!id) {
-        setLoading(false);
-        setError("No product ID provided.");
-        return;
-      }
-
+      if (!id) { setLoading(false); setError("No product ID provided."); return; }
       try {
         const res = await axios.get(`${API_BASE}/api/products/${id}`);
         const productData = res.data;
+        console.log('ProductDetail - Product fetched:', { id: productData.product_id, title: productData.title, variants: productData.variants?.length, isBundle: productData.is_bundle });
         setProduct(productData);
-        
         if (productData.variants?.length > 0) {
           setSelectedVariant(productData.variants[0]);
-          // Initialize storage and ram from first variant
-          if (productData.variants[0].storage) {
-            setSelectedStorage(productData.variants[0].storage);
-          }
-          if (productData.variants[0].ram) {
-            setSelectedRam(productData.variants[0].ram);
-          }
+          if (productData.variants[0].color) setSelectedColor(productData.variants[0].color);
+          if (productData.variants[0].storage) setSelectedStorage(productData.variants[0].storage);
+          if (productData.variants[0].ram) setSelectedRam(productData.variants[0].ram);
         }
       } catch (err) {
         console.error("Error fetching product:", err);
@@ -54,1000 +45,1310 @@ const ProductDetail = () => {
         setLoading(false);
       }
     };
-
     fetchProduct();
   }, [id]);
 
-  // Fetch gallery images
   useEffect(() => {
     const fetchImages = async () => {
       if (!product?.product_id) return;
-      
       try {
         setGalleryLoading(true);
-        const res = await axios.get(
-          `${API_BASE}/api/gallery/${product.product_id}/images`
-        );
-        
+        const res = await axios.get(`${API_BASE}/api/gallery/${product.product_id}/images`);
         if (res.data?.length > 0) {
           setGalleryImages(res.data.map(img => img.image_url));
-        } else {
-          throw new Error("No gallery images found");
-        }
+        } else { throw new Error("No gallery images found"); }
       } catch (err) {
         console.warn("Falling back to variant images:", err);
-        
-        // IMPORTANT: For bundles, include bundle images first
         let images = [];
-        
-        if (product.is_bundle && product.bundleImages) {
-          // Add bundle images from backend formatProduct function
-          images.push(...product.bundleImages);
-        }
-        
-        // Then add variant images
+        if (!!product.is_bundle && product.bundleImages) images.push(...product.bundleImages);
         if (product.variants) {
           product.variants.forEach(variant => {
-            if (variant.image && !images.includes(variant.image)) {
-              images.push(variant.image);
-            }
+            if (variant.image && !images.includes(variant.image)) images.push(variant.image);
           });
         }
-        
-        // Finally add primary image if not already included
-        if (product.primaryImage && !images.includes(product.primaryImage)) {
-          images.push(product.primaryImage);
-        }
-        
+        if (product.primaryImage && !images.includes(product.primaryImage)) images.push(product.primaryImage);
         setGalleryImages(images);
       } finally {
         setGalleryLoading(false);
       }
     };
-
-    if (product) {
-      fetchImages();
-    }
+    if (product) fetchImages();
   }, [product]);
 
-  // Lightbox handlers (memoized to prevent unnecessary re-renders)
-  const openLightbox = useCallback((index) => {
-    setActiveImageIndex(index);
-    setIsLightboxOpen(true);
-  }, []);
+  const openLightbox = useCallback((index) => { setActiveImageIndex(index); setIsLightboxOpen(true); }, []);
+  const closeLightbox = useCallback(() => { setIsLightboxOpen(false); }, []);
+  const nextImage = useCallback((e) => { e?.stopPropagation(); setActiveImageIndex((prev) => (prev + 1) % galleryImages.length); }, [galleryImages.length]);
+  const prevImage = useCallback((e) => { e?.stopPropagation(); setActiveImageIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length); }, [galleryImages.length]);
 
-  const closeLightbox = useCallback(() => {
-    setIsLightboxOpen(false);
-  }, []);
-
-  const nextImage = useCallback((e) => {
-    e?.stopPropagation();
-    setActiveImageIndex((prev) => (prev + 1) % galleryImages.length);
-  }, [galleryImages.length]);
-
-  const prevImage = useCallback((e) => {
-    e?.stopPropagation();
-    setActiveImageIndex((prev) => 
-      (prev - 1 + galleryImages.length) % galleryImages.length
-    );
-  }, [galleryImages.length]);
-
-  // Keyboard navigation for lightbox
   useEffect(() => {
     if (!isLightboxOpen) return;
-
     const handleKeyDown = (e) => {
-      switch(e.key) {
-        case 'Escape':
-          closeLightbox();
-          break;
-        case 'ArrowLeft':
-          prevImage();
-          break;
-        case 'ArrowRight':
-          nextImage();
-          break;
-        default:
-          break;
+      switch (e.key) {
+        case 'Escape': closeLightbox(); break;
+        case 'ArrowLeft': prevImage(); break;
+        case 'ArrowRight': nextImage(); break;
+        default: break;
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     document.body.style.overflow = 'hidden';
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
-    };
+    return () => { window.removeEventListener('keydown', handleKeyDown); document.body.style.overflow = 'unset'; };
   }, [isLightboxOpen, closeLightbox, nextImage, prevImage]);
 
-  // Calculate prices
   const { originalPrice, hasDiscount } = useMemo(() => {
     if (!selectedVariant) return { originalPrice: 0, hasDiscount: false };
-    
     const price = Number(selectedVariant.price) || 0;
     const discount = Number(selectedVariant.discount) || 0;
-    
-    return {
-      originalPrice: price + discount,
-      hasDiscount: discount > 0
-    };
+    return { originalPrice: price + discount, hasDiscount: discount > 0 };
   }, [selectedVariant]);
 
-  // Handle variant selection
-  const handleVariantSelect = useCallback((variant) => {
-    setSelectedVariant(variant);
-    // Also update storage and ram selection
-    if (variant.storage) setSelectedStorage(variant.storage);
-    if (variant.ram) setSelectedRam(variant.ram);
-  }, []);
+  const uniqueColors = useMemo(() => {
+    if (!product?.variants) return [];
+    return [...new Set(product.variants.map(v => v.color).filter(c => c))];
+  }, [product?.variants]);
 
-  // Get unique storage values from variants
   const uniqueStorages = useMemo(() => {
     if (!product?.variants) return [];
-    const storages = [...new Set(product.variants.map(v => v.storage).filter(s => s))];
-    return storages.sort((a, b) => {
-      const aNum = parseInt(a) || 0;
-      const bNum = parseInt(b) || 0;
-      return aNum - bNum;
-    });
-  }, [product?.variants]);
+    const filteredByColor = selectedColor ? product.variants.filter(v => v.color === selectedColor) : product.variants;
+    const storages = [...new Set(filteredByColor.map(v => v.storage).filter(s => s))];
+    return storages.sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
+  }, [product?.variants, selectedColor]);
 
-  // Get unique RAM values from variants
   const uniqueRams = useMemo(() => {
     if (!product?.variants) return [];
-    const rams = [...new Set(product.variants.map(v => v.ram).filter(r => r))];
-    return rams.sort((a, b) => {
-      const aNum = parseInt(a) || 0;
-      const bNum = parseInt(b) || 0;
-      return aNum - bNum;
-    });
-  }, [product?.variants]);
+    const filteredByColor = selectedColor ? product.variants.filter(v => v.color === selectedColor) : product.variants;
+    const filteredByStorage = selectedStorage ? filteredByColor.filter(v => v.storage === selectedStorage) : filteredByColor;
+    const rams = [...new Set(filteredByStorage.map(v => v.ram).filter(r => r))];
+    return rams.sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
+  }, [product?.variants, selectedColor, selectedStorage]);
 
-  // Check if product has storage/ram variants (different from just color)
-  const hasStorageRamVariants = uniqueStorages.length > 0 || uniqueRams.length > 0;
+  const hasMultipleColors = uniqueColors.length > 1;
 
-  // Filter variants based on selected storage and ram
   const filteredVariants = useMemo(() => {
     if (!product?.variants) return [];
     return product.variants.filter(variant => {
+      if (selectedColor && variant.color !== selectedColor) return false;
       if (selectedStorage && variant.storage !== selectedStorage) return false;
       if (selectedRam && variant.ram !== selectedRam) return false;
       return true;
     });
-  }, [product?.variants, selectedStorage, selectedRam]);
+  }, [product?.variants, selectedColor, selectedStorage, selectedRam]);
 
-  // Auto-select first variant when storage/ram changes
   useEffect(() => {
     if (filteredVariants.length > 0 && (!selectedVariant || !filteredVariants.find(v => v.variant_id === selectedVariant.variant_id))) {
       setSelectedVariant(filteredVariants[0]);
     }
-  }, [filteredVariants]);
+  }, [filteredVariants, selectedVariant]);
 
-  // Handle add to cart
   const handleAddToCart = useCallback(() => {
     if (product && selectedVariant) {
       addToCart({ ...product, ...selectedVariant });
+      setAddedToCart(true);
+      setTimeout(() => setAddedToCart(false), 2000);
     }
   }, [product, selectedVariant, addToCart]);
 
-  // Render main image with bundle splicing logic
   const renderMainImage = () => {
-    // If it's a bundle and the backend provided our spliced image array
-    if (product.is_bundle && product.bundleImages?.length >= 2) {
+    if (!!product.is_bundle && product.bundleImages?.length >= 2) {
       return (
-        <div 
-          className="flex w-full gap-1 overflow-hidden rounded-lg cursor-pointer transition-transform duration-300 hover:scale-105"
-          style={{ height: '100%', minHeight: '450px' }}
+        <div
+          className="bundle-main-img"
           onClick={() => openLightbox(0)}
         >
-          <img 
-            src={product.bundleImages[0]} 
-            className="w-1/2 h-full object-cover border-r border-gray-200 dark:border-gray-800" 
-            alt="Bundle Part 1" 
-            onError={(e) => {
-              e.target.src = "/fallback.jpg";
-              e.target.onerror = null;
-            }}
-          />
-          <img 
-            src={product.bundleImages[1]} 
-            className="w-1/2 h-full object-cover" 
-            alt="Bundle Part 2" 
-            onError={(e) => {
-              e.target.src = "/fallback.jpg";
-              e.target.onerror = null;
-            }}
-          />
+          <img src={product.bundleImages[0]} className="bundle-half" alt="Bundle Part 1"
+            onError={(e) => { e.target.src = "/fallback.jpg"; e.target.onerror = null; }} />
+          <div className="bundle-divider" />
+          <img src={product.bundleImages[1]} className="bundle-half" alt="Bundle Part 2"
+            onError={(e) => { e.target.src = "/fallback.jpg"; e.target.onerror = null; }} />
         </div>
       );
     }
-
-    // Otherwise, show the standard single image
     const mainImage = selectedVariant?.image || product?.primaryImage || '/fallback.jpg';
-    
     return (
       <img
         src={mainImage}
         alt={product?.title}
-        className="main-product-image w-full h-auto object-contain rounded-lg cursor-pointer transition-transform duration-300 hover:scale-105"
-        onError={(e) => {
-          e.target.src = "/fallback.jpg";
-          e.target.onerror = null;
-        }}
-        onClick={() => {
-          const index = galleryImages.indexOf(mainImage);
-          openLightbox(index >= 0 ? index : 0);
-        }}
+        className="main-product-image"
+        onError={(e) => { e.target.src = "/fallback.jpg"; e.target.onerror = null; }}
+        onClick={() => { const index = galleryImages.indexOf(mainImage); openLightbox(index >= 0 ? index : 0); }}
         loading="eager"
       />
     );
   };
 
-  // Loading state — skeleton layout
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Image skeleton */}
-          <div className="w-full md:w-1/2">
-            <Skeleton className="w-full h-96 rounded-lg" />
-            <div className="flex gap-2 mt-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="w-16 h-16 rounded-md" />
-              ))}
+      <div className="samsung-page">
+        <div className="samsung-container">
+          <div className="samsung-grid">
+            <div className="samsung-left">
+              <Skeleton className="skeleton-main" />
+              <div className="skeleton-thumbs">
+                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="skeleton-thumb" />)}
+              </div>
             </div>
-          </div>
-          {/* Info skeleton */}
-          <div className="w-full md:w-1/2 space-y-4">
-            <Skeleton className="h-8 w-3/4" />
-            <Skeleton className="h-6 w-1/4" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-            <Skeleton className="h-4 w-4/6" />
-            <div className="flex gap-2 mt-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="w-10 h-10 rounded-md" />
-              ))}
+            <div className="samsung-right">
+              <Skeleton className="skeleton-title" />
+              <Skeleton className="skeleton-price" />
+              <Skeleton className="skeleton-line" />
+              <Skeleton className="skeleton-line short" />
+              <Skeleton className="skeleton-btn" />
             </div>
-            <Skeleton className="h-11 w-full rounded-md mt-4" />
           </div>
         </div>
+        <style jsx>{skeletonStyles}</style>
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center px-4">
-          <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      <div className="samsung-error">
+        <div className="error-icon">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="text-xl text-red-600 dark:text-red-400 font-semibold mb-2">Oops!</p>
-          <p className="text-gray-600 dark:text-gray-400">{error}</p>
         </div>
+        <p className="error-title">Something went wrong</p>
+        <p className="error-msg">{error}</p>
+        <style jsx>{errorStyles}</style>
       </div>
     );
   }
 
-  // Product not found
   if (!product || !selectedVariant) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center px-4">
-          <p className="text-xl text-gray-600 dark:text-gray-400">Product not found</p>
-        </div>
+      <div className="samsung-error">
+        <p className="error-title">Product not found</p>
+        <style jsx>{errorStyles}</style>
       </div>
     );
   }
 
   return (
     <>
-      <div className="container mx-auto px-4 py-6 sm:py-8 md:py-12">
-        <div className="flex flex-col lg:flex-row items-start gap-6 md:gap-8 lg:gap-12 bg-white dark:bg-black p-4 sm:p-6 md:p-8 rounded-xl shadow-lg max-w-7xl mx-auto">
-          
-          {/* Left Column: Main Image + Thumbnails */}
-          <div className="w-full lg:w-3/5 flex flex-col gap-4">
-            {/* Main Image - Now uses renderMainImage function */}
-            <div className="image-wrapper w-full">
-              {renderMainImage()}
-            </div>
-            
-            {/* Thumbnail Gallery */}
-            {!galleryLoading && galleryImages.length > 1 && (
-              <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2 sm:gap-3">
-                {galleryImages.map((imageUrl, index) => (
-                  <button 
-                    key={index} 
-                    onClick={() => openLightbox(index)}
-                    className="gallery-thumbnail-btn focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
-                    aria-label={`View image ${index + 1} of ${galleryImages.length}`}
-                  >
-                    <img
-                      src={imageUrl}
-                      alt={`${product.title} - View ${index + 1}`}
-                      className={`w-full h-20 sm:h-24 object-cover rounded-md shadow-sm transition-all duration-300 ease-in-out ${
-                        // Highlight bundle images (first 2) for bundles, or selected variant image for regular products
-                        (product.is_bundle && product.bundleImages?.length >= 2 && index < 2) ||
-                        (!product.is_bundle && selectedVariant?.image === imageUrl)
-                          ? 'ring-2 ring-blue-500 scale-105' 
-                          : 'ring-0 hover:ring-2 hover:ring-gray-300'
-                      }`}
-                      loading="lazy"
-                      onError={(e) => {
-                        e.target.src = "/fallback.jpg";
-                        e.target.onerror = null;
-                      }}
-                    />
-                  </button>
-                ))}
+      <div className="samsung-page">
+        <div className="samsung-container">
+
+          {/* Breadcrumb */}
+          <nav className="samsung-breadcrumb">
+            <span>Home</span>
+            <span className="bc-sep">›</span>
+            <span>Products</span>
+            <span className="bc-sep">›</span>
+            <span className="bc-current">{product.title}</span>
+          </nav>
+
+          <div className="samsung-grid">
+
+            {/* ═══════════ LEFT – Gallery ═══════════ */}
+            <div className="samsung-left">
+              <div className="main-image-wrapper">
+                {renderMainImage()}
+                {!!product.is_bundle && (
+                  <span className="bundle-badge">Bundle</span>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Right Column: Product Details */}
-          <div className="w-full lg:w-2/5 text-center lg:text-left space-y-4 sm:space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800 dark:text-white leading-tight">
-                {product.title}
-              </h1>
-              
-              {product.is_bundle && (
-                <span className="inline-block px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-sm font-medium">
-                  Bundle Package
-                </span>
-              )}
-            </div>
-            
-            
-            <div className="text-slate-600 dark:text-gray-300 text-base sm:text-lg leading-relaxed">
-              {product.description.split('\n').map((line, index) => {
-                const trimmed = line.trim();
-                if (index === 0 && !trimmed.startsWith('•') && !trimmed.startsWith('-')) {
-                  // First line - treat as title
-                  return (
-                    <p key={index} className="font-bold text-lg mb-2">
-                      {trimmed}
-                    </p>
-                  );
-                }
-                if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
-                  // Already a bullet point
-                  return (
-                    <p key={index} className="ml-4 mb-1">
-                      {trimmed}
-                    </p>
-                  );
-                }
-                if (trimmed === '') {
-                  // Empty line
-                  return <br key={index} />;
-                }
-                // Convert to bullet point
-                return (
-                  <p key={index} className="ml-4 mb-1">
-                    • {trimmed}
-                  </p>
-                );
-              })}
-            </div>
-
-            {/* Bundle Products List */}
-            {product.is_bundle && product.bundle_products && product.bundle_products.length > 0 && (
-              <div className="bundle-section mt-6 p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4">This Bundle Includes:</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {product.bundle_products.map((item, index) => (
-                    <Link 
-                      to={`/product/${item.product_id}`} 
-                      key={item.product_id} 
-                      className="bundle-item-link no-underline"
+              {!galleryLoading && galleryImages.length > 1 && (
+                <div className="thumb-strip">
+                  {galleryImages.map((url, i) => (
+                    <button
+                      key={i}
+                      onClick={() => openLightbox(i)}
+                      className={`thumb-btn ${
+                        (!product.is_bundle && selectedVariant?.image === url) ||
+                        (!!product.is_bundle && product.bundleImages?.length >= 2 && i < 2)
+                          ? 'thumb-active' : ''
+                      }`}
+                      aria-label={`View image ${i + 1}`}
                     >
-                      <div className="bundle-item flex items-center gap-4 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                        <img 
-                          src={item.variants[0]?.image || item.primaryImage || '/fallback.jpg'} 
-                          alt={item.title}
-                          className="w-16 h-16 object-cover rounded-md"
-                          onError={(e) => {
-                            e.target.src = "/fallback.jpg";
-                            e.target.onerror = null;
-                          }}
-                        />
-                        <div className="flex-grow">
-                          <p className="font-semibold text-slate-700 dark:text-gray-200">{item.title}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Quantity: {item.quantity || 1}
-                            {index < 2 && (
-                              <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
-                                (Featured in bundle image)
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                    </Link>
+                      <img
+                        src={url}
+                        alt={`${product.title} view ${i + 1}`}
+                        loading="lazy"
+                        onError={(e) => { e.target.src = "/fallback.jpg"; e.target.onerror = null; }}
+                      />
+                    </button>
                   ))}
                 </div>
+              )}
+            </div>
+
+            {/* ═══════════ RIGHT – Details ═══════════ */}
+            <div className="samsung-right">
+
+              {/* Title + Badge */}
+              <div className="title-row">
+                <h1 className="product-title">{product.title}</h1>
+                {!!product.is_bundle && (
+                  <span className="bundle-tag">Bundle Package</span>
+                )}
               </div>
-            )}
-            
-            {/* Variant Selection - Only show for non-bundle products */}
-            {!product.is_bundle && product.variants && product.variants.length > 0 && (
-              <div className="flex flex-col items-center lg:items-start gap-3">
-                {/* Storage and RAM Selection - If product has storage/ram variants */}
-                {hasStorageRamVariants && (
-                  <div className="w-full space-y-3">
-                    {/* Storage Selection */}
-                    {uniqueStorages.length > 0 && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                          Select Storage:
-                        </h3>
-                        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Storage options">
-                          {uniqueStorages.map((storage) => (
+
+              {/* Divider */}
+              <div className="section-rule" />
+
+              {/* Price */}
+              <div className="price-block">
+                {hasDiscount ? (
+                  <>
+                    <span className="price-original">Kshs {originalPrice.toFixed(2)}</span>
+                    <span className="price-current">Kshs {Number(selectedVariant.price).toFixed(2)}</span>
+                    <span className="price-save">−Kshs {Number(selectedVariant.discount).toFixed(2)}</span>
+                  </>
+                ) : (
+                  <span className="price-current">Kshs {Number(selectedVariant.price).toFixed(2)}</span>
+                )}
+              </div>
+
+              {/* Stock */}
+              <div className="stock-row">
+                <span className="stock-dot" />
+                <span className="stock-label">In Stock</span>
+              </div>
+
+              {/* ── Variants ── */}
+              {!product.is_bundle && product.variants?.length > 0 && (
+                <div className="variants-section">
+
+                  {/* Color */}
+                  {uniqueColors.length > 0 && (
+                    <div className="variant-group">
+                      <p className="variant-label">
+                        Color <span className="variant-value">{selectedColor}</span>
+                      </p>
+                      <div className="color-row">
+                        {uniqueColors.map((color) => {
+                          const isSelected = selectedColor === color;
+                          return (
+                            <button
+                              key={color}
+                              onClick={() => {
+                                setSelectedColor(color);
+                                setSelectedStorage(null);
+                                setSelectedRam(null);
+                                const first = product.variants.find(v => v.color === color);
+                                if (first) {
+                                  setSelectedVariant(first);
+                                  if (first.storage) setSelectedStorage(first.storage);
+                                  if (first.ram) setSelectedRam(first.ram);
+                                }
+                              }}
+                              className={`color-swatch ${isSelected ? 'color-swatch-active' : ''}`}
+                              style={{ background: color?.toLowerCase() || '#ccc' }}
+                              title={color}
+                              aria-label={`Select ${color}`}
+                            >
+                              {isSelected && (
+                                <svg viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Storage */}
+                  {uniqueStorages.length > 0 && (
+                    <div className="variant-group">
+                      <p className="variant-label">Storage</p>
+                      <div className="chip-row">
+                        {uniqueStorages.map((storage) => {
+                          const isSelected = selectedStorage === storage;
+                          const variantWithStorage = product.variants.find(v =>
+                            (!selectedColor || v.color === selectedColor) && v.storage === storage
+                          );
+                          return (
                             <button
                               key={storage}
-                              onClick={() => setSelectedStorage(storage)}
-                              className={`px-4 py-2 rounded-lg border-2 transition-all ${
-                                selectedStorage === storage
-                                  ? 'border-blue-500 bg-blue-500 text-white'
-                                  : 'border-gray-300 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500'
-                              }`}
-                              aria-label={`Select ${storage} storage`}
-                              aria-checked={selectedStorage === storage}
-                              role="radio"
+                              onClick={() => {
+                                setSelectedStorage(storage);
+                                setSelectedRam(null);
+                                if (variantWithStorage) {
+                                  setSelectedVariant(variantWithStorage);
+                                  if (variantWithStorage.ram) setSelectedRam(variantWithStorage.ram);
+                                }
+                              }}
+                              className={`chip ${isSelected ? 'chip-active' : ''}`}
                             >
                               {storage}
                             </button>
-                          ))}
-                        </div>
+                          );
+                        })}
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {/* RAM Selection */}
-                    {uniqueRams.length > 0 && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                          Select RAM:
-                        </h3>
-                        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="RAM options">
-                          {uniqueRams.map((ram) => (
+                  {/* RAM */}
+                  {uniqueRams.length > 0 && (
+                    <div className="variant-group">
+                      <p className="variant-label">RAM</p>
+                      <div className="chip-row">
+                        {uniqueRams.map((ram) => {
+                          const isSelected = selectedRam === ram;
+                          const variantWithRam = product.variants.find(v =>
+                            (!selectedColor || v.color === selectedColor) &&
+                            (!selectedStorage || v.storage === selectedStorage) &&
+                            v.ram === ram
+                          );
+                          return (
                             <button
                               key={ram}
-                              onClick={() => setSelectedRam(ram)}
-                              className={`px-4 py-2 rounded-lg border-2 transition-all ${
-                                selectedRam === ram
-                                  ? 'border-blue-500 bg-blue-500 text-white'
-                                  : 'border-gray-300 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500'
-                              }`}
-                              aria-label={`Select ${ram} RAM`}
-                              aria-checked={selectedRam === ram}
-                              role="radio"
+                              onClick={() => {
+                                setSelectedRam(ram);
+                                if (variantWithRam) setSelectedVariant(variantWithRam);
+                              }}
+                              className={`chip ${isSelected ? 'chip-active' : ''}`}
                             >
                               {ram}
                             </button>
-                          ))}
-                        </div>
+                          );
+                        })}
                       </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Color Selection - Show if there are colors or no storage/ram */}
-                {(!hasStorageRamVariants || (uniqueStorages.length === 0 && uniqueRams.length === 0)) && (
-                  <>
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                      Select Color:
-                    </h3>
-                    <div className="modern-color-picker" role="radiogroup" aria-label="Product color options">
-                      {product.variants.map((variant) => {
-                        const isSelected = selectedVariant?.variant_id === variant.variant_id;
-                        return (
-                          <button
-                            key={variant.variant_id}
-                            onClick={() => handleVariantSelect(variant)}
-                            className={`color-diamond ${isSelected ? "is-selected" : ""}`}
-                            style={{ 
-                              background: variant.color?.toLowerCase() || '#ccc'
-                            }}
-                            title={variant.color || 'Default'}
-                            aria-label={`Select ${variant.color} variant`}
-                            role="radio"
-                            aria-checked={isSelected}
-                          >
-                            {isSelected && (
-                              <span className="selection-indicator" aria-hidden="true">✓</span>
-                            )}
-                          </button>
-                        );
-                      })}
                     </div>
-                  </>
-                )}
-
-                {/* Color Selection - Show after storage/ram if product has both */}
-                {hasStorageRamVariants && filteredVariants.length > 0 && uniqueStorages.length > 0 && uniqueRams.length > 0 && (
-                  <>
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                      Select Color:
-                    </h3>
-                    <div className="modern-color-picker" role="radiogroup" aria-label="Product color options">
-                      {filteredVariants.map((variant) => {
-                        const isSelected = selectedVariant?.variant_id === variant.variant_id;
-                        return (
-                          <button
-                            key={variant.variant_id}
-                            onClick={() => handleVariantSelect(variant)}
-                            className={`color-diamond ${isSelected ? "is-selected" : ""}`}
-                            style={{ 
-                              background: variant.color?.toLowerCase() || '#ccc'
-                            }}
-                            title={variant.color || 'Default'}
-                            aria-label={`Select ${variant.color} variant`}
-                            role="radio"
-                            aria-checked={isSelected}
-                          >
-                            {isSelected && (
-                              <span className="selection-indicator" aria-hidden="true">✓</span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Price Display */}
-            <div className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">
-              {hasDiscount ? (
-                <div className="flex flex-col sm:flex-row items-center lg:items-start gap-2 sm:gap-4">
-                  <span className="text-gray-500 dark:text-gray-400 line-through text-lg">
-                    Kshs {originalPrice.toFixed(2)}
-                  </span>
-                  <span className="text-red-600 dark:text-red-400">
-                    Kshs {Number(selectedVariant.price).toFixed(2)}
-                  </span>
-                  <span className="text-sm bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">
-                    Save Kshs {Number(selectedVariant.discount).toFixed(2)}
-                  </span>
+                  )}
                 </div>
-              ) : (
-                <span>Kshs {Number(selectedVariant.price).toFixed(2)}</span>
+              )}
+
+              <div className="section-rule" />
+
+              {/* Add to Cart */}
+              <button
+                className={`atc-btn ${addedToCart ? 'atc-btn-success' : ''}`}
+                onClick={handleAddToCart}
+                aria-label="Add product to cart"
+              >
+                {addedToCart ? (
+                  <>
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="atc-icon">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Added to Cart
+                  </>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="atc-icon">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    Add to Cart
+                  </>
+                )}
+              </button>
+
+              {/* Color Variant Images */}
+              {!product.is_bundle && product.variants?.length > 1 && uniqueColors.length > 1 && (
+                <div className="color-variants-grid-section">
+                  <p className="variant-label">Available Colors</p>
+                  <div className="color-variants-grid">
+                    {uniqueColors.map((color) => {
+                      const variant = product.variants.find(v => v.color === color);
+                      const isSelected = selectedColor === color;
+                      return (
+                        <button
+                          key={color}
+                          onClick={() => {
+                            setSelectedColor(color);
+                            setSelectedStorage(null);
+                            setSelectedRam(null);
+                            if (variant) {
+                              setSelectedVariant(variant);
+                              if (variant.storage) setSelectedStorage(variant.storage);
+                              if (variant.ram) setSelectedRam(variant.ram);
+                            }
+                          }}
+                          className={`color-variant-card ${isSelected ? 'color-variant-active' : ''}`}
+                          aria-label={`Select ${color} variant`}
+                        >
+                          <img
+                            src={variant?.image}
+                            alt={`${product.title} - ${color}`}
+                            loading="lazy"
+                            onError={(e) => { e.target.src = "/fallback.jpg"; e.target.onerror = null; }}
+                          />
+                          <span>{color}</span>
+                          {isSelected && (
+                            <div className="color-variant-check">
+                              <svg viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
             </div>
-            
-            {/* Add to Cart Button */}
-            <Button
-              className="cart-button mt-4 text-base sm:text-lg px-6 sm:px-10 py-4 sm:py-6 w-full lg:w-auto bg-blue-600 hover:bg-blue-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white transition-colors duration-200"
-              onClick={handleAddToCart}
-              aria-label="Add product to cart"
-            >
-              Add to Cart
-            </Button>
-
-            {/* Stock Status */}
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              <span className="inline-flex items-center gap-2">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                In Stock
-              </span>
-            </div>
-
-            {/* Variant Images Section - Only show for non-bundle products */}
-            {!product.is_bundle && product.variants && product.variants.length > 1 && (
-              <div className="variant-images-section mt-4">
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  Available Colors:
-                </h4>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-3">
-                  {product.variants.map((variant) => {
-                    const isSelected = selectedVariant.variant_id === variant.variant_id;
-                    return (
-                      <button
-                        key={variant.variant_id}
-                        onClick={() => handleVariantSelect(variant)}
-                        className={`variant-image-btn group relative overflow-hidden rounded-lg border-2 transition-all duration-200 ${
-                          isSelected 
-                            ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-50' 
-                            : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
-                        }`}
-                        aria-label={`Select ${variant.color} variant`}
-                      >
-                        <img
-                          src={variant.image}
-                          alt={`${product.title} - ${variant.color}`}
-                          className="w-full h-20 sm:h-24 object-cover transition-transform duration-300 group-hover:scale-110"
-                          loading="lazy"
-                          onError={(e) => {
-                            e.target.src = "/fallback.jpg";
-                            e.target.onerror = null;
-                          }}
-                        />
-                        {/* Color label overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs py-1 px-2 truncate">
-                          {variant.color}
-                        </div>
-                        {/* Selection indicator */}
-                        {isSelected && (
-                          <div className="absolute top-1 right-1 bg-blue-500 rounded-full p-1">
-                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
+
+          {/* ═══════════ SPECS SECTION ═══════════ */}
+          {product.description && (
+            <div className="specs-section">
+              <div className="specs-header">
+                <h2>Specifications</h2>
+                <div className="specs-rule" />
+              </div>
+              <div className="specs-body">
+                {product.description.split(/\r?\n/).map((line, index) => {
+                  const trimmed = line.trim();
+                  if (index === 0 && !trimmed.startsWith('•') && !trimmed.startsWith('-')) {
+                    return <p key={index} className="specs-model">{trimmed}</p>;
+                  }
+                  if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
+                    return <p key={index} className="specs-item">{trimmed}</p>;
+                  }
+                  if (trimmed === '') return <br key={index} />;
+                  return <p key={index} className="specs-item">• {trimmed}</p>;
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ═══════════ BUNDLE SECTION ═══════════ */}
+          {!!product.is_bundle && product.bundle_products?.length > 0 && (
+            <div className="bundle-section">
+              <div className="specs-header">
+                <h2>What's in the Box</h2>
+                <div className="specs-rule" />
+              </div>
+              <div className="bundle-grid">
+                {product.bundle_products.map((item, index) => (
+                  <Link to={`/product/${item.product_id}`} key={item.product_id} className="bundle-card">
+                    <div className="bundle-card-img">
+                      <img
+                        src={item.variants[0]?.image || item.primaryImage || '/fallback.jpg'}
+                        alt={item.title}
+                        onError={(e) => { e.target.src = "/fallback.jpg"; e.target.onerror = null; }}
+                      />
+                    </div>
+                    <div className="bundle-card-info">
+                      <p className="bundle-card-title">{item.title}</p>
+                      <p className="bundle-card-qty">Qty: {item.quantity || 1}</p>
+                      {index < 2 && <span className="bundle-featured">Featured</span>}
+                    </div>
+                    <div className="bundle-card-arrow">›</div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
 
-      {/* Lightbox Modal */}
+      {/* ═══════════ LIGHTBOX ═══════════ */}
       {isLightboxOpen && (
-        <div 
-          className="lightbox-backdrop" 
-          onClick={closeLightbox}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Image gallery lightbox"
-        >
-          <button 
-            className="lightbox-close-btn" 
-            onClick={closeLightbox}
-            aria-label="Close lightbox"
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        <div className="lightbox" onClick={closeLightbox} role="dialog" aria-modal="true">
+          <button className="lb-close" onClick={closeLightbox} aria-label="Close">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
-          
+
           {galleryImages.length > 1 && (
             <>
-              <button 
-                className="lightbox-nav-btn prev" 
-                onClick={prevImage}
-                aria-label="Previous image"
-              >
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <button className="lb-nav lb-prev" onClick={prevImage} aria-label="Previous">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              
-              <button 
-                className="lightbox-nav-btn next" 
-                onClick={nextImage}
-                aria-label="Next image"
-              >
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <button className="lb-nav lb-next" onClick={nextImage} aria-label="Next">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
-              </button>                                
+              </button>
             </>
           )}
-          
+
           <img
             src={galleryImages[activeImageIndex]}
-            alt={`${product.title} - Image ${activeImageIndex + 1} of ${galleryImages.length}`}
-            className="lightbox-image"
+            alt={`${product.title} – ${activeImageIndex + 1} of ${galleryImages.length}`}
+            className="lb-image"
             onClick={(e) => e.stopPropagation()}
-            onError={(e) => {
-              e.target.src = "/fallback.jpg";
-              e.target.onerror = null;
-            }}
+            onError={(e) => { e.target.src = "/fallback.jpg"; e.target.onerror = null; }}
           />
-          
-          <div className="lightbox-counter">
+
+          <div className="lb-counter">
             {activeImageIndex + 1} / {galleryImages.length}
-            {product.is_bundle && activeImageIndex < 2 && (
-              <span className="ml-2 text-xs text-gray-300">
-                (Bundle Product {activeImageIndex + 1})
-              </span>
+            {!!product.is_bundle && activeImageIndex < 2 && (
+              <span className="lb-bundle-label"> · Bundle item {activeImageIndex + 1}</span>
             )}
           </div>
         </div>
       )}
 
-     <style jsx>{`
-/* ========================================
-   MAIN PRODUCT IMAGE
-======================================== */
+      <style jsx>{`
+        /* ══════════════════════════════════════════════
+           SAMSUNG-STYLE PRODUCT DETAIL  
+           Font: DM Sans (body) + DM Serif Display (hero)
+        ══════════════════════════════════════════════ */
 
-.main-product-image {
-  width: 100%;
-  object-fit: contain;
-  border-radius: 0.75rem;
-  cursor: pointer;
-  transition: transform 0.35s ease;
-  max-height: 600px;
-  min-height: 450px;
-}
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=DM+Serif+Display&display=swap');
 
-.main-product-image:hover {
-  transform: scale(1.04);
-}
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-@media (min-width: 768px) {
-  .main-product-image {
-    max-height: 750px;
-    min-height: 550px;
-  }
-}
+        .samsung-page {
+          min-height: 100vh;
+          background: #f8f8f8;
+          font-family: 'DM Sans', sans-serif;
+          color: #1a1a1a;
+        }
 
-@media (min-width: 1024px) {
-  .main-product-image {
-    max-height: 900px;
-    min-height: 650px;
-  }
-}
+        .dark .samsung-page {
+          background: #0d0d0d;
+          color: #f0f0f0;
+        }
 
-@media (max-width: 640px) {
-  .main-product-image {
-    max-height: 420px;
-    min-height: 300px;
-  }
-}
+        .samsung-container {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 0 24px 80px;
+        }
 
-/* ========================================
-   IMAGE WRAPPER + GLOW
-======================================== */
+        /* ── Breadcrumb ── */
+        .samsung-breadcrumb {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 20px 0 32px;
+          font-size: 13px;
+          color: #888;
+          letter-spacing: 0.01em;
+        }
+        .bc-sep { color: #ccc; }
+        .bc-current { color: #1a1a1a; font-weight: 500; }
+        .dark .bc-current { color: #f0f0f0; }
 
-.image-wrapper {
-  position: relative;
-  overflow: hidden;
-  border-radius: 0.75rem;
-}
+        /* ── Main Grid ── */
+        .samsung-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 64px;
+          align-items: start;
+        }
 
-.image-wrapper::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle, rgba(248,248,248,.55) 0%, rgba(147,197,253,0) 70%);
-  filter: blur(30px);
-  opacity: .6;
-  transition: all .3s ease;
-  z-index: 0;
-}
+        @media (max-width: 1024px) {
+          .samsung-grid { grid-template-columns: 1fr; gap: 40px; }
+        }
 
-.dark .image-wrapper::before {
-  background: radial-gradient(circle, rgba(59,130,246,.35) 0%, rgba(147,197,253,0) 70%);
-}
+        /* ══════════════════════════════════════════════
+           LEFT COLUMN – GALLERY
+        ══════════════════════════════════════════════ */
 
-.image-wrapper:hover::before {
-  opacity: .95;
-  filter: blur(40px);
-}
+        .samsung-left {
+          position: sticky;
+          top: 24px;
+        }
 
-.image-wrapper img {
-  position: relative;
-  z-index: 1;
-}
+        @media (max-width: 1024px) {
+          .samsung-left { position: static; }
+        }
 
-/* ========================================
-   GALLERY THUMBNAILS
-======================================== */
+        .main-image-wrapper {
+          position: relative;
+          background: #ffffff;
+          border-radius: 20px;
+          overflow: hidden;
+          aspect-ratio: 1 / 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 40px rgba(0,0,0,0.06);
+          transition: box-shadow 0.3s ease;
+        }
 
-.gallery-thumbnail-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  border-radius: .5rem;
-  overflow: hidden;
-}
+        .dark .main-image-wrapper {
+          background: #1a1a1a;
+          box-shadow: 0 2px 40px rgba(0,0,0,0.4);
+        }
 
-.gallery-thumbnail-btn img {
-  transition: transform .3s ease;
-}
+        .main-image-wrapper:hover {
+          box-shadow: 0 8px 60px rgba(0,0,0,0.12);
+        }
 
-.gallery-thumbnail-btn:hover img {
-  transform: scale(1.12);
-}
+        .main-product-image {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          cursor: zoom-in;
+          padding: 24px;
+          transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
 
-/* ========================================
-   MODERN COLOR PICKER
-======================================== */
+        .main-product-image:hover { transform: scale(1.04); }
 
-.modern-color-picker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .75rem;
-  justify-content: center;
-}
+        .bundle-main-img {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          cursor: zoom-in;
+        }
 
-@media (min-width: 1024px) {
-  .modern-color-picker {
-    justify-content: flex-start;
-  }
-}
+        .bundle-half {
+          width: 50%;
+          height: 100%;
+          object-fit: cover;
+          transition: opacity 0.3s;
+        }
 
-.color-diamond {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  cursor: pointer;
-  transform: rotate(45deg);
-  transition: all .2s ease;
-  box-shadow: 0 3px 8px rgba(0,0,0,.2);
+        .bundle-half:hover { opacity: 0.9; }
+        .bundle-divider { width: 2px; background: #f8f8f8; flex-shrink: 0; }
+        .dark .bundle-divider { background: #0d0d0d; }
 
-  /* 👇 Visible border for dark colors */
-  border: 2px solid rgba(0,0,0,.25);
-}
+        .bundle-badge {
+          position: absolute;
+          top: 16px;
+          left: 16px;
+          background: #111111;
+          color: white;
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          padding: 5px 12px;
+          border-radius: 20px;
+          z-index: 2;
+        }
 
-.dark .color-diamond {
-  border: 2px solid rgba(255,255,255,.45);
-}
+        /* Thumbnails */
+        .thumb-strip {
+          display: flex;
+          gap: 8px;
+          margin-top: 12px;
+          overflow-x: auto;
+          padding-bottom: 4px;
+          scrollbar-width: none;
+        }
+        .thumb-strip::-webkit-scrollbar { display: none; }
 
-.color-diamond:hover {
-  transform: rotate(45deg) scale(1.15);
-}
+        .thumb-btn {
+          flex-shrink: 0;
+          width: 72px;
+          height: 72px;
+          border-radius: 10px;
+          overflow: hidden;
+          border: 2px solid transparent;
+          background: #fff;
+          cursor: pointer;
+          padding: 0;
+          transition: border-color 0.2s, transform 0.2s;
+        }
 
-.color-diamond.is-selected {
-  transform: rotate(45deg) scale(1.22);
-  box-shadow:
-    0 0 0 3px white,
-    0 0 0 6px #3b82f6,
-    0 10px 22px rgba(59,130,246,.45);
-}
+        .dark .thumb-btn { background: #1a1a1a; }
 
-.dark .color-diamond.is-selected {
-  box-shadow:
-    0 0 0 3px #020617,
-    0 0 0 6px #3b82f6,
-    0 12px 26px rgba(59,130,246,.6);
-}
+        .thumb-btn img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          padding: 4px;
+          transition: transform 0.25s;
+        }
 
-.selection-indicator {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  transform: rotate(-45deg);
-  color: white;
-  font-weight: 700;
-  text-shadow: 0 2px 6px rgba(0,0,0,.7);
-}
+        .thumb-btn:hover { transform: translateY(-2px); border-color: #111111; }
+        .thumb-btn:hover img { transform: scale(1.08); }
+        .thumb-active { border-color: #111111 !important; }
+        .dark .thumb-active { border-color: #444444 !important; }
 
-/* ========================================
-   VARIANT IMAGE GRID
-======================================== */
+        /* ══════════════════════════════════════════════
+           RIGHT COLUMN – DETAILS
+        ══════════════════════════════════════════════ */
 
-.variant-images-section {
-  border-top: 1px solid #e5e7eb;
-  padding-top: 1rem;
-}
+        .samsung-right {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          padding-top: 8px;
+        }
 
-.dark .variant-images-section {
-  border-top-color: #374151;
-}
+        .title-row {
+          display: flex;
+          align-items: flex-start;
+          gap: 14px;
+          flex-wrap: wrap;
+        }
 
-.variant-image-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
+        .product-title {
+          font-family: 'DM Serif Display', serif;
+          font-size: clamp(26px, 4vw, 40px);
+          font-weight: 400;
+          line-height: 1.2;
+          letter-spacing: -0.02em;
+          color: #0d0d0d;
+          flex: 1;
+        }
 
-/* ========================================
-   LIGHTBOX
-======================================== */
+        .dark .product-title { color: #f5f5f5; }
 
-.lightbox-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.92);
-  backdrop-filter: blur(10px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  animation: fade .2s ease;
-}
+        .bundle-tag {
+          background: #f0f0f0;
+          color: #111111;
+          font-size: 12px;
+          font-weight: 600;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          padding: 6px 14px;
+          border-radius: 20px;
+          flex-shrink: 0;
+          margin-top: 6px;
+          border: 1px solid #d0d0d0;
+        }
 
-@keyframes fade {
-  from { opacity: 0 }
-  to { opacity: 1 }
-}
+        .dark .bundle-tag {
+          background: #222222;
+          color: #aaaaaa;
+          border-color: #333333;
+        }
 
-.lightbox-image {
-  max-width: 92vw;
-  max-height: 92vh;
-  border-radius: .75rem;
-  animation: zoom .2s ease;
-}
+        /* Dividers */
+        .section-rule {
+          height: 1px;
+          background: linear-gradient(90deg, #e8e8e8 0%, transparent 100%);
+        }
+        .dark .section-rule { background: linear-gradient(90deg, #2a2a2a 0%, transparent 100%); }
 
-@keyframes zoom {
-  from { transform: scale(.92); opacity: 0 }
-  to { transform: scale(1); opacity: 1 }
-}
+        /* Price */
+        .price-block {
+          display: flex;
+          align-items: baseline;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
 
-.lightbox-close-btn,
-.lightbox-nav-btn {
-  position: absolute;
-  background: rgba(0,0,0,.55);
-  color: white;
-  border-radius: 50%;
-  border: none;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: .25s ease;
-}
+        .price-current {
+          font-size: clamp(24px, 3.5vw, 36px);
+          font-weight: 700;
+          color: #0d0d0d;
+          letter-spacing: -0.02em;
+        }
 
-.lightbox-close-btn:hover,
-.lightbox-nav-btn:hover {
-  background: rgba(0,0,0,.85);
-  transform: scale(1.1);
-}
+        .dark .price-current { color: #ffffff; }
 
-.lightbox-close-btn {
-  top: 20px;
-  right: 20px;
-  width: 44px;
-  height: 44px;
-}
+        .price-original {
+          font-size: 18px;
+          font-weight: 400;
+          color: #aaa;
+          text-decoration: line-through;
+        }
 
-.lightbox-nav-btn {
-  top: 50%;
-  transform: translateY(-50%);
-  width: 56px;
-  height: 56px;
-}
+        .price-save {
+          font-size: 13px;
+          font-weight: 600;
+          color: #c8232c;
+          background: #fff0f0;
+          border: 1px solid #ffd0d0;
+          padding: 4px 10px;
+          border-radius: 20px;
+        }
 
-.lightbox-nav-btn.prev { left: 20px }
-.lightbox-nav-btn.next { right: 20px }
+        .dark .price-save {
+          background: #2a1010;
+          border-color: #5a2020;
+          color: #ff6b6b;
+        }
 
-.lightbox-counter {
-  position: absolute;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0,0,0,.65);
-  padding: 8px 18px;
-  border-radius: 20px;
-  font-size: 14px;
-  color: white;
-}
+        /* Stock */
+        .stock-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
 
-/* ========================================
-   CART BUTTON DARK FIX
-======================================== */
+        .stock-dot {
+          width: 8px; height: 8px;
+          border-radius: 50%;
+          background: #0bc268;
+          box-shadow: 0 0 0 3px rgba(11, 194, 104, 0.2);
+          animation: pulse-green 2s infinite;
+        }
 
-.dark .cart-button {
-  background: #575656 !important;
-  color: #fff !important;
-}
+        @keyframes pulse-green {
+          0%, 100% { box-shadow: 0 0 0 3px rgba(11,194,104,0.2); }
+          50% { box-shadow: 0 0 0 6px rgba(11,194,104,0.1); }
+        }
 
-.dark .cart-button:hover {
-  background: #484848 !important;
-}
+        .stock-label {
+          font-size: 13px;
+          font-weight: 500;
+          color: #0bc268;
+          letter-spacing: 0.02em;
+        }
 
-/* ========================================
-   MOBILE OPTIMIZATION
-======================================== */
+        /* ── Variants ── */
+        .variants-section {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
 
-@media (max-width: 768px) {
-  .color-diamond { width: 42px; height: 42px }
-  .lightbox-nav-btn { width: 48px; height: 48px }
-}
+        .variant-group { display: flex; flex-direction: column; gap: 10px; }
 
-@media (max-width: 480px) {
-  .color-diamond { width: 38px; height: 38px }
-}
+        .variant-label {
+          font-size: 12px;
+          font-weight: 600;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: #888;
+        }
 
-@media (max-width: 360px) {
-  .color-diamond { width: 34px; height: 34px }
-}
-`}</style>
+        .variant-value {
+          color: #1a1a1a;
+          font-weight: 700;
+          text-transform: none;
+          letter-spacing: 0;
+        }
 
+        .dark .variant-value { color: #f0f0f0; }
+
+        /* Color swatches */
+        .color-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .color-swatch {
+          width: 36px; height: 36px;
+          border-radius: 50%;
+          border: 3px solid transparent;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: transform 0.2s, box-shadow 0.2s;
+          outline: none;
+        }
+
+        .color-swatch svg {
+          width: 16px; height: 16px;
+          color: white;
+          filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+        }
+
+        .color-swatch:hover { transform: scale(1.15); }
+
+        .color-swatch-active {
+          border-color: #111111;
+          box-shadow: 0 0 0 2px white, 0 0 0 4px #111111;
+          transform: scale(1.12);
+        }
+
+        .dark .color-swatch-active {
+          box-shadow: 0 0 0 2px #0d0d0d, 0 0 0 4px #444444;
+        }
+
+        /* Chips */
+        .chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .chip {
+          padding: 8px 18px;
+          border-radius: 6px;
+          border: 1.5px solid #ddd;
+          background: #fff;
+          font-size: 13px;
+          font-weight: 500;
+          color: #333;
+          cursor: pointer;
+          transition: all 0.2s;
+          font-family: 'DM Sans', sans-serif;
+          letter-spacing: 0.01em;
+        }
+
+        .dark .chip { background: #1a1a1a; border-color: #333; color: #ccc; }
+
+        .chip:hover {
+          border-color: #111111;
+          color: #111111;
+        }
+
+        .dark .chip:hover { border-color: #444444; color: #444444; }
+
+        .chip-active {
+          background: #111111;
+          border-color: #111111;
+          color: #fff;
+          font-weight: 600;
+        }
+
+        .dark .chip-active { background: #444444; border-color: #444444; }
+
+        /* ── Add to Cart ── */
+        .atc-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          width: 100%;
+          padding: 16px 32px;
+          background: #111111;
+          color: #fff;
+          border: none;
+          border-radius: 10px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 15px;
+          font-weight: 600;
+          letter-spacing: 0.02em;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .atc-btn::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%);
+          opacity: 0;
+          transition: opacity 0.3s;
+        }
+
+        .atc-btn:hover { background: #000000; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+        .atc-btn:hover::before { opacity: 1; }
+        .atc-btn:active { transform: translateY(0); }
+
+        .atc-btn-success { background: #0bc268; }
+        .atc-btn-success:hover { background: #09a558; box-shadow: 0 8px 24px rgba(11,194,104,0.35); }
+
+        .dark .atc-btn { background: #444444; }
+        .dark .atc-btn:hover { background: #333333; box-shadow: 0 8px 24px rgba(80,80,80,0.35); }
+
+        .atc-icon { width: 20px; height: 20px; flex-shrink: 0; }
+
+        /* Color variant grid */
+        .color-variants-grid-section { display: flex; flex-direction: column; gap: 10px; }
+
+        .color-variants-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+          gap: 10px;
+        }
+
+        .color-variant-card {
+          position: relative;
+          background: #fff;
+          border: 1.5px solid #e8e8e8;
+          border-radius: 10px;
+          overflow: hidden;
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 0 0 8px;
+          transition: all 0.2s;
+          font-family: 'DM Sans', sans-serif;
+        }
+
+        .dark .color-variant-card { background: #1a1a1a; border-color: #2a2a2a; }
+
+        .color-variant-card img {
+          width: 100%;
+          aspect-ratio: 1;
+          object-fit: cover;
+          transition: transform 0.3s;
+        }
+
+        .color-variant-card span {
+          font-size: 11px;
+          font-weight: 500;
+          color: #555;
+          margin-top: 6px;
+          padding: 0 6px;
+          text-align: center;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          width: 100%;
+        }
+
+        .dark .color-variant-card span { color: #aaa; }
+
+        .color-variant-card:hover { border-color: #111111; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+        .color-variant-card:hover img { transform: scale(1.08); }
+
+        .color-variant-active {
+          border-color: #111111 !important;
+          box-shadow: 0 0 0 2px rgba(0,0,0,0.12);
+        }
+
+        .dark .color-variant-active { border-color: #444444 !important; }
+
+        .color-variant-check {
+          position: absolute;
+          top: 6px; right: 6px;
+          width: 20px; height: 20px;
+          background: #111111;
+          border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+        }
+
+        .color-variant-check svg { width: 12px; height: 12px; color: white; }
+
+        /* ══════════════════════════════════════════════
+           SPECS SECTION
+        ══════════════════════════════════════════════ */
+
+        .specs-section, .bundle-section {
+          margin-top: 64px;
+          border-top: 1px solid #e8e8e8;
+          padding-top: 48px;
+        }
+
+        .dark .specs-section, .dark .bundle-section { border-top-color: #2a2a2a; }
+
+        .specs-header {
+          margin-bottom: 32px;
+        }
+
+        .specs-header h2 {
+          font-family: 'DM Serif Display', serif;
+          font-size: clamp(22px, 3vw, 32px);
+          font-weight: 400;
+          letter-spacing: -0.02em;
+          color: #0d0d0d;
+          margin-bottom: 12px;
+        }
+
+        .dark .specs-header h2 { color: #f0f0f0; }
+
+        .specs-rule {
+          width: 48px;
+          height: 3px;
+          background: linear-gradient(90deg, #111111 0%, #555555 100%);
+          border-radius: 2px;
+        }
+
+        .specs-body {
+          max-width: 680px;
+          line-height: 1.8;
+        }
+
+        .specs-model {
+          font-size: 18px;
+          font-weight: 600;
+          color: #0d0d0d;
+          margin-bottom: 12px;
+        }
+
+        .dark .specs-model { color: #f0f0f0; }
+
+        .specs-item {
+          font-size: 15px;
+          color: #555;
+          padding: 4px 0 4px 8px;
+          border-left: 2px solid transparent;
+          transition: border-color 0.2s, padding-left 0.2s;
+        }
+
+        .dark .specs-item { color: #aaa; }
+
+        .specs-item:hover {
+          border-left-color: #111111;
+          padding-left: 14px;
+          color: #1a1a1a;
+        }
+
+        .dark .specs-item:hover { border-left-color: #444444; color: #f0f0f0; }
+
+        /* ══════════════════════════════════════════════
+           BUNDLE GRID
+        ══════════════════════════════════════════════ */
+
+        .bundle-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+          gap: 16px;
+        }
+
+        .bundle-card {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 16px;
+          background: #fff;
+          border: 1.5px solid #e8e8e8;
+          border-radius: 12px;
+          text-decoration: none;
+          color: inherit;
+          transition: all 0.25s;
+          cursor: pointer;
+        }
+
+        .dark .bundle-card { background: #1a1a1a; border-color: #2a2a2a; }
+
+        .bundle-card:hover { border-color: #111111; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        .dark .bundle-card:hover { border-color: #444444; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+
+        .bundle-card-img {
+          width: 64px; height: 64px;
+          border-radius: 8px;
+          overflow: hidden;
+          flex-shrink: 0;
+          background: #f8f8f8;
+        }
+
+        .dark .bundle-card-img { background: #222; }
+
+        .bundle-card-img img {
+          width: 100%; height: 100%;
+          object-fit: contain;
+          padding: 4px;
+        }
+
+        .bundle-card-info { flex: 1; min-width: 0; }
+        .bundle-card-title { font-size: 14px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
+        .dark .bundle-card-title { color: #f0f0f0; }
+        .bundle-card-qty { font-size: 12px; color: #888; }
+
+        .bundle-featured {
+          display: inline-block;
+          margin-top: 4px;
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #111111;
+          background: #f0f0f0;
+          padding: 2px 8px;
+          border-radius: 10px;
+        }
+
+        .dark .bundle-featured { color: #aaaaaa; background: #222222; }
+
+        .bundle-card-arrow {
+          font-size: 20px;
+          color: #ccc;
+          flex-shrink: 0;
+          transition: transform 0.2s, color 0.2s;
+        }
+
+        .bundle-card:hover .bundle-card-arrow { transform: translateX(3px); color: #111111; }
+        .dark .bundle-card:hover .bundle-card-arrow { color: #444444; }
+
+        /* ══════════════════════════════════════════════
+           LIGHTBOX
+        ══════════════════════════════════════════════ */
+
+        .lightbox {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.94);
+          backdrop-filter: blur(16px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          animation: lb-fade 0.2s ease;
+        }
+
+        @keyframes lb-fade { from { opacity: 0 } to { opacity: 1 } }
+
+        .lb-image {
+          max-width: 90vw;
+          max-height: 88vh;
+          object-fit: contain;
+          border-radius: 12px;
+          animation: lb-zoom 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        @keyframes lb-zoom { from { transform: scale(0.9); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+
+        .lb-close, .lb-nav {
+          position: absolute;
+          background: rgba(255,255,255,0.1);
+          border: 1px solid rgba(255,255,255,0.12);
+          color: white;
+          border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+          backdrop-filter: blur(8px);
+        }
+
+        .lb-close:hover, .lb-nav:hover {
+          background: rgba(255,255,255,0.2);
+          transform: scale(1.08);
+        }
+
+        .lb-close { top: 20px; right: 20px; width: 44px; height: 44px; }
+        .lb-close svg { width: 20px; height: 20px; }
+
+        .lb-nav {
+          top: 50%; transform: translateY(-50%);
+          width: 52px; height: 52px;
+        }
+
+        .lb-nav:hover { transform: translateY(-50%) scale(1.08); }
+        .lb-prev { left: 24px; }
+        .lb-next { right: 24px; }
+        .lb-nav svg { width: 22px; height: 22px; }
+
+        .lb-counter {
+          position: absolute;
+          bottom: 28px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: rgba(0,0,0,0.6);
+          border: 1px solid rgba(255,255,255,0.1);
+          padding: 7px 20px;
+          border-radius: 20px;
+          font-size: 13px;
+          color: rgba(255,255,255,0.9);
+          font-weight: 500;
+          letter-spacing: 0.04em;
+          backdrop-filter: blur(8px);
+        }
+
+        .lb-bundle-label { color: rgba(255,255,255,0.55); font-weight: 400; }
+
+        /* ══════════════════════════════════════════════
+           RESPONSIVE
+        ══════════════════════════════════════════════ */
+
+        @media (max-width: 768px) {
+          .samsung-container { padding: 0 16px 60px; }
+          .samsung-breadcrumb { padding: 14px 0 24px; }
+          .thumb-btn { width: 60px; height: 60px; }
+          .specs-section, .bundle-section { margin-top: 48px; padding-top: 36px; }
+          .bundle-grid { grid-template-columns: 1fr; }
+          .lb-prev { left: 12px; }
+          .lb-next { right: 12px; }
+          .lb-nav { width: 44px; height: 44px; }
+        }
+
+        @media (max-width: 480px) {
+          .samsung-container { padding: 0 12px 48px; }
+          .atc-btn { padding: 14px 24px; font-size: 14px; }
+          .color-variants-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+      `}</style>
     </>
   );
 };
+
+// Inline styles for skeleton and error states
+const skeletonStyles = `
+  .samsung-page { min-height: 100vh; background: #f8f8f8; font-family: sans-serif; padding: 24px; }
+  .dark .samsung-page { background: #0d0d0d; }
+  .samsung-container { max-width: 1280px; margin: 0 auto; padding: 24px; }
+  .samsung-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; }
+  .samsung-left, .samsung-right { display: flex; flex-direction: column; gap: 12px; }
+  .skeleton-main { width: 100%; aspect-ratio: 1; border-radius: 20px; }
+  .skeleton-thumbs { display: flex; gap: 8px; }
+  .skeleton-thumb { width: 72px; height: 72px; border-radius: 10px; }
+  .skeleton-title { height: 48px; width: 80%; border-radius: 8px; }
+  .skeleton-price { height: 36px; width: 40%; border-radius: 8px; }
+  .skeleton-line { height: 16px; width: 100%; border-radius: 6px; }
+  .skeleton-line.short { width: 60%; }
+  .skeleton-btn { height: 52px; width: 100%; border-radius: 10px; margin-top: 8px; }
+  @media (max-width: 768px) { .samsung-grid { grid-template-columns: 1fr; } }
+`;
+
+const errorStyles = `
+  .samsung-error { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 12px; padding: 24px; font-family: sans-serif; }
+  .error-icon { width: 64px; height: 64px; color: #c8232c; }
+  .error-title { font-size: 22px; font-weight: 600; color: #1a1a1a; }
+  .error-msg { font-size: 15px; color: #888; text-align: center; max-width: 400px; }
+`;
 
 export default ProductDetail;

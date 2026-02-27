@@ -30,6 +30,7 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
   const [selectedVariants, setSelectedVariants] = useState({});
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [addedMap, setAddedMap] = useState({});
 
   /* ================= FETCH PRODUCTS ================= */
   useEffect(() => {
@@ -37,13 +38,10 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
       setLoading(true);
       try {
         let res;
-
         if (!category) {
           res = await axios.get(`${API_BASE}/api/products`);
         } else {
-          res = await axios.get(
-            `${API_BASE}/api/products/category/name/${category}`
-          );
+          res = await axios.get(`${API_BASE}/api/products/category/name/${category}`);
         }
 
         setAllProducts(res.data);
@@ -86,16 +84,15 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
 
   /* ================= HANDLERS ================= */
   const handleVariantChange = (productId, variant) => {
-    setSelectedVariants((prev) => ({
-      ...prev,
-      [productId]: variant,
-    }));
+    setSelectedVariants((prev) => ({ ...prev, [productId]: variant }));
   };
 
   const handleAddToCart = (product) => {
     const variant = selectedVariants[product.product_id];
     if (variant) {
       addToCart({ ...product, ...variant });
+      setAddedMap((prev) => ({ ...prev, [product.product_id]: true }));
+      setTimeout(() => setAddedMap((prev) => ({ ...prev, [product.product_id]: false })), 1800);
     }
   };
 
@@ -111,14 +108,13 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
   /* ================= IMAGE RENDER ================= */
   const renderProductImage = (product) => {
     if (
-      product.is_bundle &&
+      !!product.is_bundle &&
       Array.isArray(product.bundle_products) &&
       product.bundle_products.length >= 2
     ) {
       const leftImage =
         product.bundle_products[0]?.variants?.[0]?.image ||
         product.bundle_products[0]?.primaryImage;
-
       const rightImage =
         product.bundle_products[1]?.variants?.[0]?.image ||
         product.bundle_products[1]?.primaryImage;
@@ -126,169 +122,131 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
       if (leftImage && rightImage) {
         return (
           <div className="bundle-image-splice">
-            <CompressedImage
-              src={leftImage}
-              alt="Bundle item 1"
-              className="bundle-splice-image-left"
-              maxWidth={300}
-              maxHeight={300}
-              quality={0.8}
-            />
-            <CompressedImage
-              src={rightImage}
-              alt="Bundle item 2"
-              className="bundle-splice-image-right"
-              maxWidth={300}
-              maxHeight={300}
-              quality={0.8}
-            />
+            <CompressedImage src={leftImage} alt="Bundle item 1" className="bundle-splice-image-left" maxWidth={300} maxHeight={300} quality={0.8} />
+            <CompressedImage src={rightImage} alt="Bundle item 2" className="bundle-splice-image-right" maxWidth={300} maxHeight={300} quality={0.8} />
           </div>
         );
       }
     }
 
     const selectedVariant = selectedVariants[product.product_id];
-    const image =
-      selectedVariant?.image ||
-      product.primaryImage ||
-      "/fallback.jpg";
+    const image = selectedVariant?.image || product.primaryImage || "/fallback.jpg";
 
     return (
-      <CompressedImage
-        src={image}
-        alt={product.title}
-        className="product-image"
-        maxWidth={300}
-        maxHeight={300}
-        quality={0.8}
-      />
+      <CompressedImage src={image} alt={product.title} className="product-image" maxWidth={300} maxHeight={300} quality={0.8} />
     );
   };
 
   return (
-    <div className="products-container">
-      {/* 🔥 PROMOTIONAL BANNER */}
-      <div className="px-4 md:px-8 pt-4">
-        <PromotionalBanner className="promotional-banner"/>
+    <div className="samsung-products-page">
+      {/* Promotional Banner */}
+      <div className="samsung-banner-wrap">
+        <PromotionalBanner className="promotional-banner" />
       </div>
 
-      {/* Search Info */}
-      <div className="search-section mb-4 px-4 md:px-8">
-        <div className="text-xs text-gray-500 whitespace-nowrap">
-          {filteredProducts.length}{" "}
-          {filteredProducts.length === 1 ? "item" : "items"}
-          {searchQuery && ` for "${searchQuery}"`}
-          {!searchQuery && category && ` in ${category}`}
-          {!searchQuery && !category && " in All Products"}
-        </div>
+      {/* Results Count */}
+      <div className="samsung-results-bar">
+        <span className="results-count">
+          <span className="results-num">{filteredProducts.length}</span>
+          {filteredProducts.length === 1 ? " item" : " items"}
+          {searchQuery && <span className="results-query"> for &ldquo;{searchQuery}&rdquo;</span>}
+          {!searchQuery && category && <span className="results-query"> in {category}</span>}
+          {!searchQuery && !category && <span> in All Products</span>}
+        </span>
       </div>
 
-      <div className="flex">
-        <SideMenu
-          onCategorySelect={handleCategorySelect}
-          selectedCategory={category}
-        />
+      <div className="samsung-layout">
+        <SideMenu onCategorySelect={handleCategorySelect} selectedCategory={category} />
 
-        {/* Updated grid to use pos-products-grid */}
-        <div className="pos-products-grid flex-grow">
-          {loading ? (
-            Array.from({ length: 8 }).map((_, i) => (
-              <Card key={i} className="modern-card border-none">
-                <div className="pos-product-image-wrapper">
-                  <Skeleton className="w-full h-full" />
+        <div className="samsung-grid-wrap">
+          <div className="samsung-product-grid">
+            {loading ? (
+              Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="samsung-card-skeleton">
+                  <Skeleton className="skel-img" />
+                  <div className="skel-body">
+                    <Skeleton className="skel-title" />
+                    <Skeleton className="skel-price" />
+                    <Skeleton className="skel-btn" />
+                  </div>
                 </div>
-                <CardHeader>
-                  <Skeleton className="h-4 w-3/4 mb-2" />
-                  <Skeleton className="h-3 w-1/2" />
-                </CardHeader>
-                <CardContent className="px-3 pb-2">
-                  <Skeleton className="h-4 w-1/3" />
-                </CardContent>
-                <CardFooter className="p-3 pt-1">
-                  <Skeleton className="h-9 w-full rounded-md" />
-                </CardFooter>
-              </Card>
-            ))
-          ) : filteredProducts.length > 0 ? (
-            filteredProducts.map((product) => {
-              if (!product.is_bundle && !product.variants?.length) return null;
+              ))
+            ) : filteredProducts.length > 0 ? (
+              filteredProducts.map((product) => {
+                if (!product.is_bundle && !product.variants?.length) return null;
 
-              const selectedVariant =
-                selectedVariants[product.product_id];
+                const selectedVariant = selectedVariants[product.product_id];
+                const priceSource = selectedVariant || {};
+                const originalPrice = (Number(priceSource.price) || 0) + (Number(priceSource.discount) || 0);
+                const hasDiscount = Number(priceSource.discount) > 0;
+                const isAdded = addedMap[product.product_id];
 
-              const priceSource = selectedVariant || {};
-              const originalPrice =
-                (Number(priceSource.price) || 0) +
-                (Number(priceSource.discount) || 0);
-              const hasDiscount = Number(priceSource.discount) > 0;
+                return (
+                  <div key={product.product_id} className="samsung-card">
+                    {/* Discount badge */}
+                    {!!hasDiscount && (
+                      <div className="samsung-sale-badge">
+                        <Tag className="badge-icon" />
+                        SALE
+                      </div>
+                    )}
 
-              return (
-                <Card
-                  key={product.product_id}
-                  className="modern-card relative transition-all hover:scale-105 border-none group"
-                >
-                  {hasDiscount && (
-                    <div className="absolute top-3 left-3 z-10 bg-yellow-500 px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                      <Tag className="w-3 h-3" /> SALE
+                    {/* Bundle badge */}
+                    {!!product.is_bundle && (
+                      <div className="samsung-bundle-badge">Bundle</div>
+                    )}
+
+                    <Link to={`/products/${product.product_id}`} className="samsung-card-link">
+                      <div className="samsung-card-img">
+                        {renderProductImage(product)}
+                      </div>
+
+                      <div className="samsung-card-body">
+                        <h3 className="samsung-card-title">{product.title}</h3>
+                        <p className="samsung-card-desc">
+                          <DescriptionText description={product.description} />
+                        </p>
+                        <div className="samsung-card-price">
+                          {hasDiscount ? (
+                            <>
+                              <span className="price-original">Kshs {originalPrice.toFixed(2)}</span>
+                              <span className="price-current">Kshs {Number(priceSource.price).toFixed(2)}</span>
+                            </>
+                          ) : (
+                            <span className="price-current">Kshs {Number(priceSource.price).toFixed(2)}</span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+
+                    <div className="samsung-card-footer">
+                      <button
+                        className={`samsung-atc-btn ${isAdded ? "atc-success" : ""}`}
+                        onClick={() => handleAddToCart(product)}
+                      >
+                        {isAdded ? (
+                          <>
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                            Added
+                          </>
+                        ) : (
+                          "Add to Cart"
+                        )}
+                      </button>
                     </div>
-                  )}
-
-                  <Link to={`/products/${product.product_id}`}>
-                    <div className="pos-product-image-wrapper">
-                      {renderProductImage(product)}
-                    </div>
-                    
-                    <CardHeader>
-                      <CardTitle className="text-sm line-clamp-2 h-10">
-                        {product.title}
-                      </CardTitle>
-                      <CardDescription className="product-description">
-                        <DescriptionText
-                          description={product.description}
-                        />
-                      </CardDescription>
-                    </CardHeader>
-
-                    <CardContent className="font-semibold px-3 pb-2">
-                      {hasDiscount ? (
-                        <>
-                          <span className="line-through text-sm">
-                            Kshs {originalPrice.toFixed(2)}
-                          </span>
-                          <span className="ml-2">
-                            Kshs {Number(priceSource.price).toFixed(2)}
-                          </span>
-                        </>
-                      ) : (
-                        <span>
-                          Kshs {Number(priceSource.price).toFixed(2)}
-                        </span>
-                      )}
-                    </CardContent>
-                  </Link>
-
-                  <CardFooter className="p-3 pt-1">
-                    <Button
-                      className="modern-cart-btn"
-                      onClick={() => handleAddToCart(product)}
-                    >
-                      Add to cart
-                    </Button>
-                  </CardFooter>
-                </Card>
-              );
-            })
-          ) : (
-            <div className="col-span-full text-center py-12">
-              <Search className="mx-auto h-12 w-12 mb-4 opacity-40" />
-              <h3 className="text-lg font-semibold">No products found</h3>
-              <p className="opacity-70">
-                {searchQuery
-                  ? `No products match "${searchQuery}"`
-                  : `No products in ${category || "All Products"}`}
-              </p>
-            </div>
-          )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="samsung-empty">
+                <Search className="empty-icon" />
+                <p className="empty-title">No products found</p>
+                <p className="empty-sub">
+                  {searchQuery ? `No results for "${searchQuery}"` : `No products in ${category || "All Products"}`}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -297,7 +255,6 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
 
 const DescriptionText = ({ description }) => {
   const [expanded, setExpanded] = useState(false);
-
   const words = description.split(" ");
   const shortDesc = words.slice(0, 3).join(" ");
 
@@ -305,11 +262,7 @@ const DescriptionText = ({ description }) => {
     <span>
       {expanded ? description : shortDesc}
       {words.length > 3 && (
-        <button
-          type="button"
-          onClick={() => setExpanded(!expanded)}
-          className="see-more-btn"
-        >
+        <button type="button" onClick={() => setExpanded(!expanded)} className="see-more-btn">
           {expanded ? " See less" : " ...See more"}
         </button>
       )}

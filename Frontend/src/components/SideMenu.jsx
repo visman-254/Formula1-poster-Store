@@ -15,7 +15,6 @@ const debounce = (func, delay) => {
 /* ===================== COMPONENT ===================== */
 const SideMenu = ({ onCategorySelect, selectedCategory }) => {
   const [categories, setCategories] = useState([]);
-  const [hoveredCategoryId, setHoveredCategoryId] = useState(null);
   const [expandedCategoryId, setExpandedCategoryId] = useState(null);
 
   const navigate = useNavigate();
@@ -59,18 +58,17 @@ const SideMenu = ({ onCategorySelect, selectedCategory }) => {
     [onCategorySelect]
   );
 
-  const handleCategoryHover = (categoryName) => {
+  const handleCategoryClick = (categoryName) => {
     debouncedCategorySelect(categoryName, true);
   };
 
-  const handleParentMouseEnter = (categoryId) => {
-    setHoveredCategoryId(categoryId);
-  };
-
-  const handleParentMouseLeave = () => {
-    if (!expandedCategoryId) {
-      setHoveredCategoryId(null);
-    }
+  const handleParentClick = (e, categoryId, categoryName) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Toggle expansion
+    setExpandedCategoryId(prev => prev === categoryId ? null : categoryId);
+    // Load products for this category immediately (not waiting for subcategory)
+    onCategorySelect(categoryName, false);
   };
 
   const handlePreorderClick = (e) => {
@@ -107,26 +105,16 @@ const SideMenu = ({ onCategorySelect, selectedCategory }) => {
 
         {/* CATEGORIES */}
         {categories.map((category) => {
-          const isExpanded =
-            hoveredCategoryId === category.category_id ||
-            expandedCategoryId === category.category_id;
+          const isExpanded = expandedCategoryId === category.category_id;
 
           return (
             <li
               key={category.category_id}
-              onMouseEnter={() =>
-                handleParentMouseEnter(category.category_id)
-              }
-              onMouseLeave={handleParentMouseLeave}
             >
               <div className="category-item">
                 <a
                   href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setExpandedCategoryId(category.category_id);
-                    onCategorySelect(category.category_name, false);
-                  }}
+                  onClick={(e) => handleParentClick(e, category.category_id, category.category_name)}
                   className={
                     selectedCategory === category.category_name
                       ? "active"
@@ -134,25 +122,32 @@ const SideMenu = ({ onCategorySelect, selectedCategory }) => {
                   }
                 >
                   {category.category_name}
+                  {/* Show dropdown arrow if category has subcategories */}
+                  {category.subcategories?.length > 0 && (
+                    <span 
+                      className="dropdown-arrow"
+                      style={{
+                        marginLeft: '8px',
+                        fontWeight: 'bold',
+                        transition: 'transform 0.2s ease'
+                      }}
+                    >
+                      {isExpanded ? '−' : '+'}
+                    </span>
+                  )}
                 </a>
               </div>
 
               {category.subcategories?.length > 0 && (
                 <ul className="subcategory-list">
-                  {(isExpanded
-                    ? category.subcategories
-                    : category.subcategories.slice(0, 3)
-                  ).map((subcategory) => (
+                  {/* Only show subcategories when this category is expanded (clicked) */}
+                  {isExpanded && category.subcategories.map((subcategory) => (
                     <li key={subcategory.category_id}>
                       <a
                         href="#"
-                        onMouseEnter={() =>
-                          handleCategoryHover(
-                            subcategory.category_name
-                          )
-                        }
                         onClick={(e) => {
                           e.preventDefault();
+                          e.stopPropagation();
                           setExpandedCategoryId(
                             category.category_id
                           );
@@ -161,6 +156,11 @@ const SideMenu = ({ onCategorySelect, selectedCategory }) => {
                             false
                           );
                         }}
+                        onMouseEnter={() =>
+                          handleCategoryClick(
+                            subcategory.category_name
+                          )
+                        }
                         className={
                           selectedCategory ===
                           subcategory.category_name
