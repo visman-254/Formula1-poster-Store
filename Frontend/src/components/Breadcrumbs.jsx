@@ -8,8 +8,8 @@ const Breadcrumbs = () => {
 
   let breadcrumbPath = '';
 
-  // Do not show breadcrumbs on home, login, or the root products page
-  if (location.pathname === '/home' || location.pathname === '/login' || location.pathname === '/') {
+  // Do not show breadcrumbs on home, login, admin, or pos pages
+  if (location.pathname === '/' || location.pathname === '/home' || location.pathname === '/login' || location.pathname === '/admin' || location.pathname === '/pos') {
     return null;
   }
 

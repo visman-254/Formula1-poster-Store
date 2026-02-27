@@ -239,7 +239,11 @@ const ProductDetail = () => {
             <span className="bc-current">{product.title}</span>
           </nav>
 
-          <div className="samsung-grid">
+          {/* 3-col outer: [gallery+details | specs] on huge screens */}
+          <div className="samsung-outer">
+
+            {/* Left panel: gallery + details */}
+            <div className="samsung-grid">
 
             {/* ═══════════ LEFT – Gallery ═══════════ */}
             <div className="samsung-left">
@@ -484,30 +488,34 @@ const ProductDetail = () => {
                 </div>
               )}
             </div>
-          </div>
+            </div>{/* end samsung-grid */}
 
-          {/* ═══════════ SPECS SECTION ═══════════ */}
-          {product.description && (
-            <div className="specs-section">
-              <div className="specs-header">
-                <h2>Specifications</h2>
-                <div className="specs-rule" />
-              </div>
-              <div className="specs-body">
-                {product.description.split(/\r?\n/).map((line, index) => {
-                  const trimmed = line.trim();
-                  if (index === 0 && !trimmed.startsWith('•') && !trimmed.startsWith('-')) {
-                    return <p key={index} className="specs-model">{trimmed}</p>;
-                  }
-                  if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
-                    return <p key={index} className="specs-item">{trimmed}</p>;
-                  }
-                  if (trimmed === '') return <br key={index} />;
-                  return <p key={index} className="specs-item">• {trimmed}</p>;
-                })}
-              </div>
+            {/* ═══════════ RIGHT PANEL – Specs (3rd col on huge screens) ═══════════ */}
+            <div className={`specs-panel${!product.description ? ' specs-panel-hidden' : ''}`}>
+              {product.description && (
+                <>
+                  <div className="specs-header">
+                    <h2>Specifications</h2>
+                    <div className="specs-rule" />
+                  </div>
+                  <div className="specs-body">
+                    {product.description.split(/\r?\n/).map((line, index) => {
+                      const trimmed = line.trim();
+                      if (index === 0 && !trimmed.startsWith('•') && !trimmed.startsWith('-')) {
+                        return <p key={index} className="specs-model">{trimmed}</p>;
+                      }
+                      if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
+                        return <p key={index} className="specs-item">{trimmed}</p>;
+                      }
+                      if (trimmed === '') return <br key={index} />;
+                      return <p key={index} className="specs-item">• {trimmed}</p>;
+                    })}
+                  </div>
+                </>
+              )}
             </div>
-          )}
+
+          </div>{/* end samsung-outer */}
 
           {/* ═══════════ BUNDLE SECTION ═══════════ */}
           {!!product.is_bundle && product.bundle_products?.length > 0 && (
@@ -594,13 +602,15 @@ const ProductDetail = () => {
 
         .samsung-page {
           min-height: 100vh;
-          background: #f8f8f8;
+          background: linear-gradient(135deg, rgba(248,248,248,0.9) 0%, rgba(240,240,245,0.9) 100%);
+          backdrop-filter: blur(30px);
+          -webkit-backdrop-filter: blur(30px);
           font-family: 'DM Sans', sans-serif;
           color: #1a1a1a;
         }
 
         .dark .samsung-page {
-          background: #0d0d0d;
+          background: linear-gradient(135deg, rgba(13,13,13,0.95) 0%, rgba(20,20,25,0.95) 100%);
           color: #f0f0f0;
         }
 
@@ -624,16 +634,34 @@ const ProductDetail = () => {
         .bc-current { color: #1a1a1a; font-weight: 500; }
         .dark .bc-current { color: #f0f0f0; }
 
-        /* ── Main Grid ── */
-        .samsung-grid {
+        /* ── Outer 3-col layout ── */
+        /* ── Outer layout: [gallery+details] | [specs] ── */
+        .samsung-outer {
           display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 64px;
+          grid-template-columns: 1fr 320px;
+          gap: 40px;
           align-items: start;
         }
 
+        /* Inner 2-col: gallery | details */
+        .samsung-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 48px;
+          align-items: start;
+          min-width: 0;
+        }
+
+        /* ≤1280px: specs drops below as a card, gallery+details still side-by-side */
+        @media (max-width: 1280px) {
+          .samsung-outer {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        /* ≤1024px: gallery+details also go single column */
         @media (max-width: 1024px) {
-          .samsung-grid { grid-template-columns: 1fr; gap: 40px; }
+          .samsung-grid { grid-template-columns: 1fr; gap: 36px; }
         }
 
         /* ══════════════════════════════════════════════
@@ -649,9 +677,72 @@ const ProductDetail = () => {
           .samsung-left { position: static; }
         }
 
+        /* Specs panel — sticky on the right at ≥1280px */
+        .specs-panel {
+          position: sticky;
+          top: 24px;
+          background: rgba(255, 255, 255, 0.7);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-radius: 16px;
+          padding: 32px;
+          box-shadow: 0 2px 20px rgba(0,0,0,0.05);
+          max-height: calc(100vh - 48px);
+          overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: #e0e0e0 transparent;
+          border: none;
+          transition: all 0.3s ease;
+        }
+
+        .specs-panel:hover {
+          background: rgba(255, 255, 255, 0.85);
+          box-shadow: 0 8px 40px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.5);
+        }
+
+        .specs-panel::-webkit-scrollbar { width: 4px; }
+        .specs-panel::-webkit-scrollbar-track { background: transparent; }
+        .specs-panel::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 4px; }
+
+        .specs-panel-hidden {
+          display: none;
+        }
+
+        .dark .specs-panel {
+          background: rgba(26, 26, 26, 0.8);
+          border-color: transparent;
+          box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+        }
+
+        .dark .specs-panel:hover {
+          background: rgba(26, 26, 26, 0.95);
+          box-shadow: 0 8px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1);
+        }
+
+        /* When specs panel drops below (≤1280px), it becomes a full-width card */
+        @media (max-width: 1280px) {
+          .specs-panel {
+            position: static;
+            max-height: none;
+            border-radius: 16px;
+            margin-top: 48px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .specs-panel {
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 36px;
+            border: none;
+          }
+        }
+
         .main-image-wrapper {
           position: relative;
-          background: #ffffff;
+          background: rgba(255, 255, 255, 0.7);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
           border-radius: 20px;
           overflow: hidden;
           aspect-ratio: 1 / 1;
@@ -659,16 +750,22 @@ const ProductDetail = () => {
           align-items: center;
           justify-content: center;
           box-shadow: 0 2px 40px rgba(0,0,0,0.06);
-          transition: box-shadow 0.3s ease;
+          transition: all 0.3s ease;
+          border: none;
         }
 
         .dark .main-image-wrapper {
-          background: #1a1a1a;
+          background: rgba(26, 26, 26, 0.7);
           box-shadow: 0 2px 40px rgba(0,0,0,0.4);
         }
 
         .main-image-wrapper:hover {
-          box-shadow: 0 8px 60px rgba(0,0,0,0.12);
+          box-shadow: 0 8px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.3);
+          background: rgba(255, 255, 255, 0.9);
+        }
+
+        .dark .main-image-wrapper:hover {
+          background: rgba(40, 40, 40, 0.9);
         }
 
         .main-product-image {
@@ -763,6 +860,26 @@ const ProductDetail = () => {
           flex-direction: column;
           gap: 20px;
           padding-top: 8px;
+          background: rgba(255, 255, 255, 0.5);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-radius: 20px;
+          padding: 24px;
+          border: none;
+          transition: all 0.3s ease;
+        }
+
+        .samsung-right:hover {
+          background: rgba(255, 255, 255, 0.7);
+          box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+        }
+
+        .dark .samsung-right {
+          background: rgba(26, 26, 26, 0.5);
+        }
+
+        .dark .samsung-right:hover {
+          background: rgba(40, 40, 40, 0.7);
         }
 
         .title-row {
@@ -795,21 +912,21 @@ const ProductDetail = () => {
           border-radius: 20px;
           flex-shrink: 0;
           margin-top: 6px;
-          border: 1px solid #d0d0d0;
+          border: none;
         }
 
         .dark .bundle-tag {
           background: #222222;
           color: #aaaaaa;
-          border-color: #333333;
         }
 
         /* Dividers */
         .section-rule {
           height: 1px;
-          background: linear-gradient(90deg, #e8e8e8 0%, transparent 100%);
+          background: rgba(0,0,0,0.06);
+          margin: 20px 0;
         }
-        .dark .section-rule { background: linear-gradient(90deg, #2a2a2a 0%, transparent 100%); }
+        .dark .section-rule { background: rgba(255,255,255,0.06); }
 
         /* Price */
         .price-block {
@@ -840,14 +957,13 @@ const ProductDetail = () => {
           font-weight: 600;
           color: #c8232c;
           background: #fff0f0;
-          border: 1px solid #ffd0d0;
+          border: none;
           padding: 4px 10px;
           border-radius: 20px;
         }
 
         .dark .price-save {
           background: #2a1010;
-          border-color: #5a2020;
           color: #ff6b6b;
         }
 
@@ -1026,8 +1142,10 @@ const ProductDetail = () => {
 
         .color-variant-card {
           position: relative;
-          background: #fff;
-          border: 1.5px solid #e8e8e8;
+          background: rgba(255, 255, 255, 0.7);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: none;
           border-radius: 10px;
           overflow: hidden;
           cursor: pointer;
@@ -1035,11 +1153,18 @@ const ProductDetail = () => {
           flex-direction: column;
           align-items: center;
           padding: 0 0 8px;
-          transition: all 0.2s;
+          transition: all 0.3s ease;
           font-family: 'DM Sans', sans-serif;
         }
 
-        .dark .color-variant-card { background: #1a1a1a; border-color: #2a2a2a; }
+        .color-variant-card:hover {
+          background: rgba(255, 255, 255, 0.9);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+          transform: translateY(-2px);
+        }
+
+        .dark .color-variant-card { background: rgba(26, 26, 26, 0.7); }
+        .dark .color-variant-card:hover { background: rgba(40, 40, 40, 0.9); }
 
         .color-variant-card img {
           width: 100%;
@@ -1063,7 +1188,7 @@ const ProductDetail = () => {
 
         .dark .color-variant-card span { color: #aaa; }
 
-        .color-variant-card:hover { border-color: #111111; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+        .color-variant-card:hover { transform: translateY(-2px); }
         .color-variant-card:hover img { transform: scale(1.08); }
 
         .color-variant-active {
@@ -1085,24 +1210,24 @@ const ProductDetail = () => {
         .color-variant-check svg { width: 12px; height: 12px; color: white; }
 
         /* ══════════════════════════════════════════════
-           SPECS SECTION
+           SPECS PANEL + BUNDLE SECTION
         ══════════════════════════════════════════════ */
 
-        .specs-section, .bundle-section {
-          margin-top: 64px;
-          border-top: 1px solid #e8e8e8;
-          padding-top: 48px;
+        .bundle-section {
+          margin-top: 48px;
+          border-top: 1px solid rgba(0,0,0,0.06);
+          padding-top: 40px;
         }
 
-        .dark .specs-section, .dark .bundle-section { border-top-color: #2a2a2a; }
+        .dark .bundle-section { border-top-color: rgba(255,255,255,0.06); }
 
         .specs-header {
-          margin-bottom: 32px;
+          margin-bottom: 24px;
         }
 
         .specs-header h2 {
           font-family: 'DM Serif Display', serif;
-          font-size: clamp(22px, 3vw, 32px);
+          font-size: clamp(18px, 2vw, 26px);
           font-weight: 400;
           letter-spacing: -0.02em;
           color: #0d0d0d;
@@ -1119,7 +1244,6 @@ const ProductDetail = () => {
         }
 
         .specs-body {
-          max-width: 680px;
           line-height: 1.8;
         }
 
@@ -1309,7 +1433,7 @@ const ProductDetail = () => {
           .samsung-container { padding: 0 16px 60px; }
           .samsung-breadcrumb { padding: 14px 0 24px; }
           .thumb-btn { width: 60px; height: 60px; }
-          .specs-section, .bundle-section { margin-top: 48px; padding-top: 36px; }
+          .bundle-section { margin-top: 36px; padding-top: 28px; }
           .bundle-grid { grid-template-columns: 1fr; }
           .lb-prev { left: 12px; }
           .lb-next { right: 12px; }

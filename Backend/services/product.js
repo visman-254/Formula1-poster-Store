@@ -131,7 +131,9 @@ export const getProducts = async () => {
             FROM products p
             LEFT JOIN product_variants pv ON p.product_id = pv.product_id
             LEFT JOIN categories c ON p.category_id = c.category_id
-            WHERE p.is_deleted = FALSE AND p.is_visible = TRUE
+            WHERE p.is_deleted = FALSE 
+            AND p.is_visible = TRUE
+            AND (c.is_deleted = FALSE OR c.is_deleted IS NULL)
         `);
         const grouped = await groupProducts(rows);
         // Filter out bundles that are out of stock
