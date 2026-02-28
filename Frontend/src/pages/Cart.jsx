@@ -14,11 +14,6 @@ const Cart = () => {
     totalPrice
   } = useCart();
 
-  /**
-   * Resolve image URL consistently across the app
-   * Images from backend are already full URLs (http:// or /)
-   * Only modify relative paths that need API_BASE prepended
-   */
   const resolveImageUrl = (image) => {
     if (!image) return '/placeholder.png';
     
@@ -32,128 +27,71 @@ const Cart = () => {
     const cleanImage = image.replace(/^\/+/, '');
     return `${API_BASE}/${cleanImage}`;
   };
+;
 
-  /**
-   * Generate WhatsApp order message with order details
-   */
   const generateWhatsAppOrderLink = () => {
-    let message = `🛒 *NEW ORDER - PANNA MUSIC*\n\n`;
-    
+    let message = `🛒 PANNA MUSIC ORDER\n\n`;
     cartItems.forEach((item, index) => {
       const unitPrice = parseFloat(item.price);
       const qty = parseInt(item.quantity);
       const itemTotal = unitPrice * qty;
-      
-      message += `${index + 1}. *${item.title}*\n`;
-      if (item.color || item.storage || item.ram) {
-        const specs = [
-          item.color && `Color: ${item.color}`,
-          item.storage && `Storage: ${item.storage}`,
-          item.ram && `RAM: ${item.ram}`
-        ].filter(Boolean).join(' · ');
-        message += `   ${specs}\n`;
-      }
-      message += `   Unit: Ksh ${unitPrice.toFixed(2)}\n`;
-      message += `   Qty: ${qty}\n`;
-      message += `   Subtotal: Ksh ${itemTotal.toFixed(2)}\n\n`;
+      message += `${index + 1}. ${item.title}\n`;
+      message += `   Unit Price: Ksh ${unitPrice.toFixed(2)}\n`;
+      message += `   Quantity: ${qty}\n`;
+      message += `   Item Total: Ksh ${itemTotal.toFixed(2)}\n\n`;
     });
-    
-    message += `─────────────────────\n`;
-    message += `*Total Items:* ${totalItems}\n`;
-    message += `*Total Amount:* Ksh ${totalPrice.toFixed(2)}\n\n`;
-    message += `*Delivery Details:*\n`;
-    message += `Location: ___________\n`;
-    message += `Phone: ___________\n\n`;
-    message += `Thank you for shopping with us!`;
-    
+    message += `------------------------\n`;
+    message += `Total Items: ${totalItems}\n`;
+    message += `Total Price: Ksh ${totalPrice.toFixed(2)}\n\n`;
+    message += `Delivery Location:\nPhone Number:\n\nThank you.`;
     return `https://wa.me/254712133135?text=${encodeURIComponent(message)}`;
   };
 
-  /**
-   * Render cart item image (handles bundles specially)
-   */
   const renderCartImage = (item) => {
-    // For bundle items with multiple products
-    if (
-      item.is_bundle &&
-      Array.isArray(item.bundle_products) &&
-      item.bundle_products.length >= 2
-    ) {
-      const leftImage = item.bundle_products[0]?.variants?.[0]?.image || 
-                       item.bundle_products[0]?.primaryImage;
-      const rightImage = item.bundle_products[1]?.variants?.[0]?.image || 
-                        item.bundle_products[1]?.primaryImage;
-      
+    const variantImage = item.image;
+    const productImage = item.primaryImage || item.variants?.[0]?.image;
+    if (item.is_bundle && Array.isArray(item.bundle_products) && item.bundle_products.length >= 2) {
+      const leftImage = item.bundle_products[0]?.variants?.[0]?.image || item.bundle_products[0]?.primaryImage;
+      const rightImage = item.bundle_products[1]?.variants?.[0]?.image || item.bundle_products[1]?.primaryImage;
       if (leftImage && rightImage) {
         return (
           <div className="cart-bundle-img">
-            <img 
-              src={resolveImageUrl(leftImage)} 
-              className="bundle-half-left" 
-              alt={`${item.title} - item 1`}
-              loading="lazy"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = '/placeholder.png';
-              }}
-            />
-            <img 
-              src={resolveImageUrl(rightImage)} 
-              className="bundle-half-right" 
-              alt={`${item.title} - item 2`}
-              loading="lazy"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = '/placeholder.png';
-              }}
-            />
+            <img src={resolveImageUrl(leftImage)} className="bundle-half" alt="Bundle item 1" loading="lazy" />
+            <img src={resolveImageUrl(rightImage)} className="bundle-half" alt="Bundle item 2" loading="lazy" />
           </div>
         );
       }
     }
-
-    // For single items - prefer variant image, fallback to product image
-    const imageSource = item.image || item.primaryImage;
-    
     return (
       <img
         className="cart-item-img"
-        src={resolveImageUrl(imageSource)}
+        src={resolveImageUrl(variantImage || productImage)}
         alt={item.title}
         loading="lazy"
-        onError={(e) => {
-          e.target.onerror = null;
-          e.target.src = '/placeholder.png';
-        }}
       />
     );
   };
 
-  // Empty cart state
   if (cartItems.length === 0) {
     return (
       <>
         <div className="cart-page">
-          <div className="cart-container">
-            <div className="cart-breadcrumb">
-              <span>Home</span>
-              <span className="bc-sep">›</span>
+          <div className="cart-wrap">
+            <nav className="breadcrumb">
+              <span>Home</span><span className="bc-sep">›</span>
               <span className="bc-current">Cart</span>
-            </div>
-            
-            <div className="cart-empty">
-              <div className="empty-icon-wrap">
-                <ShoppingBag size={48} strokeWidth={1.2} />
-              </div>
+            </nav>
+            <div className="empty-state">
+              <ShoppingBag size={52} strokeWidth={1} className="empty-icon" />
               <h2 className="empty-title">Your cart is empty</h2>
               <p className="empty-sub">Looks like you haven't added anything yet.</p>
-              <Link to="/" className="empty-cta">
-                Continue Shopping <ArrowRight size={16} />
+              <Link to="/" className="cta-btn">
+                Continue Shopping <ArrowRight size={15} />
               </Link>
             </div>
           </div>
         </div>
-        <style>{styles}</style>
+        <style>{css}</style>
       </>
     );
   }
@@ -161,290 +99,190 @@ const Cart = () => {
   return (
     <>
       <div className="cart-page">
-        <div className="cart-container">
-          {/* Breadcrumb */}
-          <nav className="cart-breadcrumb">
-            <span>Home</span>
-            <span className="bc-sep">›</span>
-            <span className="bc-current">
-              Cart ({totalItems} {totalItems === 1 ? 'item' : 'items'})
-            </span>
+        <div className="cart-wrap">
+
+          <nav className="breadcrumb">
+            <span>Home</span><span className="bc-sep">›</span>
+            <span className="bc-current">Cart ({totalItems} {totalItems === 1 ? 'item' : 'items'})</span>
           </nav>
 
-          <div className="cart-layout">
-            {/* Items Column */}
-            <div className="cart-items-col">
-              <div className="col-header">
-                <h1 className="cart-title">Shopping Cart</h1>
-                <div className="specs-rule" />
-              </div>
+          <h1 className="page-title">Shopping Cart</h1>
+          <div className="title-rule" />
 
-              <div className="cart-items-list">
-                {cartItems.map((item, index) => (
-                  <div 
-                    key={`${item.variant_id}-${item.product_id}`} 
-                    className="cart-card" 
-                    style={{ animationDelay: `${index * 60}ms` }}
-                  >
-                    {/* Product Image */}
-                    <div className="cart-img-wrap">
-                      {renderCartImage(item)}
-                      {item.is_bundle && (
-                        <span className="bundle-badge">Bundle</span>
-                      )}
+          <div className="cart-layout">
+
+            {/* Items */}
+            <div className="items-col">
+              {cartItems.map((item, i) => (
+                <div key={item.variant_id} className="cart-row" style={{ animationDelay: `${i * 50}ms` }}>
+
+                  <div className="item-img-wrap">
+                    {renderCartImage(item)}
+                    {item.is_bundle && <span className="bundle-pip">Bundle</span>}
+                  </div>
+
+                  <div className="item-body">
+                    <div className="item-top">
+                      <div>
+                        <h3 className="item-title">{item.title}</h3>
+                        {(item.color || item.storage || item.ram) && (
+                          <p className="item-meta">
+                            {[item.color && `Color: ${item.color}`, item.storage && `Storage: ${item.storage}`, item.ram && `RAM: ${item.ram}`].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
+                        {item.product_code && <p className="item-sku">SKU: {item.product_code}</p>}
+                      </div>
+                      <button className="remove-btn" onClick={() => removeFromCart(item.variant_id, item.title)} aria-label="Remove">
+                        <Trash2 size={14} />
+                      </button>
                     </div>
 
-                    {/* Product Info */}
-                    <div className="cart-info">
-                      <div className="cart-info-top">
-                        <div>
-                          <h3 className="cart-item-title">{item.title}</h3>
-                          
-                          {/* Variant details */}
-                          {(item.color || item.storage || item.ram) && (
-                            <p className="cart-item-meta">
-                              {[
-                                item.color && `Color: ${item.color}`,
-                                item.storage && `Storage: ${item.storage}`,
-                                item.ram && `RAM: ${item.ram}`
-                              ].filter(Boolean).join(' · ')}
-                            </p>
-                          )}
-                          
-                          {/* SKU/Product Code */}
-                          {item.product_code && (
-                            <p className="cart-item-sku">SKU: {item.product_code}</p>
-                          )}
-                        </div>
-
-                        {/* Remove button */}
-                        <button
-                          className="remove-btn"
-                          onClick={() => removeFromCart(item.variant_id, item.title)}
-                          aria-label="Remove item"
-                          title="Remove item"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                    <div className="item-bottom">
+                      <div>
+                        <p className="unit-price">Ksh {parseFloat(item.price).toFixed(2)} / unit</p>
+                        <p className="line-total">Ksh {(item.price * item.quantity).toFixed(2)}</p>
                       </div>
-
-                      {/* Price and Quantity */}
-                      <div className="cart-info-bottom">
-                        <div className="cart-price-col">
-                          <span className="unit-price">
-                            Ksh {parseFloat(item.price).toFixed(2)} each
-                          </span>
-                          <span className="line-total">
-                            Ksh {(item.price * item.quantity).toFixed(2)}
-                          </span>
-                        </div>
-
-                        {/* Quantity controls */}
-                        <div className="qty-control">
-                          <button
-                            className="qty-btn"
-                            onClick={() => decreaseQuantity(item.variant_id, item.title)}
-                            aria-label="Decrease quantity"
-                            disabled={item.quantity <= 1}
-                          >
-                            <Minus size={13} />
-                          </button>
-                          <span className="qty-value">{parseInt(item.quantity)}</span>
-                          <button
-                            className="qty-btn"
-                            onClick={() => addToCart(item)}
-                            aria-label="Increase quantity"
-                          >
-                            <Plus size={13} />
-                          </button>
-                        </div>
+                      <div className="qty-control">
+                        <button className="qty-btn" onClick={() => decreaseQuantity(item.variant_id, item.title)}><Minus size={12} /></button>
+                        <span className="qty-val">{parseInt(item.quantity)}</span>
+                        <button className="qty-btn" onClick={() => addToCart(item)}><Plus size={12} /></button>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
+
+                </div>
+              ))}
             </div>
 
-            {/* Order Summary */}
-            <div className="order-summary">
-              <div className="summary-header">
-                <h2 className="summary-title">Order Summary</h2>
-                <div className="specs-rule" />
-              </div>
+            {/* Summary */}
+            <div className="summary-col">
+              <h2 className="summary-heading">Order Summary</h2>
+              <div className="summary-rule" />
 
               <div className="summary-lines">
                 <div className="summary-row">
                   <span>Subtotal ({totalItems} {totalItems === 1 ? 'item' : 'items'})</span>
                   <span>Ksh {totalPrice.toFixed(2)}</span>
                 </div>
-                <div className="summary-row">
+                <div className="summary-row muted">
                   <span>Delivery</span>
-                  <span className="delivery-tbd">Calculated at checkout</span>
+                  <span className="italic-muted">Confirmed at checkout</span>
                 </div>
                 <div className="summary-divider" />
-                <div className="summary-row total-row">
+                <div className="summary-row total">
                   <span>Total</span>
                   <span className="total-amount">Ksh {totalPrice.toFixed(2)}</span>
                 </div>
               </div>
 
-              <div className="summary-actions">
-                <Link to="/checkout" className="checkout-btn">
-                  Proceed to Checkout
-                  <ArrowRight size={17} />
+              <div className="action-stack">
+                <Link to="/checkout" className="cta-btn full">
+                  Checkout <ArrowRight size={15} />
                 </Link>
-
-                <a
-                  href={generateWhatsAppOrderLink()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="whatsapp-btn"
-                >
-                  <MessageCircle size={17} />
+                <a href={generateWhatsAppOrderLink()} target="_blank" rel="noopener noreferrer" className="wa-btn full">
+                  <MessageCircle size={16} />
                   Order via WhatsApp
                 </a>
               </div>
 
-              <div className="summary-note">
-                <Package size={13} />
-                <span>Delivery fees calculated at checkout based on location</span>
-              </div>
+              <p className="summary-note">
+                <Package size={12} /> Delivery details confirmed at checkout
+              </p>
             </div>
+
           </div>
         </div>
       </div>
-      <style>{styles}</style>
+      <style>{css}</style>
     </>
   );
 };
 
-// Styles (kept exactly as your original - no changes needed)
-const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=DM+Serif+Display&display=swap');
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Serif+Display&display=swap');
 
   .cart-page {
     min-height: 100vh;
-    background: linear-gradient(135deg, rgba(248,248,248,0.9) 0%, rgba(240,240,245,0.9) 100%);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
     font-family: 'DM Sans', sans-serif;
     color: #1a1a1a;
+    padding-bottom: 80px;
   }
+  .dark .cart-page { color: #f0f0f0; }
 
-  .dark .cart-page {
-    background: linear-gradient(135deg, rgba(13,13,13,0.95) 0%, rgba(20,20,25,0.95) 100%);
-    color: #f0f0f0;
-  }
-
-  .cart-container {
+  .cart-wrap {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 24px 80px;
+    padding: 0 24px;
   }
 
-  /* Breadcrumb */
-  .cart-breadcrumb {
+  .breadcrumb {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 20px 0 32px;
     font-size: 13px;
     color: #888;
-    letter-spacing: 0.01em;
   }
-
   .bc-sep { color: #ccc; }
   .bc-current { color: #1a1a1a; font-weight: 500; }
   .dark .bc-current { color: #f0f0f0; }
 
-  /* Layout */
-  .cart-layout {
-    display: grid;
-    grid-template-columns: 1fr 340px;
-    gap: 32px;
-    align-items: start;
-  }
-
-  @media (max-width: 900px) {
-    .cart-layout { grid-template-columns: 1fr; }
-  }
-
-  /* Column header */
-  .col-header { margin-bottom: 24px; }
-
-  .cart-title {
+  .page-title {
     font-family: 'DM Serif Display', serif;
-    font-size: clamp(26px, 4vw, 38px);
+    font-size: clamp(28px, 5vw, 44px);
     font-weight: 400;
     letter-spacing: -0.02em;
     color: #0d0d0d;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
   }
+  .dark .page-title { color: #f5f5f5; }
 
-  .dark .cart-title { color: #f5f5f5; }
-
-  .specs-rule {
+  .title-rule {
     width: 48px;
     height: 3px;
-    background: linear-gradient(90deg, #111111 0%, #555555 100%);
+    background: linear-gradient(90deg, #111 0%, #555 100%);
     border-radius: 2px;
+    margin-bottom: 40px;
   }
 
-  /* Cart items */
-  .cart-items-list {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+  .cart-layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 64px;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    .cart-layout { grid-template-columns: 1fr; gap: 48px; }
   }
 
-  .cart-card {
+  .items-col { display: flex; flex-direction: column; }
+
+  .cart-row {
     display: flex;
     gap: 20px;
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 16px;
-    padding: 20px;
-    transition: all 0.3s ease;
-    animation: card-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    padding: 22px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.07);
+    animation: row-in 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
   }
+  .dark .cart-row { border-bottom-color: rgba(255,255,255,0.06); }
+  .cart-row:first-child { border-top: 1px solid rgba(0,0,0,0.07); }
+  .dark .cart-row:first-child { border-top-color: rgba(255,255,255,0.06); }
 
-  @keyframes card-in {
-    from { opacity: 0; transform: translateY(12px); }
+  @keyframes row-in {
+    from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
-  .cart-card:hover {
-    background: rgba(255, 255, 255, 0.85);
-    box-shadow: 0 8px 40px rgba(0,0,0,0.08);
-    transform: translateY(-2px);
-  }
-
-  .dark .cart-card {
-    background: rgba(26, 26, 26, 0.6);
-  }
-
-  .dark .cart-card:hover {
-    background: rgba(40, 40, 40, 0.85);
-    box-shadow: 0 8px 40px rgba(0,0,0,0.35);
-  }
-
-  /* Image */
-  .cart-img-wrap {
+  .item-img-wrap {
     position: relative;
-    width: 110px;
-    height: 110px;
+    width: 100px;
+    height: 100px;
     flex-shrink: 0;
     border-radius: 12px;
     overflow: hidden;
-    background: rgba(255,255,255,0.8);
+    background: rgba(0,0,0,0.04);
   }
-
-  .dark .cart-img-wrap {
-    background: rgba(30,30,30,0.8);
-  }
+  .dark .item-img-wrap { background: rgba(255,255,255,0.05); }
 
   .cart-item-img {
     width: 100%;
@@ -453,152 +291,90 @@ const styles = `
     padding: 8px;
     transition: transform 0.4s ease;
   }
+  .cart-row:hover .cart-item-img { transform: scale(1.05); }
 
-  .cart-card:hover .cart-item-img {
-    transform: scale(1.06);
-  }
+  .cart-bundle-img { display: flex; width: 100%; height: 100%; }
+  .bundle-half { width: 50%; height: 100%; object-fit: cover; }
 
-  .cart-bundle-img {
-    width: 100%;
-    height: 100%;
-    display: flex;
-  }
-
-  .bundle-half-left,
-  .bundle-half-right {
-    width: 50%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .bundle-badge {
+  .bundle-pip {
     position: absolute;
-    top: 6px;
-    left: 6px;
-    background: #111111;
-    color: white;
-    font-size: 9px;
+    bottom: 4px; left: 4px;
+    background: #111;
+    color: #fff;
+    font-size: 8px;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.07em;
     text-transform: uppercase;
-    padding: 3px 8px;
-    border-radius: 20px;
-    z-index: 2;
+    padding: 2px 7px;
+    border-radius: 10px;
   }
 
-  /* Info */
-  .cart-info {
+  .item-body {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
   }
 
-  .cart-info-top {
+  .item-top {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     gap: 12px;
   }
 
-  .cart-item-title {
+  .item-title {
     font-family: 'DM Serif Display', serif;
-    font-size: clamp(15px, 2vw, 18px);
+    font-size: 17px;
     font-weight: 400;
     color: #0d0d0d;
-    line-height: 1.3;
     letter-spacing: -0.01em;
+    line-height: 1.3;
   }
+  .dark .item-title { color: #f0f0f0; }
 
-  .dark .cart-item-title { color: #f0f0f0; }
-
-  .cart-item-meta {
-    font-size: 12px;
-    color: #888;
-    margin-top: 4px;
-    font-weight: 400;
-  }
-
-  .cart-item-sku {
-    font-size: 11px;
-    color: #aaa;
-    margin-top: 3px;
-    font-family: monospace;
-  }
+  .item-meta { font-size: 12px; color: #999; margin-top: 3px; }
+  .item-sku { font-size: 11px; color: #bbb; font-family: monospace; margin-top: 2px; }
 
   .remove-btn {
     background: none;
     border: none;
     color: #ccc;
     cursor: pointer;
-    padding: 6px;
-    border-radius: 8px;
+    padding: 4px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
+    transition: color 0.2s;
     flex-shrink: 0;
   }
+  .remove-btn:hover { color: #c8232c; }
 
-  .remove-btn:hover {
-    color: #c8232c;
-    background: #fff0f0;
-  }
-
-  .dark .remove-btn:hover {
-    background: #2a1010;
-    color: #ff6b6b;
-  }
-
-  /* Bottom row: price + qty */
-  .cart-info-bottom {
+  .item-bottom {
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 10px;
   }
 
-  .cart-price-col {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
+  .unit-price { font-size: 12px; color: #aaa; }
+  .line-total { font-size: 16px; font-weight: 700; color: #0d0d0d; letter-spacing: -0.01em; margin-top: 1px; }
+  .dark .line-total { color: #fff; }
 
-  .unit-price {
-    font-size: 12px;
-    color: #999;
-    font-weight: 400;
-  }
-
-  .line-total {
-    font-size: 17px;
-    font-weight: 700;
-    color: #0d0d0d;
-    letter-spacing: -0.02em;
-  }
-
-  .dark .line-total { color: #ffffff; }
-
-  /* Quantity control */
   .qty-control {
     display: flex;
     align-items: center;
-    gap: 0;
     background: rgba(0,0,0,0.05);
     border-radius: 8px;
     overflow: hidden;
   }
-
-  .dark .qty-control {
-    background: rgba(255,255,255,0.07);
-  }
+  .dark .qty-control { background: rgba(255,255,255,0.07); }
 
   .qty-btn {
-    width: 36px;
-    height: 36px;
+    width: 32px; height: 32px;
     border: none;
     background: transparent;
     color: #555;
@@ -606,96 +382,44 @@ const styles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
-    font-family: 'DM Sans', sans-serif;
+    transition: background 0.15s, color 0.15s;
   }
-
-  .qty-btn:hover {
-    background: #111111;
-    color: white;
-  }
-
+  .qty-btn:hover { background: #111; color: #fff; }
   .dark .qty-btn { color: #aaa; }
-  .dark .qty-btn:hover { background: #444; color: white; }
-  
-  .qty-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  
-  .qty-btn:disabled:hover {
-    background: transparent;
-    color: #555;
-  }
-  
-  .dark .qty-btn:disabled:hover {
-    background: transparent;
-    color: #aaa;
-  }
+  .dark .qty-btn:hover { background: #444; color: #fff; }
 
-  .qty-value {
-    min-width: 36px;
+  .qty-val {
+    min-width: 30px;
     text-align: center;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: #1a1a1a;
-    user-select: none;
   }
+  .dark .qty-val { color: #f0f0f0; }
 
-  .dark .qty-value { color: #f0f0f0; }
+  /* Summary */
+  .summary-col { position: sticky; top: 24px; }
+  @media (max-width: 860px) { .summary-col { position: static; } }
 
-  /* ── Order Summary Panel ── */
-  .order-summary {
-    position: sticky;
-    top: 24px;
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 28px;
-    box-shadow: 0 2px 20px rgba(0,0,0,0.06);
-    transition: all 0.3s ease;
-    animation: card-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-  }
-
-  .order-summary:hover {
-    background: rgba(255, 255, 255, 0.88);
-    box-shadow: 0 8px 40px rgba(0,0,0,0.1);
-  }
-
-  .dark .order-summary {
-    background: rgba(26, 26, 26, 0.8);
-    box-shadow: 0 2px 20px rgba(0,0,0,0.35);
-  }
-
-  .dark .order-summary:hover {
-    background: rgba(40, 40, 40, 0.9);
-    box-shadow: 0 8px 40px rgba(0,0,0,0.45);
-  }
-
-  @media (max-width: 900px) {
-    .order-summary { position: static; }
-  }
-
-  .summary-header { margin-bottom: 24px; }
-
-  .summary-title {
+  .summary-heading {
     font-family: 'DM Serif Display', serif;
     font-size: 22px;
     font-weight: 400;
-    letter-spacing: -0.02em;
     color: #0d0d0d;
+    letter-spacing: -0.01em;
     margin-bottom: 12px;
   }
+  .dark .summary-heading { color: #f0f0f0; }
 
-  .dark .summary-title { color: #f0f0f0; }
-
-  .summary-lines {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+  .summary-rule {
+    width: 36px;
+    height: 2px;
+    background: linear-gradient(90deg, #111 0%, #555 100%);
+    border-radius: 2px;
     margin-bottom: 24px;
   }
+
+  .summary-lines { display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; }
 
   .summary-row {
     display: flex;
@@ -704,209 +428,94 @@ const styles = `
     font-size: 14px;
     color: #666;
   }
-
   .dark .summary-row { color: #aaa; }
+  .summary-row.muted { font-size: 13px; color: #aaa; }
+  .italic-muted { font-style: italic; color: #bbb; font-size: 12px; }
 
-  .delivery-tbd {
-    font-size: 12px;
-    color: #aaa;
-    font-style: italic;
-  }
+  .summary-divider { height: 1px; background: rgba(0,0,0,0.08); }
+  .dark .summary-divider { background: rgba(255,255,255,0.08); }
 
-  .summary-divider {
-    height: 1px;
-    background: rgba(0,0,0,0.07);
-    margin: 4px 0;
-  }
+  .summary-row.total { font-size: 15px; font-weight: 600; color: #0d0d0d; margin-top: 4px; }
+  .dark .summary-row.total { color: #f0f0f0; }
+  .total-amount { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
 
-  .dark .summary-divider { background: rgba(255,255,255,0.07); }
+  .action-stack { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 
-  .total-row {
-    font-size: 16px;
-    font-weight: 600;
-    color: #0d0d0d;
-  }
-
-  .dark .total-row { color: #f0f0f0; }
-
-  .total-amount {
-    font-size: 20px;
-    font-weight: 700;
-    color: #0d0d0d;
-    letter-spacing: -0.02em;
-  }
-
-  .dark .total-amount { color: #ffffff; }
-
-  /* Action Buttons */
-  .summary-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .checkout-btn {
-    display: flex;
+  .cta-btn {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    width: 100%;
-    padding: 15px 24px;
-    background: #111111;
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .checkout-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%);
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-
-  .checkout-btn:hover {
-    background: #000000;
-    transform: translateY(-1px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-  }
-
-  .checkout-btn:hover::before { opacity: 1; }
-  .checkout-btn:active { transform: translateY(0); }
-
-  .dark .checkout-btn { background: #444; }
-  .dark .checkout-btn:hover { background: #333; box-shadow: 0 8px 24px rgba(80,80,80,0.35); }
-
-  .whatsapp-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
     padding: 14px 24px;
-    background: #25D366;
+    background: #111;
     color: #fff;
-    border: none;
     border-radius: 10px;
     font-family: 'DM Sans', sans-serif;
     font-size: 14px;
     font-weight: 600;
-    letter-spacing: 0.01em;
-    cursor: pointer;
+    letter-spacing: 0.02em;
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: all 0.25s ease;
+    cursor: pointer;
+    border: none;
   }
+  .cta-btn.full { width: 100%; box-sizing: border-box; }
+  .cta-btn:hover { background: #000; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,0,0,0.18); }
+  .dark .cta-btn { background: #333; }
+  .dark .cta-btn:hover { background: #444; }
 
-  .whatsapp-btn:hover {
-    background: #1ebe5d;
-    transform: translateY(-1px);
-    box-shadow: 0 8px 24px rgba(37,211,102,0.35);
+  .wa-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 13px 24px;
+    background: #25D366;
+    color: #fff;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.25s ease;
   }
-
-  .whatsapp-btn:active { transform: translateY(0); }
+  .wa-btn.full { width: 100%; box-sizing: border-box; }
+  .wa-btn:hover { background: #1ebe5d; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(37,211,102,0.28); }
 
   .summary-note {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-top: 16px;
     font-size: 11px;
     color: #bbb;
-    line-height: 1.5;
   }
 
-  .summary-note svg { flex-shrink: 0; color: #ccc; }
-
-  /* ── Empty State ── */
-  .cart-empty {
+  /* Empty state */
+  .empty-state {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    align-items: flex-start;
     min-height: 55vh;
-    gap: 16px;
-    text-align: center;
-    padding: 48px 24px;
-  }
-
-  .empty-icon-wrap {
-    width: 96px;
-    height: 96px;
-    background: rgba(255,255,255,0.7);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    display: flex;
-    align-items: center;
     justify-content: center;
-    color: #ccc;
-    margin-bottom: 8px;
+    gap: 14px;
+    padding: 40px 0;
   }
-
-  .dark .empty-icon-wrap {
-    background: rgba(26,26,26,0.7);
-    color: #444;
-  }
+  .empty-icon { color: #ddd; margin-bottom: 4px; }
+  .dark .empty-icon { color: #333; }
 
   .empty-title {
     font-family: 'DM Serif Display', serif;
-    font-size: clamp(22px, 4vw, 32px);
+    font-size: clamp(22px, 4vw, 34px);
     font-weight: 400;
     color: #0d0d0d;
     letter-spacing: -0.02em;
   }
-
   .dark .empty-title { color: #f0f0f0; }
+  .empty-sub { font-size: 15px; color: #888; }
 
-  .empty-sub {
-    font-size: 15px;
-    color: #888;
-    max-width: 280px;
-  }
-
-  .empty-cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 8px;
-    padding: 13px 28px;
-    background: #111111;
-    color: #fff;
-    border-radius: 10px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    letter-spacing: 0.02em;
-    transition: all 0.3s ease;
-  }
-
-  .empty-cta:hover {
-    background: #000;
-    transform: translateY(-1px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-  }
-
-  .dark .empty-cta { background: #444; }
-  .dark .empty-cta:hover { background: #333; }
-
-  /* Responsive */
   @media (max-width: 600px) {
-    .cart-container { padding: 0 14px 60px; }
-    .cart-card { flex-direction: column; gap: 14px; }
-    .cart-img-wrap { width: 100%; height: 180px; }
-    .cart-item-img { object-fit: contain; }
-    .cart-info-bottom { flex-direction: row; justify-content: space-between; }
+    .cart-wrap { padding: 0 16px; }
+    .item-img-wrap { width: 80px; height: 80px; }
   }
 `;
 

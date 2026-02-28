@@ -240,36 +240,36 @@ const Checkout = () => {
   const selectStyles = {
     control: (base, state) => ({
       ...base,
-      backgroundColor: isDark ? "rgba(26,26,26,0.8)" : "rgba(255,255,255,0.8)",
+      backgroundColor: "transparent",
       color: isDark ? "#f0f0f0" : "#1a1a1a",
       borderColor: "transparent",
-      borderRadius: "10px",
-      minHeight: "50px",
-      boxShadow: state.isFocused ? "0 0 0 2px #111" : "none",
-      backdropFilter: "blur(10px)",
-      "&:hover": { borderColor: "transparent" },
+      borderBottom: isDark ? "1px solid rgba(255,255,255,0.15)" : "1px solid rgba(0,0,0,0.12)",
+      borderRadius: 0,
+      minHeight: "44px",
+      boxShadow: "none",
+      paddingLeft: 0,
+      "&:hover": { borderColor: "transparent", borderBottom: "1px solid #111" },
     }),
-    singleValue: (base) => ({ ...base, color: isDark ? "#f0f0f0" : "#1a1a1a" }),
+    singleValue: (base) => ({ ...base, color: isDark ? "#f0f0f0" : "#1a1a1a", paddingLeft: 0 }),
+    valueContainer: (base) => ({ ...base, paddingLeft: 0 }),
     menu: (base) => ({
       ...base,
-      backgroundColor: isDark ? "rgba(20,20,20,0.97)" : "rgba(255,255,255,0.97)",
-      borderRadius: "12px",
-      backdropFilter: "blur(20px)",
+      backgroundColor: isDark ? "#111" : "#fff",
+      borderRadius: "10px",
       border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.08)",
+      boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
       overflow: "hidden",
     }),
     option: (base, state) => ({
       ...base,
-      backgroundColor: state.isFocused
-        ? isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)"
-        : "transparent",
+      backgroundColor: state.isFocused ? (isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.04)") : "transparent",
       color: isDark ? "#f0f0f0" : "#1a1a1a",
-      cursor: "pointer",
       fontSize: "14px",
+      cursor: "pointer",
     }),
-    placeholder: (base) => ({ ...base, color: isDark ? "#666" : "#aaa", fontSize: "14px" }),
-    input: (base) => ({ ...base, color: isDark ? "#f0f0f0" : "#1a1a1a" }),
-    dropdownIndicator: (base) => ({ ...base, color: isDark ? "#666" : "#aaa" }),
+    placeholder: (base) => ({ ...base, color: isDark ? "#555" : "#bbb", fontSize: "14px", paddingLeft: 0 }),
+    input: (base) => ({ ...base, color: isDark ? "#f0f0f0" : "#1a1a1a", paddingLeft: 0 }),
+    dropdownIndicator: (base) => ({ ...base, color: isDark ? "#555" : "#bbb" }),
     indicatorSeparator: () => ({ display: "none" }),
   };
 
@@ -339,11 +339,11 @@ const Checkout = () => {
 
   return (
     <>
-      <div className="checkout-page">
-        <div className="checkout-container">
+      <div className="co-page">
+        <div className="co-wrap">
 
           {/* Breadcrumb */}
-          <nav className="checkout-breadcrumb">
+          <nav className="breadcrumb">
             <Link to="/" className="bc-link">Home</Link>
             <span className="bc-sep">›</span>
             <Link to="/cart" className="bc-link">Cart</Link>
@@ -351,93 +351,75 @@ const Checkout = () => {
             <span className="bc-current">Checkout</span>
           </nav>
 
-          {/* Page title */}
-          <div className="page-header">
-            <Link to="/cart" className="back-link">
-              <ArrowLeft size={16} />
-              Back to Cart
-            </Link>
-            <h1 className="page-title">Checkout</h1>
-            <div className="specs-rule" />
-          </div>
+          <Link to="/cart" className="back-link">
+            <ArrowLeft size={14} /> Back to Cart
+          </Link>
+
+          <h1 className="page-title">Checkout</h1>
+          <div className="title-rule" />
 
           {cartItems.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-icon-wrap">
-                <ShoppingCart size={44} strokeWidth={1.2} />
-              </div>
+              <ShoppingCart size={52} strokeWidth={1} className="empty-icon" />
               <h2 className="empty-title">Your cart is empty</h2>
               <p className="empty-sub">Add some items before checking out.</p>
-              <Link to="/orders" className="empty-cta">
-                <Receipt size={15} />
-                View Order History
+              <Link to="/orders" className="cta-btn">
+                <Receipt size={14} /> View Order History
               </Link>
             </div>
           ) : (
-            <div className="checkout-grid">
+            <div className="co-grid">
 
               {/* ── LEFT: Order Summary ── */}
-              <div className="summary-panel">
-                <div className="panel-header">
-                  <Package size={18} />
-                  <h2 className="panel-title">Order Summary</h2>
-                </div>
-                <div className="specs-rule-sm" />
+              <div className="summary-col">
+                <h2 className="section-title">Order Summary</h2>
+                <div className="section-rule" />
 
                 <div className="order-items">
                   {cartItems.map((item) => (
-                    <div key={item.variant_id} className="order-item">
-                      <div className="order-item-img">
+                    <div key={item.variant_id} className="order-row">
+                      <div className="order-img">
                         {renderCheckoutImage(item)}
-                        {item.is_bundle && <span className="bundle-badge">Bundle</span>}
                       </div>
-                      <div className="order-item-info">
-                        <h4 className="order-item-title">{item.title}</h4>
+                      <div className="order-info">
+                        <h4 className="order-title">{item.title}</h4>
                         {(item.color || item.storage || item.ram) && (
-                          <p className="order-item-meta">
-                            {[item.color && `${item.color}`, item.storage && `${item.storage}`, item.ram && `${item.ram}`].filter(Boolean).join(" · ")}
+                          <p className="order-meta">
+                            {[item.color, item.storage, item.ram].filter(Boolean).join(" · ")}
                           </p>
                         )}
-                        {item.product_code && <p className="order-item-sku">SKU: {item.product_code}</p>}
-                        <div className="order-item-pricing">
-                          <span className="order-item-unit">Ksh {parseFloat(item.price).toFixed(2)} × {item.quantity}</span>
-                          <span className="order-item-total">Ksh {(parseFloat(item.price) * parseInt(item.quantity)).toFixed(2)}</span>
+                        {item.product_code && <p className="order-sku">SKU: {item.product_code}</p>}
+                        <div className="order-pricing">
+                          <span className="order-unit">Ksh {parseFloat(item.price).toFixed(2)} × {item.quantity}</span>
+                          <span className="order-line">Ksh {(parseFloat(item.price) * parseInt(item.quantity)).toFixed(2)}</span>
                         </div>
                       </div>
-                      <button
-                        className="item-remove-btn"
-                        onClick={() => removeFromCart(item.variant_id, item.title)}
-                        aria-label="Remove item"
-                      >
-                        <Trash2 size={14} />
+                      <button className="remove-btn" onClick={() => removeFromCart(item.variant_id, item.title)} aria-label="Remove">
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   ))}
                 </div>
 
-                {/* Totals */}
-                <div className="order-totals">
-                  <div className="total-row-sm">
+                <div className="totals">
+                  <div className="totals-row">
                     <span>Subtotal ({totalItems} {totalItems === 1 ? "item" : "items"})</span>
                     <span>Ksh {totalPrice.toFixed(2)}</span>
                   </div>
                   {wantsDelivery && deliveryFee > 0 && (
-                    <div className="total-row-sm delivery">
-                      <span>
-                        <Package size={13} style={{ display: "inline", marginRight: 4 }} />
-                        Delivery
-                      </span>
+                    <div className="totals-row">
+                      <span>Delivery</span>
                       <span>Ksh {deliveryFee.toFixed(2)}</span>
                     </div>
                   )}
                   {wantsDelivery && deliveryFee === 0 && address && (
-                    <div className="total-row-sm delivery">
+                    <div className="totals-row">
                       <span>Delivery</span>
-                      <span className="tbd-text">To be confirmed</span>
+                      <span className="italic-muted">To be confirmed</span>
                     </div>
                   )}
-                  <div className="total-divider" />
-                  <div className="total-row-grand">
+                  <div className="totals-divider" />
+                  <div className="totals-row grand">
                     <span>Total</span>
                     <span className="grand-amount">Ksh {(totalPrice + deliveryFee).toFixed(2)}</span>
                   </div>
@@ -445,21 +427,14 @@ const Checkout = () => {
               </div>
 
               {/* ── RIGHT: Payment Form ── */}
-              <div className="payment-panel">
-                <div className="panel-header">
-                  <CreditCard size={18} />
-                  <h2 className="panel-title">Payment Details</h2>
-                </div>
-                <div className="specs-rule-sm" />
+              <div className="payment-col">
+                <h2 className="section-title">Payment Details</h2>
+                <div className="section-rule" />
 
-                <form onSubmit={handleCheckout} className="payment-form">
+                <form onSubmit={handleCheckout} className="pay-form">
 
-                  {/* Name */}
-                  <div className="field-group">
-                    <label className="field-label">
-                      <User size={14} />
-                      Full Name
-                    </label>
+                  <div className="field">
+                    <label className="field-label"><User size={13} /> Full Name</label>
                     <input
                       type="text"
                       value={name}
@@ -471,12 +446,8 @@ const Checkout = () => {
                     />
                   </div>
 
-                  {/* Phone */}
-                  <div className="field-group">
-                    <label className="field-label">
-                      <Phone size={14} />
-                      Phone Number
-                    </label>
+                  <div className="field">
+                    <label className="field-label"><Phone size={13} /> Phone Number</label>
                     <div className="phone-wrap">
                       <PhoneInput
                         international
@@ -490,12 +461,8 @@ const Checkout = () => {
                     <p className="field-hint">Used for M-Pesa payment prompt &amp; order updates</p>
                   </div>
 
-                  {/* Email */}
-                  <div className="field-group">
-                    <label className="field-label">
-                      <Mail size={14} />
-                      Email Address
-                    </label>
+                  <div className="field">
+                    <label className="field-label"><Mail size={13} /> Email Address</label>
                     <input
                       type="email"
                       value={email}
@@ -507,26 +474,16 @@ const Checkout = () => {
                     />
                   </div>
 
-                  {/* Delivery toggle */}
-                  <div className="delivery-toggle">
-                    <label className="toggle-label">
-                      <div className="toggle-track" onClick={() => setWantsDelivery(!wantsDelivery)}>
-                        <div className={`toggle-thumb ${wantsDelivery ? "toggle-on" : ""}`} />
-                      </div>
-                      <span className="toggle-text">
-                        <Package size={15} />
-                        Deliver to my location
-                      </span>
-                    </label>
+                  <div className="delivery-toggle" onClick={() => setWantsDelivery(!wantsDelivery)}>
+                    <div className="toggle-track">
+                      <div className={`toggle-thumb ${wantsDelivery ? "on" : ""}`} />
+                    </div>
+                    <span className="toggle-text"><Package size={14} /> Deliver to my location</span>
                   </div>
 
-                  {/* Delivery location */}
                   {wantsDelivery && (
-                    <div className="field-group">
-                      <label className="field-label">
-                        <MapPin size={14} />
-                        Delivery Location
-                      </label>
+                    <div className="field">
+                      <label className="field-label"><MapPin size={13} /> Delivery Location</label>
                       <Select
                         value={location}
                         onChange={(opt) => { setLocation(opt); setAddress(opt?.value || ""); }}
@@ -534,7 +491,6 @@ const Checkout = () => {
                           deliveryRegions[county].map((t) => ({
                             value: t.town,
                             label: `${t.town} — Ksh ${t.price}`,
-                            group: county,
                           }))
                         )}
                         isDisabled={isSubmitting}
@@ -545,33 +501,27 @@ const Checkout = () => {
                     </div>
                   )}
 
-                  {/* Submit */}
                   <button type="submit" disabled={isSubmitting} className="pay-btn">
                     {isSubmitting ? (
-                      <>
-                        <div className="spinner" />
-                        Processing...
-                      </>
+                      <><div className="spinner" /> Processing...</>
                     ) : (
                       <>
-                        <CreditCard size={18} />
+                        <CreditCard size={17} />
                         Pay via M-Pesa · Ksh {(totalPrice + deliveryFee).toFixed(2)}
-                        <ChevronRight size={18} style={{ marginLeft: "auto" }} />
+                        <ChevronRight size={17} style={{ marginLeft: "auto" }} />
                       </>
                     )}
                   </button>
 
-                  {/* Edit cart */}
-                  <Link to="/cart" className="edit-cart-btn">
-                    <ArrowLeft size={15} />
-                    Edit Cart
+                  <Link to="/cart" className="edit-btn">
+                    <ArrowLeft size={14} /> Edit Cart
                   </Link>
 
-                  {/* Security badge */}
-                  <div className="security-badge">
-                    <ShieldCheck size={14} />
+                  <div className="secure-note">
+                    <ShieldCheck size={13} />
                     <span>Secured by M-Pesa · Your payment is safe</span>
                   </div>
+
                 </form>
               </div>
 
@@ -580,636 +530,378 @@ const Checkout = () => {
         </div>
       </div>
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=DM+Serif+Display&display=swap');
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        .checkout-page {
-          min-height: 100vh;
-          background: linear-gradient(135deg, rgba(248,248,248,0.9) 0%, rgba(240,240,245,0.9) 100%);
-          backdrop-filter: blur(30px);
-          -webkit-backdrop-filter: blur(30px);
-          font-family: 'DM Sans', sans-serif;
-          color: #1a1a1a;
-        }
-
-        .dark .checkout-page {
-          background: linear-gradient(135deg, rgba(13,13,13,0.95) 0%, rgba(20,20,25,0.95) 100%);
-          color: #f0f0f0;
-        }
-
-        .checkout-container {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 0 24px 80px;
-        }
-
-        /* Breadcrumb */
-        .checkout-breadcrumb {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 20px 0 16px;
-          font-size: 13px;
-          color: #888;
-        }
-        .bc-sep { color: #ccc; }
-        .bc-link { color: #888; text-decoration: none; transition: color 0.2s; }
-        .bc-link:hover { color: #111; }
-        .dark .bc-link:hover { color: #f0f0f0; }
-        .bc-current { color: #1a1a1a; font-weight: 500; }
-        .dark .bc-current { color: #f0f0f0; }
-
-        /* Page header */
-        .page-header { margin-bottom: 36px; }
-
-        .back-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 13px;
-          color: #888;
-          text-decoration: none;
-          margin-bottom: 12px;
-          transition: color 0.2s;
-        }
-        .back-link:hover { color: #111; }
-        .dark .back-link:hover { color: #f0f0f0; }
-
-        .page-title {
-          font-family: 'DM Serif Display', serif;
-          font-size: clamp(28px, 5vw, 44px);
-          font-weight: 400;
-          letter-spacing: -0.02em;
-          color: #0d0d0d;
-          margin-bottom: 12px;
-        }
-        .dark .page-title { color: #f5f5f5; }
-
-        .specs-rule {
-          width: 48px;
-          height: 3px;
-          background: linear-gradient(90deg, #111 0%, #555 100%);
-          border-radius: 2px;
-        }
-
-        .specs-rule-sm {
-          width: 36px;
-          height: 2px;
-          background: linear-gradient(90deg, #111 0%, #555 100%);
-          border-radius: 2px;
-          margin: 10px 0 20px;
-        }
-
-        /* Main grid */
-        .checkout-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 28px;
-          align-items: start;
-        }
-
-        @media (max-width: 900px) {
-          .checkout-grid { grid-template-columns: 1fr; }
-        }
-
-        /* Panels */
-        .summary-panel,
-        .payment-panel {
-          background: rgba(255, 255, 255, 0.65);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border-radius: 20px;
-          padding: 28px;
-          box-shadow: 0 2px 20px rgba(0,0,0,0.06);
-          transition: all 0.3s ease;
-          animation: panel-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-        }
-
-        .payment-panel { animation-delay: 80ms; }
-
-        @keyframes panel-in {
-          from { opacity: 0; transform: translateY(14px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        .summary-panel:hover,
-        .payment-panel:hover {
-          background: rgba(255, 255, 255, 0.82);
-          box-shadow: 0 8px 40px rgba(0,0,0,0.09);
-        }
-
-        .dark .summary-panel,
-        .dark .payment-panel {
-          background: rgba(26, 26, 26, 0.65);
-          box-shadow: 0 2px 20px rgba(0,0,0,0.35);
-        }
-
-        .dark .summary-panel:hover,
-        .dark .payment-panel:hover {
-          background: rgba(40, 40, 40, 0.85);
-          box-shadow: 0 8px 40px rgba(0,0,0,0.45);
-        }
-
-        .panel-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          color: #888;
-        }
-
-        .panel-title {
-          font-family: 'DM Serif Display', serif;
-          font-size: 20px;
-          font-weight: 400;
-          letter-spacing: -0.01em;
-          color: #0d0d0d;
-        }
-        .dark .panel-title { color: #f0f0f0; }
-
-        /* Order items */
-        .order-items {
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-          margin-bottom: 20px;
-        }
-
-        .order-item {
-          display: flex;
-          gap: 14px;
-          align-items: flex-start;
-          padding: 14px;
-          background: rgba(0,0,0,0.03);
-          border-radius: 12px;
-          transition: background 0.2s;
-        }
-
-        .dark .order-item { background: rgba(255,255,255,0.04); }
-        .order-item:hover { background: rgba(0,0,0,0.05); }
-        .dark .order-item:hover { background: rgba(255,255,255,0.07); }
-
-        .order-item-img {
-          position: relative;
-          width: 72px;
-          height: 72px;
-          border-radius: 10px;
-          overflow: hidden;
-          flex-shrink: 0;
-          background: rgba(255,255,255,0.8);
-        }
-        .dark .order-item-img { background: rgba(30,30,30,0.8); }
-
-        .bundle-badge {
-          position: absolute;
-          bottom: 3px;
-          left: 3px;
-          background: #111;
-          color: #fff;
-          font-size: 8px;
-          font-weight: 700;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          padding: 2px 6px;
-          border-radius: 10px;
-        }
-
-        .order-item-info { flex: 1; min-width: 0; }
-
-        .order-item-title {
-          font-size: 14px;
-          font-weight: 600;
-          color: #0d0d0d;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          margin-bottom: 3px;
-        }
-        .dark .order-item-title { color: #f0f0f0; }
-
-        .order-item-meta {
-          font-size: 11px;
-          color: #888;
-          margin-bottom: 2px;
-        }
-
-        .order-item-sku {
-          font-size: 10px;
-          color: #bbb;
-          font-family: monospace;
-          margin-bottom: 6px;
-        }
-
-        .order-item-pricing {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 4px;
-        }
-
-        .order-item-unit { font-size: 12px; color: #999; }
-
-        .order-item-total {
-          font-size: 14px;
-          font-weight: 700;
-          color: #0d0d0d;
-          letter-spacing: -0.01em;
-        }
-        .dark .order-item-total { color: #fff; }
-
-        .item-remove-btn {
-          background: none;
-          border: none;
-          color: #ccc;
-          cursor: pointer;
-          padding: 6px;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          transition: all 0.2s;
-          flex-shrink: 0;
-        }
-        .item-remove-btn:hover { color: #c8232c; background: #fff0f0; }
-        .dark .item-remove-btn:hover { background: #2a1010; color: #ff6b6b; }
-
-        /* Totals */
-        .order-totals {
-          border-top: 1px solid rgba(0,0,0,0.07);
-          padding-top: 16px;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-        .dark .order-totals { border-top-color: rgba(255,255,255,0.07); }
-
-        .total-row-sm {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-size: 13px;
-          color: #777;
-        }
-        .dark .total-row-sm { color: #999; }
-
-        .total-row-sm.delivery { color: #444; }
-        .dark .total-row-sm.delivery { color: #ccc; }
-
-        .tbd-text { font-size: 12px; color: #aaa; font-style: italic; }
-
-        .total-divider {
-          height: 1px;
-          background: rgba(0,0,0,0.07);
-        }
-        .dark .total-divider { background: rgba(255,255,255,0.07); }
-
-        .total-row-grand {
-          display: flex;
-          justify-content: space-between;
-          align-items: baseline;
-          font-size: 15px;
-          font-weight: 600;
-          color: #0d0d0d;
-        }
-        .dark .total-row-grand { color: #f0f0f0; }
-
-        .grand-amount {
-          font-size: 22px;
-          font-weight: 700;
-          letter-spacing: -0.02em;
-          color: #0d0d0d;
-        }
-        .dark .grand-amount { color: #fff; }
-
-        /* Payment form */
-        .payment-form {
-          display: flex;
-          flex-direction: column;
-          gap: 18px;
-        }
-
-        .field-group {
-          display: flex;
-          flex-direction: column;
-          gap: 7px;
-        }
-
-        .field-label {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          font-size: 12px;
-          font-weight: 600;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          color: #888;
-        }
-
-        .field-input {
-          width: 100%;
-          height: 50px;
-          padding: 0 16px;
-          background: rgba(0,0,0,0.04);
-          border: none;
-          border-radius: 10px;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 14px;
-          color: #1a1a1a;
-          outline: none;
-          transition: all 0.2s;
-        }
-
-        .dark .field-input {
-          background: rgba(255,255,255,0.06);
-          color: #f0f0f0;
-        }
-
-        .field-input:focus {
-          background: rgba(0,0,0,0.06);
-          box-shadow: 0 0 0 2px #111;
-        }
-
-        .dark .field-input:focus {
-          background: rgba(255,255,255,0.09);
-          box-shadow: 0 0 0 2px #444;
-        }
-
-        .field-input::placeholder { color: #bbb; }
-
-        .field-input:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        .field-hint {
-          font-size: 11px;
-          color: #aaa;
-          padding-left: 2px;
-        }
-
-        /* Phone input */
-        .phone-wrap .PhoneInput {
-          display: flex;
-          align-items: center;
-          background: rgba(0,0,0,0.04);
-          border-radius: 10px;
-          padding: 0 14px;
-          height: 50px;
-          gap: 10px;
-          transition: all 0.2s;
-        }
-
-        .dark .phone-wrap .PhoneInput {
-          background: rgba(255,255,255,0.06);
-        }
-
-        .phone-wrap .PhoneInput:focus-within {
-          box-shadow: 0 0 0 2px #111;
-        }
-
-        .dark .phone-wrap .PhoneInput:focus-within {
-          box-shadow: 0 0 0 2px #444;
-        }
-
-        .phone-wrap .PhoneInputInput {
-          background: transparent;
-          border: none;
-          outline: none;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 14px;
-          color: #1a1a1a;
-          flex: 1;
-          height: 100%;
-        }
-
-        .dark .phone-wrap .PhoneInputInput { color: #f0f0f0; }
-        .phone-wrap .PhoneInputInput::placeholder { color: #bbb; }
-
-        .phone-wrap .PhoneInputCountrySelect {
-          background: transparent;
-          border: none;
-          outline: none;
-          font-size: 14px;
-          color: #1a1a1a;
-          cursor: pointer;
-        }
-
-        .dark .phone-wrap .PhoneInputCountrySelect { color: #f0f0f0; }
-
-        /* Delivery toggle */
-        .delivery-toggle { padding: 4px 0; }
-
-        .toggle-label {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          cursor: pointer;
-          user-select: none;
-        }
-
-        .toggle-track {
-          width: 44px;
-          height: 24px;
-          background: rgba(0,0,0,0.12);
-          border-radius: 12px;
-          position: relative;
-          cursor: pointer;
-          transition: background 0.25s;
-          flex-shrink: 0;
-        }
-
-        .dark .toggle-track { background: rgba(255,255,255,0.12); }
-
-        .toggle-thumb {
-          width: 18px;
-          height: 18px;
-          background: #fff;
-          border-radius: 50%;
-          position: absolute;
-          top: 3px;
-          left: 3px;
-          transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-          box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-        }
-
-        .toggle-on {
-          transform: translateX(20px);
-          background: #fff;
-        }
-
-        .toggle-track:has(.toggle-on) { background: #111; }
-        .dark .toggle-track:has(.toggle-on) { background: #0bc268; }
-
-        .toggle-text {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          font-size: 14px;
-          font-weight: 500;
-          color: #333;
-        }
-        .dark .toggle-text { color: #ccc; }
-
-        /* Pay button */
-        .pay-btn {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          width: 100%;
-          padding: 16px 20px;
-          background: #111;
-          color: #fff;
-          border: none;
-          border-radius: 12px;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 15px;
-          font-weight: 600;
-          letter-spacing: 0.01em;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          position: relative;
-          overflow: hidden;
-          margin-top: 4px;
-        }
-
-        .pay-btn::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%);
-          opacity: 0;
-          transition: opacity 0.3s;
-        }
-
-        .pay-btn:hover {
-          background: #000;
-          transform: translateY(-1px);
-          box-shadow: 0 10px 28px rgba(0,0,0,0.28);
-        }
-
-        .pay-btn:hover::before { opacity: 1; }
-        .pay-btn:active { transform: translateY(0); }
-
-        .pay-btn:disabled {
-          opacity: 0.55;
-          cursor: not-allowed;
-          transform: none;
-          box-shadow: none;
-        }
-
-        .dark .pay-btn { background: #444; }
-        .dark .pay-btn:hover { background: #333; box-shadow: 0 10px 28px rgba(80,80,80,0.35); }
-
-        .spinner {
-          width: 18px;
-          height: 18px;
-          border: 2px solid rgba(255,255,255,0.3);
-          border-top-color: #fff;
-          border-radius: 50%;
-          animation: spin 0.7s linear infinite;
-          flex-shrink: 0;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Edit cart link */
-        .edit-cart-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 7px;
-          width: 100%;
-          padding: 13px 20px;
-          background: rgba(0,0,0,0.05);
-          color: #555;
-          border: none;
-          border-radius: 12px;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 14px;
-          font-weight: 500;
-          text-decoration: none;
-          transition: all 0.2s;
-        }
-
-        .edit-cart-btn:hover { background: rgba(0,0,0,0.1); color: #111; }
-        .dark .edit-cart-btn { background: rgba(255,255,255,0.05); color: #aaa; }
-        .dark .edit-cart-btn:hover { background: rgba(255,255,255,0.09); color: #f0f0f0; }
-
-        /* Security badge */
-        .security-badge {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 7px;
-          font-size: 11px;
-          color: #aaa;
-          padding-top: 4px;
-        }
-        .security-badge svg { color: #0bc268; }
-
-        /* Empty state */
-        .empty-state {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          min-height: 50vh;
-          gap: 16px;
-          text-align: center;
-          padding: 48px 24px;
-        }
-
-        .empty-icon-wrap {
-          width: 96px;
-          height: 96px;
-          background: rgba(255,255,255,0.7);
-          backdrop-filter: blur(20px);
-          border-radius: 24px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #ccc;
-          margin-bottom: 8px;
-        }
-        .dark .empty-icon-wrap { background: rgba(26,26,26,0.7); color: #444; }
-
-        .empty-title {
-          font-family: 'DM Serif Display', serif;
-          font-size: clamp(22px, 4vw, 30px);
-          font-weight: 400;
-          color: #0d0d0d;
-          letter-spacing: -0.02em;
-        }
-        .dark .empty-title { color: #f0f0f0; }
-
-        .empty-sub { font-size: 14px; color: #888; max-width: 260px; }
-
-        .empty-cta {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          margin-top: 8px;
-          padding: 12px 24px;
-          background: #111;
-          color: #fff;
-          border-radius: 10px;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 14px;
-          font-weight: 600;
-          text-decoration: none;
-          transition: all 0.3s;
-        }
-        .empty-cta:hover { background: #000; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
-        .dark .empty-cta { background: #444; }
-        .dark .empty-cta:hover { background: #333; }
-
-        /* Responsive */
-        @media (max-width: 600px) {
-          .checkout-container { padding: 0 14px 60px; }
-          .summary-panel, .payment-panel { padding: 20px; border-radius: 16px; }
-          .order-item { padding: 10px; }
-          .order-item-img { width: 60px; height: 60px; }
-        }
-      `}</style>
+      <style>{css}</style>
     </>
   );
 };
+
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Serif+Display&display=swap');
+
+  .co-page {
+    min-height: 100vh;
+    font-family: 'DM Sans', sans-serif;
+    color: #1a1a1a;
+    padding-bottom: 80px;
+  }
+  .dark .co-page { color: #f0f0f0; }
+
+  .co-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 0 16px;
+    font-size: 13px;
+    color: #888;
+  }
+  .bc-sep { color: #ccc; }
+  .bc-link { color: #888; text-decoration: none; transition: color 0.2s; }
+  .bc-link:hover { color: #111; }
+  .dark .bc-link:hover { color: #f0f0f0; }
+  .bc-current { color: #1a1a1a; font-weight: 500; }
+  .dark .bc-current { color: #f0f0f0; }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #888;
+    text-decoration: none;
+    margin-bottom: 20px;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: #111; }
+  .dark .back-link:hover { color: #f0f0f0; }
+
+  .page-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(28px, 5vw, 44px);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    color: #0d0d0d;
+    margin-bottom: 14px;
+  }
+  .dark .page-title { color: #f5f5f5; }
+
+  .title-rule {
+    width: 48px;
+    height: 3px;
+    background: linear-gradient(90deg, #111 0%, #555 100%);
+    border-radius: 2px;
+    margin-bottom: 44px;
+  }
+
+  .co-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 72px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .co-grid { grid-template-columns: 1fr; gap: 52px; }
+  }
+
+  /* Section titles */
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    font-weight: 400;
+    color: #0d0d0d;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
+  }
+  .dark .section-title { color: #f0f0f0; }
+
+  .section-rule {
+    width: 36px;
+    height: 2px;
+    background: linear-gradient(90deg, #111 0%, #555 100%);
+    border-radius: 2px;
+    margin-bottom: 24px;
+  }
+
+  /* Order rows */
+  .order-items { display: flex; flex-direction: column; }
+
+  .order-row {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.07);
+  }
+  .dark .order-row { border-bottom-color: rgba(255,255,255,0.06); }
+  .order-row:first-child { border-top: 1px solid rgba(0,0,0,0.07); }
+  .dark .order-row:first-child { border-top-color: rgba(255,255,255,0.06); }
+
+  .order-img {
+    width: 72px;
+    height: 72px;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.04);
+  }
+  .dark .order-img { background: rgba(255,255,255,0.05); }
+
+  .order-info { flex: 1; min-width: 0; }
+
+  .order-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0d0d0d;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
+  }
+  .dark .order-title { color: #f0f0f0; }
+
+  .order-meta { font-size: 11px; color: #999; margin-bottom: 2px; }
+  .order-sku { font-size: 10px; color: #ccc; font-family: monospace; margin-bottom: 6px; }
+
+  .order-pricing { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px; }
+  .order-unit { font-size: 12px; color: #aaa; }
+  .order-line { font-size: 14px; font-weight: 700; color: #0d0d0d; }
+  .dark .order-line { color: #fff; }
+
+  .remove-btn {
+    background: none; border: none; color: #ccc;
+    cursor: pointer; padding: 4px; border-radius: 6px;
+    display: flex; align-items: center; transition: color 0.2s; flex-shrink: 0;
+  }
+  .remove-btn:hover { color: #c8232c; }
+
+  /* Totals */
+  .totals {
+    border-top: 1px solid rgba(0,0,0,0.07);
+    padding-top: 16px;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .dark .totals { border-top-color: rgba(255,255,255,0.06); }
+
+  .totals-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #777;
+  }
+  .dark .totals-row { color: #999; }
+
+  .italic-muted { font-style: italic; color: #bbb; font-size: 12px; }
+
+  .totals-divider { height: 1px; background: rgba(0,0,0,0.08); }
+  .dark .totals-divider { background: rgba(255,255,255,0.07); }
+
+  .totals-row.grand { font-size: 15px; font-weight: 600; color: #0d0d0d; margin-top: 2px; }
+  .dark .totals-row.grand { color: #f0f0f0; }
+  .grand-amount { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+
+  /* Form */
+  .pay-form { display: flex; flex-direction: column; gap: 24px; }
+
+  .field { display: flex; flex-direction: column; gap: 8px; }
+
+  .field-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: #888;
+  }
+
+  .field-input {
+    width: 100%;
+    padding: 10px 0;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(0,0,0,0.12);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: #1a1a1a;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .dark .field-input {
+    color: #f0f0f0;
+    border-bottom-color: rgba(255,255,255,0.15);
+  }
+  .field-input:focus { border-bottom-color: #111; }
+  .dark .field-input:focus { border-bottom-color: #888; }
+  .field-input::placeholder { color: #bbb; }
+  .field-input:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .field-hint { font-size: 11px; color: #bbb; }
+
+  /* Phone input */
+  .phone-wrap .PhoneInput {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(0,0,0,0.12);
+    padding: 10px 0;
+    transition: border-color 0.2s;
+  }
+  .dark .phone-wrap .PhoneInput { border-bottom-color: rgba(255,255,255,0.15); }
+  .phone-wrap .PhoneInput:focus-within { border-bottom-color: #111; }
+  .dark .phone-wrap .PhoneInput:focus-within { border-bottom-color: #888; }
+
+  .phone-wrap .PhoneInputInput {
+    background: transparent; border: none; outline: none;
+    font-family: 'DM Sans', sans-serif; font-size: 15px;
+    color: #1a1a1a; flex: 1;
+  }
+  .dark .phone-wrap .PhoneInputInput { color: #f0f0f0; }
+  .phone-wrap .PhoneInputInput::placeholder { color: #bbb; }
+
+  .phone-wrap .PhoneInputCountrySelect {
+    background: transparent; border: none; outline: none;
+    font-size: 14px; color: #1a1a1a; cursor: pointer;
+  }
+  .dark .phone-wrap .PhoneInputCountrySelect { color: #f0f0f0; }
+
+  /* Delivery toggle */
+  .delivery-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+    padding: 4px 0;
+  }
+
+  .toggle-track {
+    width: 40px; height: 22px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 11px;
+    position: relative;
+    transition: background 0.25s;
+    flex-shrink: 0;
+  }
+  .dark .toggle-track { background: rgba(255,255,255,0.1); }
+
+  .toggle-thumb {
+    width: 16px; height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    top: 3px; left: 3px;
+    transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle-thumb.on {
+    transform: translateX(18px);
+    background: #fff;
+  }
+  .toggle-track:has(.on) { background: #111; }
+  .dark .toggle-track:has(.on) { background: #0bc268; }
+
+  .toggle-text {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 14px; font-weight: 500; color: #444;
+  }
+  .dark .toggle-text { color: #ccc; }
+
+  /* Pay button */
+  .pay-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px 20px;
+    background: #111;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    margin-top: 8px;
+  }
+  .pay-btn:hover { background: #000; transform: translateY(-1px); box-shadow: 0 10px 28px rgba(0,0,0,0.2); }
+  .pay-btn:active { transform: translateY(0); }
+  .pay-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .dark .pay-btn { background: #333; }
+  .dark .pay-btn:hover { background: #444; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .edit-btn {
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px;
+    font-size: 13px; font-weight: 500;
+    color: #888; text-decoration: none;
+    transition: color 0.2s;
+    text-align: center;
+  }
+  .edit-btn:hover { color: #111; }
+  .dark .edit-btn:hover { color: #f0f0f0; }
+
+  .secure-note {
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px; font-size: 11px; color: #bbb;
+  }
+  .secure-note svg { color: #0bc268; }
+
+  /* CTA button */
+  .cta-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 22px;
+    background: #111; color: #fff;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 600;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    margin-top: 8px;
+  }
+  .cta-btn:hover { background: #000; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,0,0,0.18); }
+  .dark .cta-btn { background: #333; }
+
+  /* Empty state */
+  .empty-state {
+    display: flex; flex-direction: column;
+    align-items: flex-start; justify-content: center;
+    min-height: 50vh; gap: 14px; padding: 40px 0;
+  }
+  .empty-icon { color: #ddd; margin-bottom: 4px; }
+  .dark .empty-icon { color: #333; }
+  .empty-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(22px, 4vw, 32px);
+    font-weight: 400; color: #0d0d0d; letter-spacing: -0.02em;
+  }
+  .dark .empty-title { color: #f0f0f0; }
+  .empty-sub { font-size: 14px; color: #888; }
+
+  @media (max-width: 600px) {
+    .co-wrap { padding: 0 16px; }
+    .co-grid { gap: 40px; }
+  }
+`;
 
 export default Checkout;
