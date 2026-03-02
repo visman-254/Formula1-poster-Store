@@ -45,6 +45,7 @@ import CreatePromotion from "../components/CreatePromotion";
 import ProductAnalytics from "../components/ProductAnalytics";
 import ImportData from "../components/ImportData";
 import ManageIMEIs from "../components/ManageIMEIs";
+import ManageSKUs from "../components/ManageSKUs";
 import GlassmorphicContainer from "../components/GlassmorphicContainer";
 import BatchInventory from "../components/BatchInventory";
 import StandaloneBarcodeScanner from "../components/StandaloneBarcodeScanner";
@@ -104,6 +105,7 @@ export default function AdminPage() {
           { value: "delete",        label: "Categories",     icon: <Delete size={16} /> },
           { value: "uncategorized", label: "Uncategorized",  icon: <HeartCrack size={16} /> },
           { value: "imei",          label: "IMEI Tracking",  icon: <Barcode size={16} /> },
+          { value: "sku-management", label: "SKU Management", icon: <Barcode size={16} /> },
           { value: "batch-inventory", label: "Batch Inventory", icon: <Package size={16} /> },
           // Scan SKU is now in All Products page - removed from sidebar
         ];
@@ -478,6 +480,9 @@ export default function AdminPage() {
             )}
             {activeTab === "imei" && (
               <GlassmorphicContainer><ManageIMEIs /></GlassmorphicContainer>
+            )}
+            {activeTab === "sku-management" && (
+              <GlassmorphicContainer><ManageSKUs /></GlassmorphicContainer>
             )}
             {activeTab === "batch-inventory" && (
               <GlassmorphicContainer><BatchInventory /></GlassmorphicContainer>
