@@ -16,7 +16,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import API_BASE from "../config";
 import BarcodeScanner from "./BarcodeScanner";
-import { Camera } from "lucide-react";
+import { Camera, Palette, Upload, Check } from "lucide-react";
+import ColorPicker from "./ColorPicker";
+import ColorPickerModal from "./ColorPickerModal";
+import ImageColorMapperModal from "./ImageColorMapperModal";
 
 const CategoryInput = ({ label, placeholder, value, onChange, suggestions, onSelect }) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -92,6 +95,20 @@ const AddProductForm = () => {
   const [imeiLoading, setImeiLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [imeiMessage, setImeiMessage] = useState("");
+
+  // Quick Generate State
+  const [useQuickGenerate, setUseQuickGenerate] = useState(false);
+  const [quickColors, setQuickColors] = useState("");
+  const [quickStorage, setQuickStorage] = useState("");
+  const [quickRam, setQuickRam] = useState("");
+  const [quickStock, setQuickStock] = useState("1");
+  const [quickBuyingPrice, setQuickBuyingPrice] = useState(""); // comma-separated buying prices
+  const [quickSellingPrice, setQuickSellingPrice] = useState(""); // comma-separated selling prices
+  const [savedColors, setSavedColors] = useState([]); // colors from color picker
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [quickImages, setQuickImages] = useState([]); // uploaded images for quick generate
+  const [showImageMapper, setShowImageMapper] = useState(false); // show image-to-color mapping
+  const [colorImageMapping, setColorImageMapping] = useState({}); // color hex -> image object mapping
 
   const [categoryName, setCategoryName] = useState("");
   const [subcategoryName, setSubcategoryName] = useState("");
@@ -191,6 +208,116 @@ const AddProductForm = () => {
     const newVariants = variants.filter((_, i) => i !== index);
     setVariants(newVariants);
   };
+
+  // Quick Generate Variants Handler
+  const handleQuickGenerate = () => {
+    // Parse comma-separated values
+    const colorList = quickColors.split(',').map(c => c.trim()).filter(c => c);
+    const storageList = quickStorage.split(',').map(s => s.trim()).filter(s => s);
+    const ramList = quickRam.split(',').map(r => r.trim()).filter(r => r);
+    // Parse comma-separated stock values
+    const stockList = quickStock.split(',').map(s => s.trim()).filter(s => s);
+
+    // Also include saved colors from color picker
+    const pickerColors = savedColors.map(c => c.hex);
+    const allColors = [...colorList, ...pickerColors].filter(c => c);
+
+    if (allColors.length === 0 && storageList.length === 0 && ramList.length === 0) {
+      setMessage("Please enter at least one option for colors, storage, or RAM");
+      return;
+    }
+
+    // Parse comma-separated buying and selling prices
+    const buyingPrices = quickBuyingPrice.split(',').map(p => Number(p.trim()) || 0).filter(p => p > 0);
+    const sellingPrices = quickSellingPrice.split(',').map(p => Number(p.trim()) || 0).filter(p => p > 0);
+
+    // Generate all combinations
+    const generatedVariants = [];
+    
+    // If no lists provided, use single empty value
+    const colors = allColors.length > 0 ? allColors : [''];
+    const storages = storageList.length > 0 ? storageList : [''];
+    const rams = ramList.length > 0 ? ramList : [''];
+    const stocks = stockList.length > 0 ? stockList : ['1'];
+
+    colors.forEach((color, colorIndex) => {
+      storages.forEach((storage, storageIndex) => {
+        rams.forEach((ram, ramIndex) => {
+          const variantIndex = generatedVariants.length;
+          
+          // Get buying price - cycle through values or use first
+          const buyingPrice = buyingPrices.length > 0 
+            ? buyingPrices[variantIndex % buyingPrices.length] 
+            : 0;
+          
+          // Get selling price - cycle through values or use first
+          const sellingPrice = sellingPrices.length > 0 
+            ? sellingPrices[variantIndex % sellingPrices.length] 
+            : 0;
+          
+          // Get stock for this variant - cycle through stock values if not enough
+          const stockIndex = variantIndex % stocks.length;
+          const stock = stocks[stockIndex];
+          
+          // Get mapped image for this variant (color + storage + ram combo)
+          let variantImage = null;
+          let variantImagePreview = null;
+          
+          // Try to find mapped image by combo id
+          const comboId = `${colorIndex}-${storageIndex}-${ramIndex}`;
+          if (colorImageMapping[comboId]) {
+            const mappedImage = colorImageMapping[comboId];
+            variantImage = mappedImage.file;
+            variantImagePreview = mappedImage.preview;
+          }
+          
+          generatedVariants.push({
+            color: color || '#000000',
+            storage,
+            ram,
+            buying_price: buyingPrice.toString(),
+            profit_margin: '',
+            discount: '',
+            stock: stock.toString(),
+            image: variantImage,
+            imagePreview: variantImagePreview,
+            final_price: sellingPrice.toString(),
+            imeis: '',
+            product_code: ''
+          });
+        });
+      });
+    });
+
+    setVariants(generatedVariants);
+    setMessage(`${generatedVariants.length} variants generated! You can edit them below if needed.`);
+    setUseQuickGenerate(false);
+  };
+
+  // Handle saved colors from ColorPicker
+  const handleSavedColorsChange = (colors) => {
+    setSavedColors(colors);
+  };
+
+  // Handle quick image upload
+  const handleQuickImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const newImages = files.map(file => ({
+      file,
+      preview: URL.createObjectURL(file)
+    }));
+    setQuickImages([...quickImages, ...newImages]);
+  };
+
+  const removeQuickImage = (index) => {
+    const newImages = [...quickImages];
+    URL.revokeObjectURL(newImages[index].preview);
+    newImages.splice(index, 1);
+    setQuickImages(newImages);
+  };
+
+  // Update current color from color picker
+  const [currentPickerColor, setCurrentPickerColor] = useState("#000000");
   
   const handleAddBundleItem = () => {
     if (!selectedVariantForBundle) return;
@@ -495,7 +622,269 @@ Bluetooth 5.3"
                 </div>
             ) : (
                 <div>
-                    <h3 className="text-lg font-semibold mb-2">Product Variants</h3>
+                  {/* Quick Generate Section */}
+                  <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300">Quick Generate Variants</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Generate multiple variants at once from lists</p>
+                      </div>
+                      <Switch 
+                        id="quick-generate" 
+                        checked={useQuickGenerate} 
+                        onCheckedChange={setUseQuickGenerate} 
+                      />
+                    </div>
+
+                    {useQuickGenerate && (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                        <div className="space-y-2">
+                          <Label>Colors (comma-separated)</Label>
+                          <Input 
+                            value={quickColors} 
+                            onChange={(e) => setQuickColors(e.target.value)} 
+                            placeholder="Black, White, Blue"
+                          />
+                          <p className="text-xs text-gray-500">e.g., #000000, #FFFFFF, #007bff</p>
+                          
+                          {/* Color Picker Button */}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowColorPicker(!showColorPicker)}
+                            className="mt-2 cursor-pointer"
+                          >
+                            <Palette className="w-4 h-4 mr-2" /> Pick Colors
+                          </Button>
+                          
+                          {/* Color Picker Modal */}
+                          {showColorPicker && (
+                            <ColorPickerModal
+                              isOpen={showColorPicker}
+                              onClose={() => setShowColorPicker(false)}
+                              onColorSelect={handleSavedColorsChange}
+                              existingColors={savedColors}
+                            />
+                          )}
+                          
+                          {/* Image to Color Mapper Modal */}
+                          {showImageMapper && (
+                            <ImageColorMapperModal
+                              isOpen={showImageMapper}
+                              onClose={() => setShowImageMapper(false)}
+                              images={quickImages}
+                              colors={[...savedColors, ...quickColors.split(',').map(c => ({ hex: c.trim(), name: c.trim() })).filter(c => c.hex)]
+                                .filter((c, i, arr) => arr.findIndex(x => x.hex === c.hex) === i) // remove duplicates
+                              }
+                              storages={quickStorage.split(',').map(s => s.trim()).filter(s => s)}
+                              rams={quickRam.split(',').map(r => r.trim()).filter(r => r)}
+                              onMappingSave={setColorImageMapping}
+                            />
+                          )}
+                          
+                          {/* Show saved colors */}
+                          {savedColors.length > 0 && (
+                            <div className="mt-2">
+                              <Label className="text-xs">Selected Colors ({savedColors.length}):</Label>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {savedColors.map((color, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="w-6 h-6 rounded-full border"
+                                    style={{ backgroundColor: color.hex }}
+                                    title={color.name}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Storage (comma-separated)</Label>
+                          <Input 
+                            value={quickStorage} 
+                            onChange={(e) => setQuickStorage(e.target.value)} 
+                            placeholder="256GB, 512GB, 1TB"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>RAM (comma-separated)</Label>
+                          <Input 
+                            value={quickRam} 
+                            onChange={(e) => setQuickRam(e.target.value)} 
+                            placeholder="8GB, 12GB, 16GB"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Buying Price (comma-separated)</Label>
+                          <Input 
+                            value={quickBuyingPrice} 
+                            onChange={(e) => setQuickBuyingPrice(e.target.value)} 
+                            placeholder="50000, 55000, 60000"
+                          />
+                          <p className="text-xs text-gray-500">Cost per variant - cycles through list</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Selling Price (comma-separated)</Label>
+                          <Input 
+                            value={quickSellingPrice} 
+                            onChange={(e) => setQuickSellingPrice(e.target.value)} 
+                            placeholder="55000, 60000, 65000"
+                          />
+                          <p className="text-xs text-gray-500">Final price - cycles through list</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Stock per Variant (comma-separated)</Label>
+                          <Input 
+                            type="text"
+                            value={quickStock} 
+                            onChange={(e) => setQuickStock(e.target.value)} 
+                            placeholder="1"
+                          />
+                          <p className="text-xs text-gray-500">e.g., 1,3,5 for different stock per variant</p>
+                        </div>
+
+                        {/* Image Upload Section */}
+                        <div className="col-span-2 md:col-span-4 space-y-2">
+                          <Label>Upload Images for Variants</Label>
+                          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*"
+                              onChange={handleQuickImageUpload}
+                              className="hidden"
+                              id="quick-image-upload"
+                            />
+                            <label
+                              htmlFor="quick-image-upload"
+                              className="flex flex-col items-center justify-center cursor-pointer"
+                            >
+                              <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                              <span className="text-sm text-gray-500">Click to upload images</span>
+                              <span className="text-xs text-gray-400">One image per color variant</span>
+                            </label>
+                          </div>
+                          
+                          {/* Image Previews */}
+                          {quickImages.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {quickImages.map((img, idx) => (
+                                <div key={idx} className="relative group">
+                                  <img
+                                    src={img.preview}
+                                    alt={`Upload ${idx + 1}`}
+                                    className="w-16 h-16 object-cover rounded border"
+                                  />
+                                  <button
+                                    onClick={() => removeQuickImage(idx)}
+                                    className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Map Images to Variants Button */}
+                          {(() => {
+                            const colorCount = savedColors.length || quickColors.split(',').filter(c => c.trim()).length || 1;
+                            const storageCount = quickStorage.split(',').filter(s => s.trim()).length || 1;
+                            const ramCount = quickRam.split(',').filter(r => r.trim()).length || 1;
+                            const variantCount = colorCount * storageCount * ramCount;
+                            
+                            return quickImages.length > 0 && variantCount > 0 ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowImageMapper(true)}
+                                className="mt-2 cursor-pointer"
+                              >
+                                <Check className="w-4 h-4 mr-2" />
+                                Map Images to {variantCount} Variants
+                              </Button>
+                            ) : null;
+                          })()}
+                          
+                          {/* Show current mapping */}
+                          {Object.keys(colorImageMapping).length > 0 && (
+                            <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded">
+                              <p className="text-xs text-green-700 dark:text-green-300">
+                                ✓ {Object.keys(colorImageMapping).length} variants mapped to images
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="col-span-2 md:col-span-4 flex gap-2 mt-2">
+                          <Button 
+                            type="button" 
+                            onClick={handleQuickGenerate}
+                            className="cursor-pointer bg-blue-600 hover:bg-blue-700"
+                          >
+                            Generate {((([...quickColors.split(',').filter(c => c.trim()), ...savedColors.map(c => c.hex)].filter(c => c).length) || 1) * (quickStorage.split(',').filter(s => s.trim()).length || 1) * (quickRam.split(',').filter(r => r.trim()).length || 1))} Variants
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            onClick={() => {
+                              setQuickColors('');
+                              setQuickStorage('');
+                              setQuickRam('');
+                              setQuickBuyingPrice('');
+                              setQuickSellingPrice('');
+                              setQuickStock('1');
+                              setSavedColors([]);
+                              setQuickImages([]);
+                              setColorImageMapping({});
+                              setShowColorPicker(false);
+                            }}
+                            className="cursor-pointer"
+                          >
+                            Clear
+                          </Button>
+                          {variants.length > 0 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                setVariants([{
+                                  color: '#000000',
+                                  storage: '',
+                                  ram: '',
+                                  buying_price: '',
+                                  profit_margin: '',
+                                  discount: '',
+                                  stock: '',
+                                  image: null,
+                                  imagePreview: null,
+                                  final_price: '0',
+                                  imeis: '',
+                                  product_code: ''
+                                }]);
+                                setUseQuickGenerate(false);
+                                setSavedColors([]);
+                                setShowColorPicker(false);
+                              }}
+                              className="cursor-pointer text-orange-600 border-orange-600 hover:bg-orange-50"
+                            >
+                              Reset to Manual
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <h3 className="text-lg font-semibold mb-2">Product Variants</h3>
                     {variants.map((variant, index) => (
                       <div key={index} className="border p-4 rounded-md mb-4 relative">
                         <h4 className="text-md font-semibold mb-2">Variant {index + 1}</h4>

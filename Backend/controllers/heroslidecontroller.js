@@ -5,7 +5,8 @@ import {
     getAllHeroSlides,
     createHeroSlide,
     deleteHeroSlide,
-    toggleHeroSlideStatus
+    toggleHeroSlideStatus,
+    updateHeroSlide
 } from "../services/heroslide.js";
 
 import sharp from "sharp";
@@ -40,6 +41,7 @@ const formatHeroSlide = (req, slide) => ({
     ...slide,
     // Ensure the image URL is correctly retrieved from the DB field 'image_url'
     image_url: formatHeroSlideImage(req, slide.image_url),
+    status: slide.is_active ? "active" : "inactive"
 });
 
 
@@ -84,7 +86,7 @@ export const newHeroSlide = async (req, res) => {
             return res.status(403).json({ error: "Access denied. Admin only." });
         }
 
-        const { title, description } = req.body;
+        const { title, description, category_id } = req.body;
         
         
         if (!req.file) {
@@ -133,7 +135,8 @@ export const newHeroSlide = async (req, res) => {
         const newSlide = await createHeroSlide({ 
             title: title || null, 
             description: description || null, 
-            imagePath 
+            imagePath,
+            categoryId: category_id || null
         });
         
        
@@ -162,13 +165,16 @@ export const generateHeroSlideStatus = async (req, res) => {
         const { id } = req.params;
         const { status } = req.body; 
 
-        // CRITICAL FIX: The database service expects a value for 'is_active', 
-        // which should be 1 for active and 0 for inactive.
-        // Assuming your frontend sends `true` or `false` for status.
-        const dbStatus = status ? 1 : 0; 
-
-        if (status === undefined || typeof status !== 'boolean') {
-             return res.status(400).json({ error: "A boolean 'status' is required in the request body." });
+        // Accept both boolean and string ("active"/"inactive") formats
+        let dbStatus;
+        if (typeof status === 'boolean') {
+            dbStatus = status ? 1 : 0;
+        } else if (status === 'active') {
+            dbStatus = 1;
+        } else if (status === 'inactive') {
+            dbStatus = 0;
+        } else {
+            return res.status(400).json({ error: "Status must be 'active', 'inactive', or a boolean." });
         }
 
         const result = await toggleHeroSlideStatus(id, dbStatus);
@@ -199,5 +205,32 @@ export const removeHeroSlide = async (req, res) => {
     } catch (err) {
         console.error("Error deleting hero slide:", err);
         res.status(500).json({ error: err.message || "Failed to delete hero slide" });
+    }
+}
+
+export const editHeroSlide = async (req, res) => {
+    try {
+        if (req.user?.role !== "admin") {
+            return res.status(403).json({ error: "Access denied. Admin only." });
+        }
+
+        const { id } = req.params;
+        const { title, description, category_id } = req.body;
+
+        if (!title) {
+            return res.status(400).json({ error: "Title is required." });
+        }
+
+        const result = await updateHeroSlide(id, {
+            title,
+            description: description || null,
+            categoryId: category_id || null
+        });
+
+        res.json({ message: "Hero slide updated successfully", ...result });
+
+    } catch (err) {
+        console.error("Error updating hero slide:", err);
+        res.status(500).json({ error: err.message || "Failed to update hero slide" });
     }
 }

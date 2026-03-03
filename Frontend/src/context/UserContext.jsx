@@ -1,5 +1,5 @@
 // src/context/UserContext.jsx
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import useIdle from "../hooks/useIdle";
@@ -16,7 +16,7 @@ export const UserProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // Logout function
-  const logout = (message) => {
+  const logout = useCallback((message) => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setToken(null);
@@ -24,15 +24,17 @@ export const UserProvider = ({ children }) => {
 
     if (message) sessionStorage.setItem("expiredMessage", message);
     navigate("/login");
-  };
+  }, [navigate]);
 
-  // Set up the idle timer
-  useIdle(900000, () => {
-    // 15 minutes
+  // Idle callback - only triggers on TRUE inactivity (no mouse/keyboard/touch for 15 min)
+  const handleIdle = useCallback(() => {
     if (user) {
       logout("Your session has expired due to inactivity.");
     }
-  });
+  }, [user, logout]);
+
+  // Set up the idle timer - only logs out when PC is truly unattended
+  useIdle(900000, handleIdle); // 15 minutes of INACTIVITY
 
   // Load from localStorage on start
   useEffect(() => {

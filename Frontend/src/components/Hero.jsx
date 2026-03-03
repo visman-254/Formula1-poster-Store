@@ -37,7 +37,6 @@ const getRandomIndex = (length) => Math.floor(Math.random() * length);
 const Hero = () => {
   const [heroSlides, setHeroSlides] = useState([]);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
-  const [nextHeroIndex, setNextHeroIndex] = useState(0);
   const [isFading, setIsFading] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -58,7 +57,6 @@ const Hero = () => {
         const start = getRandomIndex(data.length);
         setHeroSlides(data);
         setCurrentHeroIndex(start);
-        setNextHeroIndex(getNextRandomIndex(start, data.length));
       }
     };
     fetchSlides();
@@ -71,16 +69,15 @@ const Hero = () => {
     const interval = setInterval(() => {
       setIsFading(true);
       setTimeout(() => {
-        setCurrentHeroIndex(nextHeroIndex);
-        setNextHeroIndex(
-          getNextRandomIndex(nextHeroIndex, heroSlides.length)
+        setCurrentHeroIndex((prevIndex) => 
+          getNextRandomIndex(prevIndex, heroSlides.length)
         );
         setIsFading(false);
       }, 800);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [heroSlides, nextHeroIndex, isPaused]);
+  }, [heroSlides, isPaused]);
 
   /* carousel */
   useEffect(() => {
@@ -91,7 +88,6 @@ const Hero = () => {
   }, []);
 
   const currentSlide = heroSlides[currentHeroIndex];
-  const nextSlide = heroSlides[nextHeroIndex];
 
   return (
     <>
@@ -126,7 +122,7 @@ const Hero = () => {
             </a>
           </div>
 
-          {currentSlide && nextSlide && (
+          {currentSlide && (
             <>
               {isPaused ? (
                 <Play className="pause-icon" onClick={() => setIsPaused(false)} />
@@ -135,17 +131,9 @@ const Hero = () => {
               )}
 
               <img
-                src={nextSlide.image_url}
-                alt={nextSlide.title}
-                className={`hero-img next-slide ${isFading ? "active" : ""}`}
-              />
-
-              <img
                 src={currentSlide.image_url}
                 alt={currentSlide.title}
-                className={`hero-img current-slide ${
-                  isFading ? "fading-out" : "active"
-                }`}
+                className={`hero-img ${isFading ? "fading-out" : "active"}`}
               />
 
               {/* HERO TEXT OVERLAY */}
@@ -163,7 +151,7 @@ const Hero = () => {
                   parentClassName="hero-subtitle-wrapper"
                 />
 
-                <Link to="/products">
+                <Link to={currentSlide.category_name ? `/products/category/${currentSlide.category_name}` : "/products"}>
                   <Button className="shop shop-now-button mt-6">
                     <ShoppingBag className="shop-icon" size={20} />
                     Visit Shop

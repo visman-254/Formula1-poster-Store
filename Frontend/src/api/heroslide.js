@@ -26,17 +26,18 @@ export const getFullHeroSlides = async () => {
 }
 
 export const createHeroSlide = async (heroSlideData) => {
-  // CRITICAL FIX: Use FormData for file uploads
+  // Use FormData for file uploads
   const formData = new FormData();
   formData.append('title', heroSlideData.title);
   formData.append('description', heroSlideData.description);
+  formData.append('category_id', heroSlideData.category_id || '');
   // 'image' must match the key used in your multer middleware: upload.single("image")
   formData.append('image', heroSlideData.image); 
 
   // Include auth headers. Axios automatically sets the 'Content-Type' to 'multipart/form-data'
   // when the data is a FormData object.
-  const res = await axios.post(API_URL, formData, getAuthHeaders());
-  return res.data;
+  const res = await axios.post(API_URL, formData, getAuthHeaders());
+  return res.data;
 
 }
 
@@ -49,5 +50,10 @@ export const deleteHeroSlide = async (id) => {
 
 export const toggleHeroSlideStatus = async (id, status) => {
   const res = await axios.put(`${API_URL}/${id}/status`, { status }, getAuthHeaders());
+  return res.data;
+}
+
+export const updateHeroSlide = async (id, heroSlideData) => {
+  const res = await axios.put(`${API_URL}/${id}`, heroSlideData, getAuthHeaders());
   return res.data;
 }

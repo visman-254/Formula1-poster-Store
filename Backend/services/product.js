@@ -352,13 +352,36 @@ export const createProduct = async ({ title, description, category_id, variants,
 
 export const getProductsByCategoryName = async (categoryName) => {
     try {
-        const query = categoryName === "Uncategorized"
-            ? `SELECT p.*, c.category_name, pv.* FROM products p LEFT JOIN product_variants pv ON p.product_id = pv.product_id LEFT JOIN categories c ON p.category_id = c.category_id WHERE (p.category_id = ? OR c.is_deleted = 1) AND p.is_deleted = FALSE`
-            : `SELECT p.*, c.category_name, pv.* FROM products p LEFT JOIN product_variants pv ON p.product_id = pv.product_id LEFT JOIN categories c ON p.category_id = c.category_id WHERE c.category_name = ? AND p.is_deleted = FALSE AND p.is_visible = TRUE`;
-        
-        const params = categoryName === "Uncategorized" ? [UNCATEGORIZED_ID] : [categoryName];
+        // First, find the category and its subcategories
+        const [categories] = await db.execute(
+            `WITH RECURSIVE category_tree AS (
+                SELECT category_id, category_name, parent_id
+                FROM categories
+                WHERE category_name = ? AND is_deleted = 0
+                UNION ALL
+                SELECT c.category_id, c.category_name, c.parent_id
+                FROM categories c
+                JOIN category_tree ct ON c.parent_id = ct.category_id
+                WHERE c.is_deleted = 0
+            )
+            SELECT category_id FROM category_tree`,
+            [categoryName]
+        );
 
-        const [rows] = await db.execute(query, params);
+        if (categories.length === 0) {
+            return [];
+        }
+
+        const categoryIds = categories.map(c => c.category_id);
+        const placeholders = categoryIds.map(() => '?').join(',');
+
+        const query = `SELECT p.*, c.category_name, pv.* 
+            FROM products p 
+            LEFT JOIN product_variants pv ON p.product_id = pv.product_id 
+            LEFT JOIN categories c ON p.category_id = c.category_id 
+            WHERE p.category_id IN (${placeholders}) AND p.is_deleted = FALSE AND p.is_visible = TRUE`;
+
+        const [rows] = await db.execute(query, categoryIds);
         const grouped = await groupProducts(rows);
         // Filter out bundles that are out of stock
         return grouped.filter(p => {
@@ -376,13 +399,36 @@ export const getProductsByCategoryName = async (categoryName) => {
 
 export const getProductsByCategoryNameAdmin = async (categoryName) => {
     try {
+        // First, find the category and its subcategories
+        const [categories] = await db.execute(
+            `WITH RECURSIVE category_tree AS (
+                SELECT category_id, category_name, parent_id
+                FROM categories
+                WHERE category_name = ? AND is_deleted = 0
+                UNION ALL
+                SELECT c.category_id, c.category_name, c.parent_id
+                FROM categories c
+                JOIN category_tree ct ON c.parent_id = ct.category_id
+                WHERE c.is_deleted = 0
+            )
+            SELECT category_id FROM category_tree`,
+            [categoryName]
+        );
+
+        if (categories.length === 0) {
+            return [];
+        }
+
+        const categoryIds = categories.map(c => c.category_id);
+        const placeholders = categoryIds.map(() => '?').join(',');
+
         const [rows] = await db.execute(`
             SELECT p.*, c.category_name, pv.*
             FROM products p
             LEFT JOIN product_variants pv ON p.product_id = pv.product_id
             LEFT JOIN categories c ON p.category_id = c.category_id
-            WHERE c.category_name = ?
-        `, [categoryName]);
+            WHERE p.category_id IN (${placeholders})
+        `, categoryIds);
         return groupProducts(rows);
     } catch (err) {
         console.error("Error fetching products by category name (admin):", err);

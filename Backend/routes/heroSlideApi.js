@@ -1,7 +1,7 @@
 // src/routes/heroSlideApi.js (Improved)
 
 import express from "express";
-import { getUserHeroSlides, getFullHeroSlides, newHeroSlide, generateHeroSlideStatus, removeHeroSlide } from "../controllers/heroslidecontroller.js";
+import { getUserHeroSlides, getFullHeroSlides, newHeroSlide, generateHeroSlideStatus, removeHeroSlide, editHeroSlide } from "../controllers/heroslidecontroller.js";
 import { verifyAdmin, verifyToken } from "../middleware/authMiddleware.js";
 import multer from "multer"; 
 import path from "path";
@@ -30,6 +30,8 @@ router.post("/", verifyToken, verifyAdmin, upload.single('image'), newHeroSlide)
 
 
 router.put("/:id/status", verifyToken, verifyAdmin, generateHeroSlideStatus);
+
+router.put("/:id", verifyToken, verifyAdmin, editHeroSlide);
 
 
 router.delete("/:id", verifyToken, verifyAdmin, removeHeroSlide);

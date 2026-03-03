@@ -1,28 +1,34 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 const useIdle = (timeout, onIdle) => {
   const [isIdle, setIsIdle] = useState(false);
   const timeoutRef = useRef(null);
+  const onIdleRef = useRef(onIdle);
 
-  const handleEvent = () => {
+  // Keep the callback ref updated without triggering resets
+  useEffect(() => {
+    onIdleRef.current = onIdle;
+  }, [onIdle]);
+
+  const handleEvent = useCallback(() => {
     setIsIdle(false);
-    resetTimer();
-  };
-
-  const resetTimer = () => {
+    
+    // Clear existing timeout
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
+    
+    // Set new timeout - only log out if truly idle
     timeoutRef.current = setTimeout(() => {
       setIsIdle(true);
-      if (onIdle) {
-        onIdle();
+      if (onIdleRef.current) {
+        onIdleRef.current();
       }
     }, timeout);
-  };
+  }, [timeout]);
 
   useEffect(() => {
-    const events = ['mousemove', 'keydown', 'mousedown', 'touchstart'];
+    const events = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
 
     const addEventListeners = () => {
       events.forEach(event => {
@@ -37,7 +43,8 @@ const useIdle = (timeout, onIdle) => {
     };
 
     addEventListeners();
-    resetTimer();
+    // Initial timer
+    handleEvent();
 
     return () => {
       removeEventListeners();
@@ -45,7 +52,7 @@ const useIdle = (timeout, onIdle) => {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [timeout, onIdle]);
+  }, [handleEvent]);
 
   return isIdle;
 };
