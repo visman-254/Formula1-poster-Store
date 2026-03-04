@@ -464,12 +464,14 @@ const ProductDetail = () => {
                             className={`color-variant-card ${isSelected ? 'color-variant-active' : ''}`}
                             aria-label={`Select ${color} variant`}
                           >
-                            <img
-                              src={variant?.image}
-                              alt={`${product.title} - ${color}`}
-                              loading="lazy"
-                              onError={(e) => { e.target.src = "/fallback.jpg"; e.target.onerror = null; }}
-                            />
+                            <div className="color-variant-img-wrap">
+                              <img
+                                src={variant?.image}
+                                alt={`${product.title} - ${color}`}
+                                loading="lazy"
+                                onError={(e) => { e.target.src = "/fallback.jpg"; e.target.onerror = null; }}
+                              />
+                            </div>
                             <span>{color}</span>
                             {isSelected && (
                               <div className="color-variant-check">
@@ -646,15 +648,16 @@ const css = `
     position: relative;
     border-radius: 16px;
     overflow: hidden;
-    aspect-ratio: 1 / 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 100%;
     background: rgba(0,0,0,0.03);
+    /* padding-top trick: reliable square regardless of container width */
+    padding-top: 100%;
   }
   .dark .main-image-wrap { background: rgba(255,255,255,0.04); }
 
   .main-product-image {
+    position: absolute;
+    top: 0; left: 0;
     width: 100%;
     height: 100%;
     object-fit: contain;
@@ -665,6 +668,8 @@ const css = `
   .main-product-image:hover { transform: scale(1.04); }
 
   .bundle-main-img {
+    position: absolute;
+    top: 0; left: 0;
     width: 100%;
     height: 100%;
     display: flex;
@@ -927,8 +932,28 @@ const css = `
   .dark .color-variant-card { background: rgba(255,255,255,0.05); }
   .color-variant-card:hover { background: rgba(0,0,0,0.06); transform: translateY(-2px); }
   .dark .color-variant-card:hover { background: rgba(255,255,255,0.09); }
-  .color-variant-card img { width: 100%; aspect-ratio: 1; object-fit: cover; transition: transform 0.3s; }
-  .color-variant-card:hover img { transform: scale(1.06); }
+
+  /* ── FIX: image wrapper keeps a square aspect ratio,
+     object-fit: contain so the full product shot is visible
+     (no cropping/zooming regardless of image dimensions) ── */
+  .color-variant-img-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: transparent;
+  }
+  .color-variant-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 8px;
+    transition: transform 0.3s;
+  }
+  .color-variant-card:hover .color-variant-img-wrap img { transform: scale(1.06); }
+
   .color-variant-card span {
     font-size: 11px; font-weight: 500; color: #666;
     margin-top: 6px; padding: 0 6px; text-align: center;

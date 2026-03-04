@@ -133,10 +133,18 @@ export const fetchProductById = async (req, res) => {
 
 export const addProduct = async (req, res) => {
   try {
+    console.log("[addProduct] Request received");
+    console.log("[addProduct] Files in request:", req.files?.length || 0);
+    console.log("[addProduct] Body keys:", Object.keys(req.body));
+    
     if (req.user?.role !== "admin") return res.status(403).json({ error: "Admin only" });
 
     const { title, description, categoryName, variants: variantsJson, is_bundle, bundle_of: bundleOfJson } = req.body;
+    console.log("[addProduct] Title:", title);
+    console.log("[addProduct] Variants JSON:", variantsJson);
     const variants = JSON.parse(variantsJson || '[]');
+    console.log("[addProduct] Parsed variants count:", variants.length);
+    
     const bundle_of = JSON.parse(bundleOfJson || 'null');
     const isBundleBool = is_bundle === 'true' || is_bundle === true;
 

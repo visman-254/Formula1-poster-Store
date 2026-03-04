@@ -35,16 +35,41 @@ import { verifyToken, verifyAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// configure multer storage (omitted for brevity)
+// configure multer storage with debug logging
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    console.log(`[Multer] Saving file to: uploads/images`);
     cb(null, path.join(process.cwd(), "uploads", "images"));
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+    const filename = Date.now() + path.extname(file.originalname);
+    console.log(`[Multer] Filename: ${filename}, Original: ${file.originalname}`);
+    cb(null, filename);
   },
 });
+
+// Regular upload for single file routes
 const upload = multer({ storage });
+
+// Custom upload middleware that logs all fields and handles errors gracefully
+const uploadWithLogging = (req, res, next) => {
+  // Increased limit to 50 to handle large image uploads
+  const uploadMiddleware = upload.array("images", 50);
+  
+  uploadMiddleware(req, res, (err) => {
+    if (err) {
+      console.error(`[Multer Error] Code: ${err.code}, Message: ${err.message}`);
+      console.error(`[Multer Error] Field: ${err.field}`);
+      return next(err);
+    }
+    
+    // Log what was received
+    console.log(`[Multer] Files received: ${req.files?.length || 0}`);
+    console.log(`[Multer] Body fields:`, Object.keys(req.body));
+    
+    next();
+  });
+};
 
 
 router.get("/categories", fetchCategories);
@@ -150,7 +175,7 @@ router.post(
   "/", 
   verifyToken, 
   verifyAdmin, 
-  upload.array("images", 10), 
+  uploadWithLogging, 
   addProduct
 );
 
