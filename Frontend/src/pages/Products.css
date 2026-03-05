@@ -416,7 +416,7 @@
   transition: opacity 0.25s;
 }
 
-.samsung-atc-btn:hover {
+.samsung-atc-btn:hover { 
   background: #0f1e7a;
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(20, 40, 160, 0.35);

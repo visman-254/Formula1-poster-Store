@@ -5,6 +5,30 @@ import axios from "axios";
 import { useCart } from "../context/CartContext";
 import API_BASE from "../config";
 
+// Returns true if a CSS color string is perceptually dark
+const isDarkColor = (color) => {
+  if (!color) return false;
+  const s = color.toLowerCase().trim();
+  const darkKeywords = [
+    'black', 'noir', 'nero', 'negro', 'zwart', 'schwarz', 'noir',
+    '#000', '#111', '#0d0d0d', '#1a1a1a', '#222', '#333', 'darkslategray', 'darkslategrey',
+  ];
+  if (darkKeywords.some(k => s.includes(k))) return true;
+  if (s.startsWith('#')) {
+    const full = s.length === 4
+      ? `#${s[1]}${s[1]}${s[2]}${s[2]}${s[3]}${s[3]}`
+      : s;
+    const r = parseInt(full.slice(1, 3), 16);
+    const g = parseInt(full.slice(3, 5), 16);
+    const b = parseInt(full.slice(5, 7), 16);
+    if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      return luminance < 0.25;
+    }
+  }
+  return false;
+};
+
 const ProductDetail = () => {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
@@ -53,17 +77,31 @@ const ProductDetail = () => {
         setGalleryLoading(true);
         const res = await axios.get(`${API_BASE}/api/gallery/${product.product_id}/images`);
         if (res.data?.length > 0) {
-          setGalleryImages(res.data.map(img => img.image_url));
+          const colorImageMap = new Map();
+          res.data.forEach(img => {
+            const color = img.color?.toLowerCase().trim();
+            if (color && !colorImageMap.has(color)) {
+              colorImageMap.set(color, img.image_url);
+            }
+          });
+          const images = colorImageMap.size > 0
+            ? Array.from(colorImageMap.values())
+            : [...new Set(res.data.map(img => img.image_url))];
+          setGalleryImages(images);
         } else { throw new Error("No gallery images found"); }
       } catch (err) {
         console.warn("Falling back to variant images:", err);
-        let images = [];
-        if (!!product.is_bundle && product.bundleImages) images.push(...product.bundleImages);
+        const colorImageMap = new Map();
         if (product.variants) {
           product.variants.forEach(variant => {
-            if (variant.image && !images.includes(variant.image)) images.push(variant.image);
+            const color = variant.color?.toLowerCase().trim();
+            if (color && variant.image && !colorImageMap.has(color)) {
+              colorImageMap.set(color, variant.image);
+            }
           });
         }
+        let images = Array.from(colorImageMap.values());
+        if (!!product.is_bundle && product.bundleImages) images.push(...product.bundleImages);
         if (product.primaryImage && !images.includes(product.primaryImage)) images.push(product.primaryImage);
         setGalleryImages(images);
       } finally {
@@ -144,6 +182,18 @@ const ProductDetail = () => {
     }
   }, [product, selectedVariant, addToCart]);
 
+  const colorImageMap = useMemo(() => {
+    const map = new Map();
+    if (!product?.variants || !galleryImages.length) return map;
+    const uniqueColorsLocal = [...new Set(product.variants.map(v => v.color))];
+    uniqueColorsLocal.forEach((color, index) => {
+      if (galleryImages[index]) {
+        map.set(color.toLowerCase().trim(), galleryImages[index]);
+      }
+    });
+    return map;
+  }, [product?.variants, galleryImages]);
+
   const renderMainImage = () => {
     if (!!product.is_bundle && product.bundleImages?.length >= 2) {
       return (
@@ -156,7 +206,10 @@ const ProductDetail = () => {
         </div>
       );
     }
-    const mainImage = selectedVariant?.image || product?.primaryImage || '/fallback.jpg';
+    const colorKey = selectedColor?.toLowerCase().trim();
+    const mainImage = colorKey && colorImageMap.has(colorKey)
+      ? colorImageMap.get(colorKey)
+      : selectedVariant?.image || product?.primaryImage || '/fallback.jpg';
     return (
       <img
         src={mainImage}
@@ -167,6 +220,20 @@ const ProductDetail = () => {
         loading="eager"
       />
     );
+  };
+
+  // Compute swatch style: dark colors get a visible border so they're not invisible
+  const getSwatchStyle = (color, isSelected) => {
+    const dark = isDarkColor(color);
+    const base = { background: color?.toLowerCase() || '#ccc' };
+    if (isSelected) {
+      // Selected: always show the double-ring; adjust ring color for dark swatches
+      return dark
+        ? { ...base, boxShadow: '0 0 0 2px white, 0 0 0 4px #555' }
+        : base; // non-dark selected handled by .color-swatch-active CSS
+    }
+    // Unselected dark: add a grey outline so the swatch is visible
+    return dark ? { ...base, border: '3px solid #c0c0c0' } : base;
   };
 
   if (loading) {
@@ -259,25 +326,38 @@ const ProductDetail = () => {
 
                 {!galleryLoading && galleryImages.length > 1 && (
                   <div className="thumb-strip">
-                    {galleryImages.map((url, i) => (
-                      <button
-                        key={i}
-                        onClick={() => openLightbox(i)}
-                        className={`thumb-btn ${
-                          (!product.is_bundle && selectedVariant?.image === url) ||
-                          (!!product.is_bundle && product.bundleImages?.length >= 2 && i < 2)
-                            ? 'thumb-active' : ''
-                        }`}
-                        aria-label={`View image ${i + 1}`}
-                      >
-                        <img
-                          src={url}
-                          alt={`${product.title} view ${i + 1}`}
-                          loading="lazy"
-                          onError={(e) => { e.target.src = "/fallback.jpg"; e.target.onerror = null; }}
-                        />
-                      </button>
-                    ))}
+                    {galleryImages.map((url, i) => {
+                      const isActive = !product.is_bundle && (
+                        (selectedColor && colorImageMap.get(selectedColor.toLowerCase().trim()) === url) ||
+                        (!selectedColor && selectedVariant?.image === url)
+                      );
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            if (!product.is_bundle) {
+                              const uniqueColorsLocal = [...new Set(product.variants.map(v => v.color))];
+                              const clickedColor = uniqueColorsLocal[i];
+                              if (clickedColor) {
+                                setSelectedColor(clickedColor);
+                                setSelectedStorage(null);
+                                setSelectedRam(null);
+                              }
+                            }
+                            openLightbox(i);
+                          }}
+                          className={`thumb-btn ${isActive || (!!product.is_bundle && product.bundleImages?.length >= 2 && i < 2) ? 'thumb-active' : ''}`}
+                          aria-label={`View image ${i + 1}`}
+                        >
+                          <img
+                            src={url}
+                            alt={`${product.title} view ${i + 1}`}
+                            loading="lazy"
+                            onError={(e) => { e.target.src = "/fallback.jpg"; e.target.onerror = null; }}
+                          />
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -304,12 +384,6 @@ const ProductDetail = () => {
                   ) : (
                     <span className="price-current">Kshs {Number(selectedVariant.price).toFixed(2)}</span>
                   )}
-                </div>
-
-                {/* Stock */}
-                <div className="stock-row">
-                  <span className="stock-dot" />
-                  <span className="stock-label">In Stock</span>
                 </div>
 
                 {/* Variants */}
@@ -339,7 +413,7 @@ const ProductDetail = () => {
                                   }
                                 }}
                                 className={`color-swatch ${isSelected ? 'color-swatch-active' : ''}`}
-                                style={{ background: color?.toLowerCase() || '#ccc' }}
+                                style={getSwatchStyle(color, isSelected)}
                                 title={color}
                                 aria-label={`Select ${color}`}
                               >
@@ -650,7 +724,6 @@ const css = `
     overflow: hidden;
     width: 100%;
     background: rgba(0,0,0,0.03);
-    /* padding-top trick: reliable square regardless of container width */
     padding-top: 100%;
   }
   .dark .main-image-wrap { background: rgba(255,255,255,0.04); }
@@ -663,6 +736,7 @@ const css = `
     object-fit: contain;
     cursor: zoom-in;
     padding: 24px;
+    transform: scale(1);
     transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
   .main-product-image:hover { transform: scale(1.04); }
@@ -810,21 +884,6 @@ const css = `
   }
   .dark .price-save { background: #2a1010; color: #ff6b6b; }
 
-  /* Stock */
-  .stock-row { display: flex; align-items: center; gap: 8px; }
-  .stock-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: #0bc268;
-    box-shadow: 0 0 0 3px rgba(11,194,104,0.2);
-    animation: pulse-green 2s infinite;
-  }
-  @keyframes pulse-green {
-    0%, 100% { box-shadow: 0 0 0 3px rgba(11,194,104,0.2); }
-    50% { box-shadow: 0 0 0 6px rgba(11,194,104,0.08); }
-  }
-  .stock-label { font-size: 13px; font-weight: 500; color: #0bc268; }
-
   /* Variants */
   .variants-section { display: flex; flex-direction: column; gap: 20px; }
   .variant-group { display: flex; flex-direction: column; gap: 10px; }
@@ -851,6 +910,7 @@ const css = `
   }
   .color-swatch svg { width: 15px; height: 15px; color: white; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
   .color-swatch:hover { transform: scale(1.15); }
+  /* Active ring for non-dark swatches — dark swatches get their ring via inline style */
   .color-swatch-active { box-shadow: 0 0 0 2px white, 0 0 0 4px #111; transform: scale(1.12); }
   .dark .color-swatch-active { box-shadow: 0 0 0 2px #111, 0 0 0 4px #555; }
 
@@ -933,9 +993,6 @@ const css = `
   .color-variant-card:hover { background: rgba(0,0,0,0.06); transform: translateY(-2px); }
   .dark .color-variant-card:hover { background: rgba(255,255,255,0.09); }
 
-  /* ── FIX: image wrapper keeps a square aspect ratio,
-     object-fit: contain so the full product shot is visible
-     (no cropping/zooming regardless of image dimensions) ── */
   .color-variant-img-wrap {
     width: 100%;
     aspect-ratio: 1 / 1;

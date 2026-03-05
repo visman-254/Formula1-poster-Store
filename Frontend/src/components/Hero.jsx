@@ -185,17 +185,9 @@ const Hero = () => {
         <div className="carousel-container">
           <div className="carousel-track">
             {allImages.map((img, index) => {
-              let cls = "carousel-item";
-              if (index === carouselIndex) cls += " active";
-              else if (
-                index === (carouselIndex + 1) % numAllImages ||
-                index === (carouselIndex - 1 + numAllImages) % numAllImages
-              )
-                cls += " side";
-              else cls += " hidden";
-
+              const isActive = index === carouselIndex;
               return (
-                <div className={cls} key={index}>
+                <div className={`carousel-item ${isActive ? 'active' : 'hidden'}`} key={index}>
                   <img src={img} alt="" />
                 </div>
               );
