@@ -340,8 +340,21 @@ const ProductDetail = () => {
                               const clickedColor = uniqueColorsLocal[i];
                               if (clickedColor) {
                                 setSelectedColor(clickedColor);
-                                setSelectedStorage(null);
-                                setSelectedRam(null);
+                                // Keep storage if available for the new color, otherwise select first available
+                                const variantWithCurrentStorage = product.variants.find(v => 
+                                  v.color === clickedColor && v.storage === selectedStorage
+                                );
+                                if (variantWithCurrentStorage) {
+                                  setSelectedVariant(variantWithCurrentStorage);
+                                  if (variantWithCurrentStorage.ram) setSelectedRam(variantWithCurrentStorage.ram);
+                                } else {
+                                  const first = product.variants.find(v => v.color === clickedColor);
+                                  if (first) {
+                                    setSelectedVariant(first);
+                                    if (first.storage) setSelectedStorage(first.storage);
+                                    if (first.ram) setSelectedRam(first.ram);
+                                  }
+                                }
                               }
                             }
                             openLightbox(i);
@@ -403,13 +416,20 @@ const ProductDetail = () => {
                                 key={color}
                                 onClick={() => {
                                   setSelectedColor(color);
-                                  setSelectedStorage(null);
-                                  setSelectedRam(null);
-                                  const first = product.variants.find(v => v.color === color);
-                                  if (first) {
-                                    setSelectedVariant(first);
-                                    if (first.storage) setSelectedStorage(first.storage);
-                                    if (first.ram) setSelectedRam(first.ram);
+                                  // Keep storage if available for the new color, otherwise select first available
+                                  const variantWithCurrentStorage = product.variants.find(v => 
+                                    v.color === color && v.storage === selectedStorage
+                                  );
+                                  if (variantWithCurrentStorage) {
+                                    setSelectedVariant(variantWithCurrentStorage);
+                                    if (variantWithCurrentStorage.ram) setSelectedRam(variantWithCurrentStorage.ram);
+                                  } else {
+                                    const first = product.variants.find(v => v.color === color);
+                                    if (first) {
+                                      setSelectedVariant(first);
+                                      if (first.storage) setSelectedStorage(first.storage);
+                                      if (first.ram) setSelectedRam(first.ram);
+                                    }
                                   }
                                 }}
                                 className={`color-swatch ${isSelected ? 'color-swatch-active' : ''}`}
@@ -527,12 +547,19 @@ const ProductDetail = () => {
                             key={color}
                             onClick={() => {
                               setSelectedColor(color);
-                              setSelectedStorage(null);
-                              setSelectedRam(null);
-                              if (variant) {
-                                setSelectedVariant(variant);
-                                if (variant.storage) setSelectedStorage(variant.storage);
-                                if (variant.ram) setSelectedRam(variant.ram);
+                              // Keep storage if available for the new color, otherwise select first available
+                              const variantWithCurrentStorage = product.variants.find(v => 
+                                v.color === color && v.storage === selectedStorage
+                              );
+                              if (variantWithCurrentStorage) {
+                                setSelectedVariant(variantWithCurrentStorage);
+                                if (variantWithCurrentStorage.ram) setSelectedRam(variantWithCurrentStorage.ram);
+                              } else {
+                                if (variant) {
+                                  setSelectedVariant(variant);
+                                  if (variant.storage) setSelectedStorage(variant.storage);
+                                  if (variant.ram) setSelectedRam(variant.ram);
+                                }
                               }
                             }}
                             className={`color-variant-card ${isSelected ? 'color-variant-active' : ''}`}
