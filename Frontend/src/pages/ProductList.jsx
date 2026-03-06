@@ -32,6 +32,56 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
   const [loading, setLoading] = useState(true);
   const [addedMap, setAddedMap] = useState({});
 
+  // Sort function: Featured first, then by product_id (newest)
+  const sortProducts = (products, query = "") => {
+    let filtered = [...products];
+    
+    // Apply search filter if query exists
+    if (query && query.trim()) {
+      filtered = filtered.filter((product) =>
+        product.title.toLowerCase().includes(query.toLowerCase())
+      );
+    }
+    
+    // Sort: Featured products first, then by product_id (newest)
+    return filtered.sort((a, b) => {
+      // First sort by featured status (featured products first)
+      if (a.is_featured && !b.is_featured) return -1;
+      if (!a.is_featured && b.is_featured) return 1;
+      
+      // Then sort by product_id descending (newest first)
+      // Using product_id as a proxy for creation date since it's auto-incrementing
+      return (b.product_id || 0) - (a.product_id || 0);
+    });
+  };
+
+  // Handle product updates (from ProductCard)
+  const handleProductUpdated = (updatedProduct) => {
+    if (!updatedProduct) return;
+    
+    // Update the product in allProducts
+    setAllProducts(prevProducts => {
+      const updated = prevProducts.map(p => 
+        p.product_id === updatedProduct.product_id ? updatedProduct : p
+      );
+      // Re-sort after update
+      return updated;
+    });
+    
+    // Also update selected variant if needed
+    if (updatedProduct.variants?.length > 0) {
+      setSelectedVariants(prev => ({
+        ...prev,
+        [updatedProduct.product_id]: updatedProduct.variants[0]
+      }));
+    }
+  };
+
+  // Handle product deletion
+  const handleProductDeleted = (productId) => {
+    setAllProducts(prev => prev.filter(p => p.product_id !== productId));
+  };
+
   /* ================= FETCH PRODUCTS ================= */
   useEffect(() => {
     const fetchProductsData = async () => {
@@ -44,11 +94,13 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
           res = await axios.get(`${API_BASE}/api/products/category/name/${category}`);
         }
 
-        setAllProducts(res.data);
-        setFilteredProducts(res.data);
+        // Sort products immediately after fetching
+        const sortedProducts = sortProducts(res.data, searchQuery);
+        setAllProducts(sortedProducts);
+        setFilteredProducts(sortedProducts);
 
         const initialVariants = {};
-        res.data.forEach((product) => {
+        sortedProducts.forEach((product) => {
           if (product.variants?.length > 0) {
             initialVariants[product.product_id] = product.variants[0];
           }
@@ -67,19 +119,15 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
       .get(`${API_BASE}/api/products/categories`)
       .then((res) => setCategories(res.data))
       .catch((err) => console.error(err));
-  }, [category]);
+  }, [category]); // Remove searchQuery from dependencies here
 
-  /* ================= SEARCH FILTER ================= */
+  /* ================= SEARCH FILTER EFFECT ================= */
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredProducts(allProducts);
-    } else {
-      setFilteredProducts(
-        allProducts.filter((product) =>
-          product.title.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      );
-    }
+    if (!allProducts.length) return;
+    
+    // Re-sort and filter when searchQuery changes
+    const sortedAndFiltered = sortProducts(allProducts, searchQuery);
+    setFilteredProducts(sortedAndFiltered);
   }, [searchQuery, allProducts]);
 
   /* ================= HANDLERS ================= */
@@ -152,6 +200,9 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
           {searchQuery && <span className="results-query"> for &ldquo;{searchQuery}&rdquo;</span>}
           {!searchQuery && category && <span className="results-query"> in {category}</span>}
           {!searchQuery && !category && <span> in All Products</span>}
+          {filteredProducts.some(p => p.is_featured) && (
+            <span className="results-featured"> (Featured shown first)</span>
+          )}
         </span>
       </div>
 
@@ -183,6 +234,13 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
 
                 return (
                   <div key={product.product_id} className="samsung-card">
+                    {/* Featured badge */}
+                    {product.is_featured && (
+                      <div className="samsung-featured-badge">
+                        ⭐ FEATURED
+                      </div>
+                    )}
+
                     {/* Discount badge */}
                     {!!hasDiscount && (
                       <div className="samsung-sale-badge">
@@ -248,7 +306,7 @@ const ProductList = ({ searchQuery, setSearchQuery }) => {
 
 const DescriptionText = ({ description }) => {
   const [expanded, setExpanded] = useState(false);
-  const words = description.split(" ");
+  const words = description ? description.split(" ") : [];
   const shortDesc = words.slice(0, 3).join(" ");
 
   return (

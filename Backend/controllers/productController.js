@@ -18,6 +18,7 @@ import {
   permanentlyDeleteProduct,
    updateStockForVariant as updateStockForVariantService,
    toggleProductVisibility as toggleProductVisibilityService,
+   toggleProductFeatured as toggleProductFeaturedService,
   migrateExistingProductsToBatches,
 } from "../services/product.js";
 
@@ -618,6 +619,31 @@ export const updateStockForVariant = async (req, res) => {
   } catch (err) {
     console.error("Error toggling product visibility:", err);
     res.status(500).json({ error: "Failed to toggle product visibility" });
+  }
+};
+
+export const toggleProductFeatured = async (req, res) => {
+  try {
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ error: "Admin only" });
+    }
+
+    const { id } = req.params;
+    const { is_featured } = req.body;
+
+    if (is_featured === undefined) {
+      return res.status(400).json({ error: "is_featured is required" });
+    }
+
+    const updatedProduct = await toggleProductFeaturedService(id, is_featured);
+
+    res.json({
+      message: "Product featured status updated successfully",
+      product: formatProduct(req, updatedProduct),
+    });
+  } catch (err) {
+    console.error("Error toggling product featured status:", err);
+    res.status(500).json({ error: "Failed to toggle product featured status" });
   }
 };
 

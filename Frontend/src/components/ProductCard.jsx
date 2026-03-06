@@ -1586,6 +1586,7 @@ const ProductCard = ({ product, onDeleted, onUpdated }) => {
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [busy, setBusy] = useState(false);
     const [isVisible, setIsVisible] = useState(product.is_visible);
+    const [isFeatured, setIsFeatured] = useState(product.is_featured || false);
 
     const handleToggleVisibility = async () => {
         try {
@@ -1603,6 +1604,25 @@ const ProductCard = ({ product, onDeleted, onUpdated }) => {
             console.error("Error toggling product visibility:", err);
             setIsVisible(!isVisible);
             alert("Failed to update product visibility");
+        }
+    };
+
+    const handleToggleFeatured = async () => {
+        try {
+            const newFeatured = !isFeatured;
+            setIsFeatured(newFeatured);
+            await axios.put(
+                `${API_BASE}/api/products/${product.product_id}/toggle-featured`,
+                { is_featured: newFeatured },
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
+            onUpdated?.({ ...product, is_featured: newFeatured });
+        } catch (err) {
+            console.error("Error toggling product featured status:", err);
+            setIsFeatured(!isFeatured);
+            alert("Failed to update product featured status");
         }
     };
 
@@ -1758,6 +1778,16 @@ const ProductCard = ({ product, onDeleted, onUpdated }) => {
                                         {isVisible ? "Visible" : "Hidden"}
                                     </Label>
                                 </div>
+                                <div className="flex items-center space-x-2">
+                                    <Switch
+                                        id={`featured-toggle-mobile-${product.product_id}`}
+                                        checked={isFeatured}
+                                        onCheckedChange={handleToggleFeatured}
+                                    />
+                                    <Label htmlFor={`featured-toggle-mobile-${product.product_id}`}>
+                                        {isFeatured ? "Featured" : "Not Featured"}
+                                    </Label>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -1844,6 +1874,17 @@ const ProductCard = ({ product, onDeleted, onUpdated }) => {
                             />
                             <Label htmlFor={`visibility-toggle-${product.product_id}`} className="text-xs cursor-pointer">
                                 {isVisible ? "Visible" : "Hidden"}
+                            </Label>
+                        </div>
+                        <div className="flex items-center justify-end gap-1">
+                            <Switch
+                                id={`featured-toggle-${product.product_id}`}
+                                checked={isFeatured}
+                                onCheckedChange={handleToggleFeatured}
+                                className="scale-75"
+                            />
+                            <Label htmlFor={`featured-toggle-${product.product_id}`} className="text-xs cursor-pointer">
+                                {isFeatured ? "Featured" : "Not Featured"}
                             </Label>
                         </div>
                     </div>

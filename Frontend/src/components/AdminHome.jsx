@@ -24,6 +24,7 @@ import AdminProductAnalytics from "./AdminProductAnalytics";
 import AddProductModal from "./AddProductModal";
 import ViewUsersModal from "./ViewUsersModal";
 import GlassmorphicContainer from "./GlassmorphicContainer";
+import API_BASE from "../config";
 export default function AdminHome({ onNavigate }) {
   const [stats, setStats] = useState({
     totalRevenue: 0,
@@ -54,7 +55,7 @@ export default function AdminHome({ onNavigate }) {
       const token = localStorage.getItem("token");
       
       // Fetch all dashboard stats from unified endpoint
-      const res = await fetch("http://localhost:5000/api/analytics/dashboard-stats", {
+      const res = await fetch(`${API_BASE}/api/analytics/dashboard-stats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();

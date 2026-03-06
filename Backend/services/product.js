@@ -1034,6 +1034,25 @@ export const updateStockForVariant = async (variantId, newStockQuantity) => {
             throw err;
           }
         };
+        
+        export const toggleProductFeatured = async (productId, isFeatured) => {
+          try {
+            const [result] = await db.execute(
+              "UPDATE products SET is_featured = ? WHERE product_id = ?",
+              [isFeatured, productId]
+            );
+        
+            if (result.affectedRows === 0) {
+              throw new Error("Product not found or featured status not updated.");
+            }
+        
+            const updatedProduct = await getProductById(productId);
+            return updatedProduct;
+          } catch (err) {
+            console.error("Error toggling product featured status:", err);
+            throw err;
+          }
+        };
         export const createProductBatch = async (variantId, quantityReceived, buyingPrice) => {
   try {
     const [result] = await db.execute(

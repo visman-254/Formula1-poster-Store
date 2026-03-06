@@ -54,13 +54,27 @@ const Products = () => {
 
   /* ===================== SEARCH ===================== */
   useEffect(() => {
+    let sortedProducts = [...products];
+    
+    // Sort: Featured products first (is_featured = true), then by newest
+    sortedProducts.sort((a, b) => {
+      // First, sort by featured status (featured products first)
+      if (a.is_featured && !b.is_featured) return -1;
+      if (!a.is_featured && b.is_featured) return 1;
+      
+      // Then, sort by newest (created_at descending)
+      const dateA = new Date(a.created_at || 0);
+      const dateB = new Date(b.created_at || 0);
+      return dateB - dateA; // Newest first
+    });
+    
     if (!searchQuery.trim()) {
-      setFilteredProducts(products);
+      setFilteredProducts(sortedProducts);
       return;
     }
 
     setFilteredProducts(
-      products.filter((p) =>
+      sortedProducts.filter((p) =>
         p.title.toLowerCase().includes(searchQuery.toLowerCase())
       )
     );

@@ -25,6 +25,7 @@ import {
   updateStockForVariant,
   updateVariantColor,
   toggleProductVisibility,
+  toggleProductFeatured,
   migrateProductsToBatches,
 } from "../controllers/productController.js";
 
@@ -226,6 +227,13 @@ router.put(
   verifyToken,
   verifyAdmin,
   toggleProductVisibility
+);
+
+router.put(
+  "/:id/toggle-featured",
+  verifyToken,
+  verifyAdmin,
+  toggleProductFeatured
 );
 
 // ===== BARCODE / PRODUCT CODE ROUTES =====
