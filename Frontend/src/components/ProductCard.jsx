@@ -1,1900 +1,810 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import axios from "axios";
 import { useUser } from "../context/UserContext";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { MoreVertical, SquarePen, CookingPot, Delete, X, Package, ScanBarcode, Camera } from "lucide-react";
+import { MoreVertical, SquarePen, CookingPot, Trash2, X, Package, ScanBarcode } from "lucide-react";
 import { toast } from "sonner";
 import "./ProductCard.css";
 import API_BASE from "../config";
-import { lookupByBarcode, generateBarcode } from "../api/importApi";
+import { lookupByBarcode } from "../api/importApi";
 
-const calculateSellingPrice = (buying_price, profit_margin, discount) => {
-    const bp = Number(buying_price) || 0;
-    const pm = Number(profit_margin) || 0;
-    const disc = Number(discount) || 0;
-    return bp + pm - disc;
+/* ─── shared style tokens (same system as BatchInventory) ─── */
+const mono = "'JetBrains Mono', 'Fira Mono', monospace";
+const sans = "'Inter', system-ui, sans-serif";
+
+const s = {
+  /* labels */
+  sectionHead: { fontSize: 9, fontFamily: sans, fontWeight: 500, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' },
+  fieldLabel:  { fontSize: 9, fontFamily: sans, fontWeight: 500, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 },
+
+  /* inputs */
+  input: { fontFamily: sans, fontSize: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 5, color: 'rgba(255,255,255,0.88)', padding: '6px 9px', width: '100%', outline: 'none', boxSizing: 'border-box' },
+
+  /* buttons */
+  btnPrimary:   { fontFamily: sans, fontSize: 12, padding: '6px 14px', borderRadius: 5, border: '1px solid rgba(255,255,255,0.22)', background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.88)', cursor: 'pointer' },
+  btnSecondary: { fontFamily: sans, fontSize: 12, padding: '6px 14px', borderRadius: 5, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.55)', cursor: 'pointer' },
+  btnSmall:     { fontFamily: sans, fontSize: 11, padding: '5px 10px', borderRadius: 5, border: '1px solid rgba(255,255,255,0.16)', background: 'transparent', color: 'rgba(255,255,255,0.58)', cursor: 'pointer' },
+
+  /* icon action btn */
+  iconBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 27, height: 27, borderRadius: 5, background: 'transparent', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.50)', cursor: 'pointer', padding: 0, flexShrink: 0 },
+
+  /* modal */
+  modal: { background: 'rgba(9,9,11,0.97)', borderRadius: 10, maxWidth: 860, width: '100%', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 32px 64px rgba(0,0,0,0.85)', position: 'relative', fontFamily: sans, color: 'rgba(255,255,255,0.88)', padding: 28, maxHeight: '90vh', overflowY: 'auto' },
+  modalClose: { position: 'absolute', top: 18, right: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 27, height: 27, borderRadius: 5, background: 'transparent', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.50)', cursor: 'pointer' },
+  modalTitle: { fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.88)', margin: '0 0 22px', paddingRight: 36, letterSpacing: '-0.01em' },
+
+  /* divider */
+  divider: { borderTop: '1px solid rgba(255,255,255,0.08)', margin: '20px 0' },
+
+  /* inner panel */
+  panel: { padding: 12, borderRadius: 7, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.03)' },
+
+  /* table */
+  th: { fontSize: 9, fontFamily: sans, fontWeight: 500, color: 'rgba(255,255,255,0.40)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '7px 10px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' },
+  td: { fontSize: 11, fontFamily: sans, color: 'rgba(255,255,255,0.65)', padding: '6px 10px', borderBottom: '1px solid rgba(255,255,255,0.05)' },
+  tdMono: { fontSize: 11, fontFamily: mono, color: 'rgba(255,255,255,0.60)', padding: '6px 10px', borderBottom: '1px solid rgba(255,255,255,0.05)' },
+  tdRight: { fontSize: 11, fontFamily: mono, color: 'rgba(255,255,255,0.72)', padding: '6px 10px', borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'right' },
+
+  /* toggle row */
+  toggleRow: { display: 'flex', alignItems: 'center', gap: 5 },
+  toggleLabel: { fontSize: 9, fontFamily: sans, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' },
+
+  /* variant pill */
+  variantPill: (selected) => ({
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    padding: '8px 10px', borderRadius: 6, cursor: 'pointer',
+    border: `1px solid ${selected ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.10)'}`,
+    background: selected ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.02)',
+    transition: 'all 0.10s',
+  }),
 };
+
+/* helpers */
+const calculateSellingPrice = (bp, pm, disc) => (Number(bp)||0) + (Number(pm)||0) - (Number(disc)||0);
 
 const getVariantDisplay = (product, variant) => {
-    if (variant.color && variant.color !== 'Default') {
-        let display = `${product.title} (${variant.color})`;
-        if (variant.storage) display += ` ${variant.storage}`;
-        if (variant.ram) display += ` / ${variant.ram}`;
-        return display;
-    }
-    if (variant.storage || variant.ram) {
-        let display = `${product.title}`;
-        if (variant.storage) display += ` ${variant.storage}`;
-        if (variant.ram) display += ` / ${variant.ram}`;
-        return display;
-    }
-    return `${product.title} (Variant #${variant.variant_id})`;
+  if (variant.color && variant.color !== 'Default') {
+    let d = `${product.title} (${variant.color})`;
+    if (variant.storage) d += ` ${variant.storage}`;
+    if (variant.ram) d += ` / ${variant.ram}`;
+    return d;
+  }
+  if (variant.storage || variant.ram) {
+    let d = product.title;
+    if (variant.storage) d += ` ${variant.storage}`;
+    if (variant.ram) d += ` / ${variant.ram}`;
+    return d;
+  }
+  return `${product.title} (Variant #${variant.variant_id})`;
 };
 
+/* ─────────────────────────────────────────────
+   AdminImageGallery
+───────────────────────────────────────────── */
 const AdminImageGallery = ({ product }) => {
-    const { user, token } = useUser();
-    const [images, setImages] = useState([]);
-    const [newImages, setNewImages] = useState([]);
-    const [imagePreviews, setImagePreviews] = useState([]);
-    const [busy, setBusy] = useState(false);
-    const [loading, setLoading] = useState(true);
+  const { user, token } = useUser();
+  const [images, setImages]         = useState([]);
+  const [newImages, setNewImages]   = useState([]);
+  const [previews, setPreviews]     = useState([]);
+  const [busy, setBusy]             = useState(false);
+  const [loading, setLoading]       = useState(true);
 
-    useEffect(() => {
-        const fetchImages = async () => {
-            if (!product?.product_id) return;
-            
-            try {
-                setLoading(true);
-                const res = await axios.get(
-                    `${API_BASE}/api/gallery/${product.product_id}/images`
-                );
-                setImages(res.data);
-            } catch (err) {
-                console.error("Error fetching product images:", err);
-                if (product.variants) {
-                    const variantImages = product.variants
-                        .map(variant => variant.image)
-                        .filter(Boolean)
-                        .map((image, index) => ({
-                            image_id: `variant-${index}`,
-                            image_url: image,
-                            created_at: new Date().toISOString(),
-                            isVariantImage: true
-                        }));
-                    setImages(variantImages);
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchImages();
-    }, [product]);
-
-    const handleImageChange = (e) => {
-        const files = Array.from(e.target.files);
-        setNewImages(files);
-        
-        const previews = files.map(file => ({
-            file,
-            preview: URL.createObjectURL(file)
-        }));
-        setImagePreviews(previews);
-    };
-
-    const handleImageUpload = async () => {
-        if (newImages.length === 0 || !user || user.role !== "admin") {
-            return;
-        }
-
-        const formData = new FormData();
-        newImages.forEach((image) => {
-            formData.append("images", image);
-        });
-
-        try {
-            setBusy(true);
-            const res = await axios.post(
-                `${API_BASE}/api/gallery/${product.product_id}/images`,
-                formData,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "multipart/form-data",
-                    },
-                }
-            );
-            
-            setImages(res.data.images);
-            setNewImages([]);
-            setImagePreviews([]);
-            alert("Images uploaded successfully!");
-        } catch (err) {
-            console.error("Error uploading images:", err);
-            alert(err.response?.data?.error || "Failed to upload images");
-        } finally {
-            setBusy(false);
-        }
-    };
-
-    const handleDeleteImage = async (imageId) => {
-        if (!user || user.role !== "admin") return;
-        
-        if (!window.confirm("Are you sure you want to delete this image?")) return;
-
-        try {
-            await axios.delete(
-                `${API_BASE}/api/gallery/images/${imageId}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
-            
-            setImages(images.filter(img => img.image_id !== imageId));
-            alert("Image deleted successfully!");
-        } catch (err) {
-            console.error("Error deleting image:", err);
-            alert("Failed to delete image");
-        }
-    };
-
-    const removePreview = (index) => {
-        const newPreviews = imagePreviews.filter((_, i) => i !== index);
-        const newFiles = newImages.filter((_, i) => i !== index);
-        setImagePreviews(newPreviews);
-        setNewImages(newFiles);
-    };
-
-    useEffect(() => {
-        return () => {
-            imagePreviews.forEach(preview => {
-                URL.revokeObjectURL(preview.preview);
-            });
-        };
-    }, [imagePreviews]);
-
-    if (loading) {
-        return (
-            <div className="space-y-4">
-                <h3 className="text-lg font-bold text-blue-600 dark:text-blue-400">Image Gallery</h3>
-                <p className="text-gray-500 dark:text-gray-400">Loading images...</p>
-            </div>
+  useEffect(() => {
+    if (!product?.product_id) return;
+    axios.get(`${API_BASE}/api/gallery/${product.product_id}/images`)
+      .then(r => setImages(r.data))
+      .catch(() => {
+        if (product.variants) setImages(
+          product.variants.map(v => v.image).filter(Boolean)
+            .map((url, i) => ({ image_id: `v-${i}`, image_url: url, isVariantImage: true }))
         );
-    }
+      })
+      .finally(() => setLoading(false));
+  }, [product]);
 
-    const allImages = images.length > 0 ? images : 
-        (product.variants ? product.variants
-            .map(variant => variant.image)
-            .filter(Boolean)
-            .map((image, index) => ({
-                image_id: `variant-${index}`,
-                image_url: image,
-                created_at: new Date().toISOString(),
-                isVariantImage: true
-            })) : []);
+  const handleFiles = e => {
+    const files = Array.from(e.target.files);
+    setNewImages(files);
+    setPreviews(files.map(f => ({ file: f, preview: URL.createObjectURL(f) })));
+  };
 
-    return (
-        <div className="space-y-6">
-            <h3 className="text-lg font-bold text-blue-600 dark:text-blue-400">Image Gallery</h3>
-            
-            {allImages.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <p>No images available for this product.</p>
+  const handleUpload = async () => {
+    if (!newImages.length || user?.role !== 'admin') return;
+    const fd = new FormData();
+    newImages.forEach(f => fd.append('images', f));
+    try {
+      setBusy(true);
+      const r = await axios.post(`${API_BASE}/api/gallery/${product.product_id}/images`, fd, {
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
+      });
+      setImages(r.data.images); setNewImages([]); setPreviews([]);
+      toast.success('Images uploaded');
+    } catch { toast.error('Upload failed'); } finally { setBusy(false); }
+  };
+
+  const handleDelete = async id => {
+    if (user?.role !== 'admin' || !window.confirm('Delete image?')) return;
+    try {
+      await axios.delete(`${API_BASE}/api/gallery/images/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      setImages(images.filter(i => i.image_id !== id));
+    } catch { toast.error('Delete failed'); }
+  };
+
+  useEffect(() => () => previews.forEach(p => URL.revokeObjectURL(p.preview)), [previews]);
+
+  if (loading) return <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.22)', fontFamily: sans }}>Loading images…</p>;
+
+  const all = images.length > 0 ? images :
+    (product.variants?.map(v => v.image).filter(Boolean).map((url, i) => ({ image_id: `v-${i}`, image_url: url, isVariantImage: true })) || []);
+
+  return (
+    <div>
+      <p style={s.sectionHead}>Image Gallery</p>
+      {all.length === 0
+        ? <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.20)', fontFamily: sans, fontStyle: 'italic' }}>No images.</p>
+        : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(90px,1fr))', gap: 6, marginBottom: 12 }}>
+            {all.map(img => (
+              <div key={img.image_id} style={{ position: 'relative', borderRadius: 5, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <img src={img.image_url} alt="" style={{ width: '100%', height: 72, objectFit: 'cover', display: 'block' }} />
+                {user?.role === 'admin' && !img.isVariantImage && (
+                  <button onClick={() => handleDelete(img.image_id)}
+                    style={{ position: 'absolute', top: 3, right: 3, width: 18, height: 18, borderRadius: 3, background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.65)', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+      }
+      {user?.role === 'admin' && (
+        <div style={s.panel}>
+          <input type="file" multiple accept="image/*" onChange={handleFiles}
+            style={{ fontFamily: sans, fontSize: 11, color: 'rgba(255,255,255,0.38)', marginBottom: 8, display: 'block', width: '100%' }} />
+          {previews.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(60px,1fr))', gap: 5, marginBottom: 8 }}>
+              {previews.map((p, i) => (
+                <div key={i} style={{ position: 'relative', borderRadius: 4, overflow: 'hidden' }}>
+                  <img src={p.preview} alt="" style={{ width: '100%', height: 50, objectFit: 'cover', display: 'block' }} />
+                  <button onClick={() => { setPreviews(ps => ps.filter((_,j)=>j!==i)); setNewImages(ns=>ns.filter((_,j)=>j!==i)); }}
+                    style={{ position: 'absolute', top: 2, right: 2, width: 14, height: 14, borderRadius: 2, background: 'rgba(0,0,0,0.7)', border: 'none', color: 'white', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
                 </div>
-            ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {allImages.map((image) => (
-                        <div key={image.image_id} className="relative group">
-                            <img
-                                src={image.image_url}
-                                alt={`${product.title} - Gallery image`}
-                                className="w-full h-48 object-cover rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-                            />
-                            
-                            {user?.role === "admin" && !image.isVariantImage && (
-                                <button
-                                    onClick={() => handleDeleteImage(image.image_id)}
-                                    className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                    title="Delete image"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            )}
-                            
-                            {image.isVariantImage && (
-                                <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                                    Variant
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={handleUpload} disabled={busy || !newImages.length} style={s.btnSmall}>
+              {busy ? 'Uploading…' : `Upload ${newImages.length || ''}`}
+            </button>
+            {newImages.length > 0 && (
+              <button onClick={() => { setNewImages([]); setPreviews([]); }} style={s.btnSecondary}>Clear</button>
             )}
-
-            {user?.role === "admin" && (
-                <div className="mt-8 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900">
-                    <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-                        Manage Gallery Images
-                    </h4>
-                    
-                    <div className="space-y-4">
-                        <div>
-                            <Label htmlFor="gallery-images" className="text-black dark:text-white">
-                                Select Images to Upload
-                            </Label>
-                            <Input 
-                                id="gallery-images"
-                                type="file" 
-                                multiple 
-                                accept="image/*" 
-                                onChange={handleImageChange}
-                                className="bg-white dark:bg-gray-800 mt-1"
-                            />
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                Select multiple images to add to the gallery
-                            </p>
-                        </div>
-
-                        {imagePreviews.length > 0 && (
-                            <div className="space-y-3">
-                                <Label className="text-black dark:text-white font-medium">
-                                    Preview ({imagePreviews.length} image{imagePreviews.length !== 1 ? 's' : ''} selected):
-                                </Label>
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                                    {imagePreviews.map((preview, index) => (
-                                        <div key={index} className="relative group">
-                                            <img
-                                                src={preview.preview}
-                                                alt={`Preview ${index + 1}`}
-                                                className="w-full h-32 object-cover rounded-lg border-2 border-blue-300 shadow-sm"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => removePreview(index)}
-                                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
-                                                title="Remove this image"
-                                            >
-                                                ×
-                                            </button>
-                                            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 truncate">
-                                                {preview.file.name}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="flex gap-2">
-                            <Button 
-                                onClick={handleImageUpload} 
-                                disabled={busy || newImages.length === 0}
-                                className="bg-blue-600 hover:bg-blue-700 text-white"
-                            >
-                                {busy ? "Uploading..." : `Upload ${newImages.length} Image${newImages.length !== 1 ? 's' : ''}`}
-                            </Button>
-                            {newImages.length > 0 && (
-                                <Button 
-                                    type="button"
-                                    variant="outline" 
-                                    onClick={() => {
-                                        setNewImages([]);
-                                        setImagePreviews([]);
-                                    }}
-                                    className="text-gray-600 dark:text-gray-400"
-                                >
-                                    Clear All
-                                </Button>
-                            )}
-                        </div>
-                        
-                        {newImages.length > 0 && (
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
-                                {newImages.length} image{newImages.length !== 1 ? 's' : ''} selected for upload. Click "Upload" to add them to the gallery.
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
+          </div>
         </div>
-    );
+      )}
+    </div>
+  );
 };
 
+/* ─────────────────────────────────────────────
+   EditProductModal
+───────────────────────────────────────────── */
 const EditProductModal = ({ product, onUpdated, setIsEditing, user, token }) => {
-    const [selectedVariantId, setSelectedVariantId] = useState(product.variants?.[0]?.variant_id || '');
-    const [form, setForm] = useState({
-        name: product?.title || "",
-        description: product?.description || "",
-        categoryName: product?.category_name || "",
-        image: null,
-    });
-    const [categories, setCategories] = useState([]);
-    const [busy, setBusy] = useState(false);
-    const [stockUpdateForm, setStockUpdateForm] = useState({
-        newStockQuantity: ""
-    });
-    const [updatingStock, setUpdatingStock] = useState(false);
-    const [bundleComponents, setBundleComponents] = useState(product.bundle_products || []);
-    const [bundleTotalPrice, setBundleTotalPrice] = useState(0);
-    const [batches, setBatches] = useState([]);
-    const [loadingBatches, setLoadingBatches] = useState(false);
+  const [selectedVariantId, setSelectedVariantId] = useState(product.variants?.[0]?.variant_id || '');
+  const [form, setForm] = useState({ name: product?.title || '', description: product?.description || '', categoryName: product?.category_name || '', image: null });
+  const [categories, setCategories] = useState([]);
+  const [busy, setBusy]             = useState(false);
+  const [newStock, setNewStock]     = useState('');
+  const [updatingStock, setUpdatingStock] = useState(false);
+  const [batches, setBatches]       = useState([]);
+  const [loadingBatches, setLoadingBatches] = useState(false);
 
-    useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                const { data } = await axios.get(`${API_BASE}/api/products/categories`);
-                setCategories(data);
-            } catch (err) {
-                console.error("Failed to fetch categories", err);
-            }
-        };
-        fetchCategories();
-    }, []);
+  const selectedVariant = product.variants?.find(v => v.variant_id.toString() === selectedVariantId.toString());
+  const currentStock = Number(selectedVariant?.stock || 0);
 
-    // Fetch batches when variant is selected
-    useEffect(() => {
-        if (selectedVariantId) {
-            const fetchBatches = async () => {
-                try {
-                    setLoadingBatches(true);
-                    const res = await axios.get(
-                        `${API_BASE}/api/products/variants/${selectedVariantId}/batches`,
-                        { headers: { Authorization: `Bearer ${token}` } }
-                    );
-                    setBatches(res.data || []);
-                } catch (err) {
-                    console.error("Error fetching batches:", err);
-                    setBatches([]);
-                } finally {
-                    setLoadingBatches(false);
-                }
-            };
-            fetchBatches();
-        }
-    }, [selectedVariantId, token]);
+  const [variantForm, setVariantForm] = useState({
+    buying_price: selectedVariant?.buying_price || '',
+    profit_margin: selectedVariant?.profit_margin || '',
+    discount: selectedVariant?.discount || '',
+    variant_image: null,
+    color: selectedVariant?.color || '',
+    final_price: selectedVariant?.price || 0,
+  });
 
-    // Calculate bundle total price
-    useEffect(() => {
-        if (product.is_bundle && bundleComponents.length > 0) {
-            const total = bundleComponents.reduce((sum, component) => {
-                const price = Number(component.variants?.[0]?.price || 0);
-                const quantity = component.quantity || 1;
-                return sum + (price * quantity);
-            }, 0);
-            setBundleTotalPrice(total);
-        }
-    }, [bundleComponents, product.is_bundle]);
+  useEffect(() => {
+    axios.get(`${API_BASE}/api/products/categories`).then(({ data }) => setCategories(data)).catch(() => {});
+  }, []);
 
-    const selectedVariant = product.variants?.find(v => v.variant_id.toString() === selectedVariantId.toString());
+  useEffect(() => {
+    if (!selectedVariantId) return;
+    setLoadingBatches(true);
+    axios.get(`${API_BASE}/api/products/variants/${selectedVariantId}/batches`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => setBatches(r.data || []))
+      .catch(() => setBatches([]))
+      .finally(() => setLoadingBatches(false));
+  }, [selectedVariantId, token]);
 
-    const [variantForm, setVariantForm] = useState({
-        variant_id: selectedVariant?.variant_id,
-        buying_price: selectedVariant?.buying_price || "",
-        profit_margin: selectedVariant?.profit_margin || "",
-        discount: selectedVariant?.discount || "",
-        variant_image: null,
-        color: selectedVariant?.color || "",
-    });
+  useEffect(() => {
+    if (selectedVariant) {
+      setVariantForm({ buying_price: selectedVariant.buying_price || '', profit_margin: selectedVariant.profit_margin || '', discount: selectedVariant.discount || '', variant_image: null, color: selectedVariant.color || '', final_price: selectedVariant.price || 0 });
+      setNewStock(selectedVariant.stock || '');
+    }
+  }, [selectedVariantId]);
 
-    useEffect(() => {
-        if (selectedVariant) {
-            // Use the stored price from database as the selling price
-            // Only recalculate if user has manually changed values
-            const storedPrice = selectedVariant.price || 0;
-            setVariantForm({
-                variant_id: selectedVariant.variant_id,
-                buying_price: selectedVariant.buying_price || "",
-                profit_margin: selectedVariant.profit_margin || "",
-                discount: selectedVariant.discount || "",
-                variant_image: null,
-                color: selectedVariant.color || "",
-                final_price: storedPrice // Use stored price, not calculated
-            });
-            setStockUpdateForm({
-                newStockQuantity: selectedVariant.stock || ""
-            });
-        }
-    }, [selectedVariant]);
+  const handleChange = e => {
+    const { name, value, files } = e.target;
+    if (['buying_price','profit_margin','discount','color','final_price'].includes(name)) {
+      setVariantForm(prev => {
+        const n = { ...prev, [name]: value };
+        if (name === 'final_price') n.profit_margin = Number(value) - (Number(n.buying_price)||0) + (Number(n.discount)||0);
+        else if (['buying_price','profit_margin','discount'].includes(name)) n.final_price = calculateSellingPrice(n.buying_price, n.profit_margin, n.discount);
+        return n;
+      });
+    } else if (name === 'variant_image') {
+      setVariantForm(p => ({ ...p, variant_image: files[0] }));
+    } else if (name === 'image') {
+      setForm(p => ({ ...p, image: files[0] }));
+    } else {
+      setForm(p => ({ ...p, [name]: value }));
+    }
+  };
 
-    const handleChange = (e) => {
-        const { name, value, files } = e.target;
-        if (["buying_price", "profit_margin", "discount", "color", "final_price"].includes(name)) {
-            setVariantForm(prev => {
-                const newForm = {...prev, [name]: value};
-                if (name === "final_price") {
-                    const bp = Number(newForm.buying_price) || 0;
-                    const disc = Number(newForm.discount) || 0;
-                    newForm.profit_margin = Number(value) - bp + disc;
-                } else if (["buying_price", "profit_margin", "discount"].includes(name)) {
-                    newForm.final_price = calculateSellingPrice(
-                        newForm.buying_price,
-                        newForm.profit_margin,
-                        newForm.discount
-                    );
-                }
-                return newForm;
-            });
-        } else if (name === "image" || name === "variant_image") {
-            const targetStateSetter = name === "image" ? setForm : setVariantForm;
-            targetStateSetter(prev => ({
-                ...prev,
-                [name]: files[0],
-            }));
-        } else {
-            setForm(prev => ({
-                ...prev,
-                [name]: value,
-            }));
-        }
-    };
+  const handleUpdateStock = async () => {
+    const qty = Number(newStock);
+    if (isNaN(qty)) { toast.error('Invalid quantity'); return; }
+    try {
+      setUpdatingStock(true);
+      const r = await axios.post(`${API_BASE}/api/products/variants/${selectedVariant.variant_id}/update-stock`, { newStockQuantity: qty }, { headers: { Authorization: `Bearer ${token}` } });
+      onUpdated?.(r.data.product);
+      toast.success('Stock updated');
+    } catch (err) { toast.error(err.response?.data?.error || 'Failed'); } finally { setUpdatingStock(false); }
+  };
 
-    const handleStockUpdateChange = (e) => {
-        const { name, value } = e.target;
-        setStockUpdateForm(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
+  const handleUpdate = async e => {
+    e.preventDefault();
+    try {
+      setBusy(true);
+      const pFd = new FormData(); let hasP = false;
+      if (form.name !== product.title) { pFd.append('title', form.name); hasP = true; }
+      if (form.description !== product.description) { pFd.append('description', form.description); hasP = true; }
+      if (form.categoryName) { pFd.append('categoryName', form.categoryName); hasP = true; }
+      if (form.image) { pFd.append('image', form.image); hasP = true; }
 
-    const handleUpdateStock = async () => {
-        if (!selectedVariant) return;
+      const vFd = new FormData(); let hasV = false;
+      if (user?.role === 'admin' && selectedVariant) {
+        if (Number(variantForm.buying_price) !== Number(selectedVariant.buying_price)) { vFd.append('buying_price', variantForm.buying_price); hasV = true; }
+        if (Number(variantForm.profit_margin) !== Number(selectedVariant.profit_margin)) { vFd.append('profit_margin', variantForm.profit_margin); hasV = true; }
+        if (Number(variantForm.discount) !== Number(selectedVariant.discount) || hasV) { vFd.append('discount', variantForm.discount); vFd.append('price', variantForm.final_price); hasV = true; }
+        if (variantForm.variant_image) { vFd.append('image', variantForm.variant_image); hasV = true; }
+      }
 
-        const newStock = Number(stockUpdateForm.newStockQuantity);
+      let updated = product;
+      if (hasP) { const r = await axios.put(`${API_BASE}/api/products/${product.product_id}`, pFd, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } }); updated = r.data.product; }
+      if (hasV && selectedVariant) { const r = await axios.put(`${API_BASE}/api/products/variants/${selectedVariant.variant_id}`, vFd, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } }); updated = r.data.product || updated; }
+      if (variantForm.color && variantForm.color !== selectedVariant?.color) { const r = await axios.put(`${API_BASE}/api/products/variants/${selectedVariant.variant_id}/color`, { color: variantForm.color }, { headers: { Authorization: `Bearer ${token}` } }); updated = r.data.product || updated; }
 
-        if (isNaN(newStock)) {
-            alert("Stock quantity must be a valid number.");
-            return;
-        }
+      onUpdated?.(updated); setIsEditing(false);
+      toast.success(`"${product.title}" updated`);
+    } catch (err) { toast.error(err.response?.data?.error || 'Failed'); } finally { setBusy(false); }
+  };
 
-        try {
-            setUpdatingStock(true);
-            const res = await axios.post(
-                `${API_BASE}/api/products/variants/${selectedVariant.variant_id}/update-stock`,
-                {
-                    newStockQuantity: newStock
-                },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+  return ReactDOM.createPortal(
+    <div className="modal-overlay">
+      <div style={s.modal}>
+        <button onClick={() => setIsEditing(false)} style={s.modalClose}><X size={13} /></button>
+        <p style={s.modalTitle}>Edit Product</p>
 
-            onUpdated?.(res.data.product);
-            alert(res.data.message || "Stock successfully updated.");
+        <form onSubmit={handleUpdate}>
+          {/* ── top grid ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 20 }}>
 
-            if (selectedVariant) {
-                selectedVariant.stock = newStock;
-            }
-        } catch (err) {
-            console.error("Update Stock Error:", err.response?.data || err);
-            alert(err.response?.data?.error || "Failed to update stock");
-        } finally {
-            setUpdatingStock(false);
-        }
-    };
-
-    const handleBundleComponentUpdate = async (componentIndex, field, value, file = null) => {
-        const updatedComponents = [...bundleComponents];
-        const component = updatedComponents[componentIndex];
-
-        if (field === 'image' && file) {
-            // Upload image for bundle component
-            const formData = new FormData();
-            formData.append('image', file);
-
-            try {
-                const res = await axios.put(
-                    `${API_BASE}/api/products/variants/${component.variants[0].variant_id}`,
-                    formData,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            "Content-Type": "multipart/form-data",
-                        },
-                    }
-                );
-                // Update the component with new image
-                component.variants[0].image = res.data.product.variants.find(v => v.variant_id === component.variants[0].variant_id).image;
-                setBundleComponents([...updatedComponents]);
-                // Update the bundle's total price after component change
-                updateBundlePrice();
-                onUpdated?.(res.data.product);
-            } catch (err) {
-                console.error("Error updating bundle component image:", err);
-                alert("Failed to update component image");
-            }
-        } else if (field === 'price') {
-            // Update price for bundle component
-            try {
-                const res = await axios.put(
-                    `${API_BASE}/api/products/variants/${component.variants[0].variant_id}`,
-                    { price: Number(value) },
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
-                );
-                // Update the component with new price
-                component.variants[0].price = Number(value);
-                setBundleComponents([...updatedComponents]);
-                setBundleComponents(updatedComponents);
-                // Update the bundle's total price after component change
-                updateBundlePrice();
-                onUpdated?.(res.data.product);
-            } catch (err) {
-                console.error("Error updating bundle component price:", err);
-                alert("Failed to update component price");
-            }
-        }
-    };
-
-    const updateBundlePrice = async () => {
-        const total = bundleComponents.reduce((sum, component) => {
-            const price = Number(component.variants?.[0]?.price || 0);
-            const quantity = component.quantity || 1;
-            return sum + (price * quantity);
-        }, 0);
-
-        if (total > 0 && product.variants?.[0]) {
-            try {
-                const res = await axios.put(
-                    `${API_BASE}/api/products/variants/${product.variants[0].variant_id}`,
-                    { price: total },
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
-                );
-                onUpdated?.(res.data.product);
-            } catch (err) {
-                console.error("Error updating bundle price:", err);
-            }
-        }
-    };
-
-    const handleUpdate = async (e) => {
-        e.preventDefault();
-        try {
-            setBusy(true);
-            const productFd = new FormData();
-            let hasProductUpdates = false;
-
-            if (form.name && form.name !== product.title) {
-                productFd.append("title", form.name);
-                hasProductUpdates = true;
-            }
-            if (form.description && form.description !== product.description) {
-                productFd.append("description", form.description);
-                hasProductUpdates = true;
-            }
-            if (form.categoryName) {
-                productFd.append("categoryName", form.categoryName);
-                hasProductUpdates = true;
-            }
-            if (form.image) {
-                productFd.append("image", form.image);
-                hasProductUpdates = true;
-            }
-
-            const variantFd = new FormData();
-            let hasVariantUpdates = false;
-
-            if (user?.role === "admin" && selectedVariant) {
-                if (Number(variantForm.buying_price) !== Number(selectedVariant.buying_price)) {
-                    variantFd.append("buying_price", variantForm.buying_price);
-                    hasVariantUpdates = true;
-                }
-                if (Number(variantForm.profit_margin) !== Number(selectedVariant.profit_margin)) {
-                    variantFd.append("profit_margin", variantForm.profit_margin);
-                    hasVariantUpdates = true;
-                }
-                if (Number(variantForm.discount) !== Number(selectedVariant.discount) || hasVariantUpdates) {
-                    variantFd.append("discount", variantForm.discount);
-                    variantFd.append("price", variantForm.final_price);
-                    hasVariantUpdates = true;
-                }
-                if (variantForm.variant_image) {
-                    variantFd.append("image", variantForm.variant_image);
-                    hasVariantUpdates = true;
-                }
-            }
-
-            let updatedProduct = product;
-
-            if (hasProductUpdates) {
-                const res = await axios.put(
-                    `${API_BASE}/api/products/${product.product_id}`,
-                    productFd,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            "Content-Type": "multipart/form-data",
-                        },
-                    }
-                );
-                updatedProduct = res.data.product;
-            }
-
-            if (hasVariantUpdates && selectedVariant) {
-                const res = await axios.put(
-                    `${API_BASE}/api/products/variants/${selectedVariant.variant_id}`,
-                    variantFd,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            "Content-Type": "multipart/form-data",
-                        },
-                    }
-                );
-                updatedProduct = res.data.product || updatedProduct;
-            }
-
-            if (variantForm.color && variantForm.color !== selectedVariant.color) {
-                const res = await axios.put(
-                    `${API_BASE}/api/products/variants/${selectedVariant.variant_id}/color`,
-                    { color: variantForm.color },
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
-                );
-                updatedProduct = res.data.product || updatedProduct;
-            }
-
-            // Update bundle price if it's a bundle
-            if (product.is_bundle && bundleTotalPrice > 0) {
-                const bundleVariant = updatedProduct.variants?.[0];
-                if (bundleVariant) {
-                    const res = await axios.put(
-                        `${API_BASE}/api/products/variants/${bundleVariant.variant_id}`,
-                        { price: bundleTotalPrice },
-                        {
-                            headers: {
-                                Authorization: `Bearer ${token}`,
-                            },
-                        }
-                    );
-                    updatedProduct = res.data.product || updatedProduct;
-                }
-            }
-
-            onUpdated?.(updatedProduct);
-            setIsEditing(false);
-            toast.success(`"${product.title}" has been updated successfully`);
-        } catch (err) {
-            console.error("Update error:", err.response?.data || err);
-            toast.error(err.response?.data?.error || "Failed to update product/variant");
-        } finally {
-            setBusy(false);
-        }
-    };
-
-    const currentStock = Number(selectedVariant?.stock || 0);
-    const isBackordered = currentStock < 0;
-
-    return ReactDOM.createPortal(
-        <div className="modal-overlay">
-            <div className="modal-content bg-white dark:bg-black dark:text-white border dark:border-gray-800 max-w-4xl max-h-[90vh] overflow-y-auto">
-                {/* Close Button - Top Right */}
-                <button 
-                    onClick={() => setIsEditing(false)}
-                    className="modal-close-btn absolute top-4 right-4"
-                    title="Close"
-                >
-                    <X size={20} />
-                </button>
-                <h2 className="text-2xl font-bold mb-4 text-black dark:text-white pr-10">Edit Product</h2>
-                <form onSubmit={handleUpdate} className="space-y-6">
-                   
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-bold text-blue-600 dark:text-blue-400">Product Information</h3>
-                            <div className="space-y-2">
-                                <Label className="text-black dark:text-white">Product Name</Label>
-                                <Input 
-                                    name="name" 
-                                    value={form.name} 
-                                    onChange={handleChange}
-                                    className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-black dark:text-white">Description</Label>
-                                <Input 
-                                    name="description" 
-                                    value={form.description} 
-                                    onChange={handleChange}
-                                    className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-black dark:text-white">Category</Label>
-                                <Select 
-                                    onValueChange={(value) => setForm(prev => ({...prev, categoryName: value}))}
-                                    value={form.categoryName || product.category_name}
-                                >
-                                    <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white">
-                                        <SelectValue placeholder="Select a category" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {categories.map(category => (
-                                            <React.Fragment key={category.category_id}>
-                                                <SelectItem 
-                                                    key={category.category_id} 
-                                                    value={category.category_name}
-                                                    className="font-semibold"
-                                                >
-                                                    {category.category_name}
-                                                </SelectItem>
-                                                {category.subcategories?.map(sub => (
-                                                    <SelectItem 
-                                                        key={sub.category_id} 
-                                                        value={sub.category_name}
-                                                        className="pl-6 text-gray-600 dark:text-gray-400"
-                                                    >
-                                                        ↳ {sub.category_name}
-                                                    </SelectItem>
-                                                ))}
-                                            </React.Fragment>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-black dark:text-white">Replace Product Image (optional)</Label>
-                                <Input 
-                                    name="image" 
-                                    type="file" 
-                                    onChange={handleChange}
-                                    className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white file:text-black dark:file:text-white"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-bold text-blue-600 dark:text-blue-400">Select Variant to Edit</h3>
-                            <div className="space-y-2">
-                                <Label className="text-black dark:text-white font-semibold">
-                                    Available Variants:
-                                </Label>
-                                <div className="grid gap-2 max-h-60 overflow-y-auto p-1">
-                                    {product.variants.map((variant) => {
-                                        const variantStock = Number(variant.stock || 0);
-                                        const isVariantBackordered = variantStock < 0;
-                                        const isSelected = selectedVariantId === variant.variant_id;
-                                        
-                                        return (
-                                            <div
-                                                key={variant.variant_id}
-                                                onClick={() => setSelectedVariantId(variant.variant_id)}
-                                                className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                                                    isSelected 
-                                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/20' 
-                                                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750'
-                                                }`}
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`w-3 h-3 rounded-full border-2 ${
-                                                            isSelected 
-                                                                ? 'bg-blue-500 border-blue-500' 
-                                                                : 'bg-transparent border-gray-400'
-                                                        }`} />
-                                                        <div>
-                                                            <div className="font-medium text-black dark:text-white">
-                                                                {getVariantDisplay(product, variant)}
-                                                            </div>
-                                                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                                Stock: <span className={`font-semibold ${
-                                                                    isVariantBackordered ? 'text-red-500' : 'text-green-500'
-                                                                }`}>
-                                                                    {isVariantBackordered 
-                                                                        ? `BACKORDERED: ${variantStock.toFixed(0)}` 
-                                                                        : variantStock.toFixed(0)
-                                                                    }
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    {variant.image && (
-                                                        <img 
-                                                            src={variant.image} 
-                                                            alt={variant.color}
-                                                            className="w-10 h-10 rounded border border-gray-200 dark:border-gray-700 object-cover"
-                                                        />
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {user?.role === "admin" && selectedVariant && (
-                        <>
-                            <div className="border-t border-gray-200 dark:border-gray-800 pt-6 mt-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                                        Editing Variant: {getVariantDisplay(product, selectedVariant)}
-                                    </h3>
-                                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                                        Current Stock: <span className={`font-semibold ${
-                                            currentStock < 0 ? 'text-red-500' : 'text-green-500'
-                                        }`}>
-                                            {currentStock}
-                                        </span>
-                                    </div>
-                                </div>
-                                
-                                <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                                    <h4 className="text-lg font-bold text-yellow-700 dark:text-yellow-300 mb-3">
-                                        Update Stock Level
-                                    </h4>
-                                    
-                                    <div className="flex items-end gap-4">
-                                        <div className="flex-1 space-y-2">
-                                            <Label htmlFor="newStockQuantity" className="text-black dark:text-white font-semibold">
-                                                New Stock Quantity
-                                            </Label>
-                                            <Input
-                                                id="newStockQuantity"
-                                                name="newStockQuantity"
-                                                type="number"
-                                                value={stockUpdateForm.newStockQuantity}
-                                                onChange={handleStockUpdateChange}
-                                                className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white"
-                                                placeholder="Enter new stock quantity"
-                                            />
-                                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                Set exact stock level (positive, negative, or zero)
-                                            </p>
-                                        </div>
-
-                                        <Button
-                                            onClick={handleUpdateStock}
-                                            disabled={updatingStock || stockUpdateForm.newStockQuantity === ""}
-                                            className="bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-700 dark:hover:bg-yellow-600 text-white mb-1"
-                                        >
-                                            {updatingStock ? "Updating..." : "Update Stock"}
-                                        </Button>
-                                    </div>
-
-                                    {stockUpdateForm.newStockQuantity !== "" && !isNaN(Number(stockUpdateForm.newStockQuantity)) && (
-                                        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
-                                            <p className="text-sm text-blue-700 dark:text-blue-300">
-                                                <strong>Change Summary:</strong> Stock will change from{" "}
-                                                <span className={`font-bold ${isBackordered ? 'text-red-500' : 'text-green-500'}`}>
-                                                    {currentStock.toFixed(0)}
-                                                </span>{" "}
-                                                to{" "}
-                                                <span className={`font-bold ${
-                                                    Number(stockUpdateForm.newStockQuantity) < 0 ? 'text-red-500' : 
-                                                    Number(stockUpdateForm.newStockQuantity) === 0 ? 'text-yellow-500' : 'text-green-500'
-                                                }`}>
-                                                    {Number(stockUpdateForm.newStockQuantity).toFixed(0)}
-                                                </span>
-                                                {" "}({
-                                                    Number(stockUpdateForm.newStockQuantity) - currentStock > 0 ? "+" : ""
-                                                }{Number(stockUpdateForm.newStockQuantity) - currentStock} units)
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="buying_price" className="text-black dark:text-white">Buying Price (Cost)</Label>
-                                            <Input
-                                                id="buying_price"
-                                                name="buying_price"
-                                                type="number"
-                                                value={variantForm.buying_price}
-                                                onChange={handleChange}
-                                                required
-                                                className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white"
-                                            />
-                                            {selectedVariant?.wac > 0 && (
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                    WAC: Kshs {Number(selectedVariant.wac).toFixed(2)} | Stock Value: Kshs {Number(selectedVariant.stock_value || 0).toFixed(2)}
-                                                </p>
-                                            )}
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="profit_margin" className="text-black dark:text-white">Profit Margin (Selling - Cost)</Label>
-                                            <Input
-                                                id="profit_margin"
-                                                name="profit_margin"
-                                                type="number"
-                                                value={variantForm.profit_margin}
-                                                onChange={handleChange}
-                                                required
-                                                className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white"
-                                            />
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                Current: Kshs {Number(variantForm.final_price - variantForm.buying_price).toFixed(2)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="space-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="discount" className="text-black dark:text-white">Discount (Cash)</Label>
-                                            <Input
-                                                id="discount"
-                                                name="discount"
-                                                type="number"
-                                                value={variantForm.discount}
-                                                onChange={handleChange}
-                                                className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-black dark:text-white">Final Selling Price</Label>
-                                            <Input
-                                                name="final_price"
-                                                type="number"
-                                                value={variantForm.final_price}
-                                                onChange={handleChange}
-                                                className="font-bold bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white"
-                                            />
-                                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                Editing this will adjust the Profit Margin.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Batch Information Section */}
-                                {batches.length > 0 && (
-                                    <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                                        <h5 className="font-bold text-amber-700 dark:text-amber-300 mb-3 flex items-center gap-2">
-                                            <Package className="w-4 h-4" />
-                                            Stock Batches (FIFO - Oldest First)
-                                        </h5>
-                                        <div className="max-h-48 overflow-y-auto">
-                                            <table className="w-full text-sm">
-                                                <thead className="text-xs text-gray-500 dark:text-gray-400 sticky top-0 bg-amber-50 dark:bg-amber-900/20">
-                                                    <tr>
-                                                        <th className="text-left py-2">Batch</th>
-                                                        <th className="text-right py-2">Received</th>
-                                                        <th className="text-right py-2">Remaining</th>
-                                                        <th className="text-right py-2">Cost/Unit</th>
-                                                        <th className="text-right py-2">Total Value</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="text-gray-700 dark:text-gray-300">
-                                                    {batches.map((batch, idx) => (
-                                                        <tr key={batch.batch_id || idx} className="border-t border-amber-200 dark:border-amber-700">
-                                                            <td className="py-2 font-medium">#{idx + 1}</td>
-                                                            <td className="text-right py-2">{batch.quantity_received}</td>
-                                                            <td className="text-right py-2">{batch.remaining_quantity}</td>
-                                                            <td className="text-right py-2">Kshs {Number(batch.buying_price).toFixed(2)}</td>
-                                                            <td className="text-right py-2 font-medium">Kshs {(batch.remaining_quantity * batch.buying_price).toFixed(2)}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 italic">
-                                            ✓ Oldest batches are sold first (FIFO). Set your Selling Price above based on these costs.
-                                        </p>
-                                    </div>
-                                )}
-                                {selectedVariantId && loadingBatches && (
-                                    <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
-                                        <p className="text-sm text-gray-500">Loading batch information...</p>
-                                    </div>
-                                )}
-
-                                <div className="space-y-2 mt-4">
-                                    <Label className="text-black dark:text-white">Replace Variant Image (optional)</Label>
-                                    <Input 
-                                        name="variant_image" 
-                                        type="file" 
-                                        onChange={handleChange}
-                                        className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white file:text-black dark:file:text-white"
-                                    />
-                                </div>
-
-                                <div className="space-y-2 mt-4">
-                                    <Label className="text-black dark:text-white">Variant Color</Label>
-                                    <Input 
-                                        name="color" 
-                                        type="color" 
-                                        value={variantForm.color}
-                                        onChange={handleChange}
-                                        className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white"
-                                    />
-                                </div>
-                            </div>
-                        </>
-                    )}
-                    
-                    <AdminImageGallery product={product} />
-
-                    {/* Bundle Components Editing */}
-                    {product.is_bundle && bundleComponents.length > 0 && (
-                        <div className="border-t border-gray-200 dark:border-gray-800 pt-6 mt-6">
-                            <h3 className="text-lg font-bold text-blue-600 dark:text-blue-400 mb-4">
-                                Bundle Components
-                            </h3>
-                            <div className="space-y-4">
-                                {bundleComponents.map((component, index) => {
-                                    const variant = component.variants?.[0];
-                                    if (!variant) return null;
-
-                                    return (
-                                        <div key={component.product_id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900">
-                                            <div className="flex items-center justify-between mb-3">
-                                                <h4 className="font-semibold text-black dark:text-white">
-                                                    {component.title} (x{component.quantity || 1})
-                                                </h4>
-                                                <span className="text-sm text-gray-600 dark:text-gray-400">
-                                                    Kshs {Number(variant.price || 0).toFixed(2)} each
-                                                </span>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label className="text-black dark:text-white text-sm">Update Image</Label>
-                                                    <Input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        onChange={(e) => {
-                                                            const file = e.target.files[0];
-                                                            if (file) {
-                                                                handleBundleComponentUpdate(index, 'image', null, file);
-                                                            }
-                                                        }}
-                                                        className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-black dark:text-white file:text-black dark:file:text-white"
-                                                    />
-                                                </div>
-
-                                                <div className="space-y-2">
-                                                    <Label className="text-black dark:text-white text-sm">Update Price</Label>
-                                                    <Input
-                                                        type="number"
-                                                        step="0.01"
-                                                        value={Number(variant.price || 0)}
-                                                        onChange={(e) => {
-                                                            const newPrice = e.target.value;
-                                                            handleBundleComponentUpdate(index, 'price', newPrice);
-                                                        }}
-                                                        className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-black dark:text-white"
-                                                        placeholder="Enter price"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {variant.image && (
-                                                <div className="mt-3">
-                                                    <img
-                                                        src={variant.image}
-                                                        alt={component.title}
-                                                        className="w-16 h-16 object-cover rounded border border-gray-200 dark:border-gray-700"
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                                <div className="flex justify-between items-center">
-                                    <span className="font-bold text-green-700 dark:text-green-300">Bundle Total Price:</span>
-                                    <span className="text-xl font-bold text-green-700 dark:text-green-300">
-                                        Kshs {bundleTotalPrice.toFixed(2)}
-                                    </span>
-                                </div>
-                                <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                                    This is the sum of all component prices. The bundle's selling price will be updated accordingly.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-800">
-                        <Button type="submit" disabled={busy} className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-600">
-                            {busy ? "Saving..." : "Save Changes"}
-                        </Button>
-                        <Button type="button" variant="outline" onClick={() => setIsEditing(false)} className="text-gray-600 dark:text-gray-400 border-gray-600 dark:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900">
-                            Cancel
-                        </Button>
-                    </div>
-                </form>
-            </div>
-        </div>,
-        document.body
-    );
-};
-
-const ReceiveStockModal = ({ product, onUpdated, setIsReceivingStock, token }) => {
-    const [selectedVariantId, setSelectedVariantId] = useState(product.variants?.[0]?.variant_id || '');
-    const [receiveForm, setReceiveForm] = useState({ quantityReceived: "", buyingPrice: "" });
-    const [busy, setBusy] = useState(false);
-    const [batches, setBatches] = useState([]);
-    const [avgCost, setAvgCost] = useState(0);
-    const [loadingBatches, setLoadingBatches] = useState(false);
-    
-    // Barcode scanning state
-    const [scanMode, setScanMode] = useState(false);
-    const [barcodeInput, setBarcodeInput] = useState('');
-    const [scannedProduct, setScannedProduct] = useState(null);
-    const [scanning, setScanning] = useState(false);
-    const [imeiNumbers, setImeiNumbers] = useState([]);
-    const [currentImei, setCurrentImei] = useState('');
-    const [loadingBarcode, setLoadingBarcode] = useState(false);
-    const [barcodeError, setBarcodeError] = useState(null);
-
-    const selectedVariant = product.variants?.find(v => v.variant_id.toString() === selectedVariantId.toString());
-    
-    const stockValue = Number(selectedVariant?.stock || 0);
-    const isBackordered = stockValue < 0;
-
-    // Fetch batches when variant is selected
-    useEffect(() => {
-        if (selectedVariantId) {
-            const fetchBatches = async () => {
-                try {
-                    setLoadingBatches(true);
-                    const res = await axios.get(
-                        `${API_BASE}/api/products/variants/${selectedVariantId}/batches`,
-                        { headers: { Authorization: `Bearer ${token}` } }
-                    );
-                    setBatches(res.data || []);
-                    
-                    // Also get average cost
-                    const avgRes = await axios.get(
-                        `${API_BASE}/api/products/variants/${selectedVariantId}/average-cost`,
-                        { headers: { Authorization: `Bearer ${token}` } }
-                    );
-                    setAvgCost(avgRes.data.averageCost || 0);
-                } catch (err) {
-                    console.error("Error fetching batches:", err);
-                    setBatches([]);
-                    setAvgCost(0);
-                } finally {
-                    setLoadingBatches(false);
-                }
-            };
-            fetchBatches();
-        }
-    }, [selectedVariantId, token]);
-
-    const handleReceiveFormChange = (e) => {
-        const { name, value } = e.target;
-        setReceiveForm(prev => ({ ...prev, [name]: value }));
-    };
-
-    // Handle barcode scan lookup
-    const handleBarcodeLookup = async () => {
-        if (!barcodeInput.trim()) return;
-        
-        setLoadingBarcode(true);
-        setBarcodeError(null);
-        
-        try {
-            const result = await lookupByBarcode(barcodeInput.trim(), token);
-            
-            if (result.found) {
-                if (result.type === 'product_code') {
-                    setScannedProduct(result.variant);
-                    setSelectedVariantId(result.variant.variant_id);
-                    setReceiveForm(prev => ({ ...prev, buyingPrice: result.variant.buying_price || '' }));
-                } else if (result.type === 'imei') {
-                    // It's an IMEI - show the variant info
-                    setScannedProduct({
-                        ...result.imei,
-                        product_name: result.imei.product_name,
-                        color: result.imei.color
-                    });
-                    setSelectedVariantId(result.imei.variant_id);
-                    setReceiveForm(prev => ({ ...prev, buyingPrice: result.imei.buying_price || '' }));
-                    toast.info(`IMEI found: ${result.imei.imei_number}`);
-                }
-            } else {
-                setBarcodeError('Product not found. Make sure the SKU/IMEI exists or generate one first.');
-            }
-        } catch (err) {
-            console.error('Barcode lookup error:', err);
-            setBarcodeError('Failed to lookup barcode: ' + err.message);
-        } finally {
-            setLoadingBarcode(false);
-        }
-    };
-
-    // Handle adding IMEI
-    const handleAddImei = () => {
-        if (currentImei.trim() && !imeiNumbers.includes(currentImei.trim())) {
-            setImeiNumbers([...imeiNumbers, currentImei.trim()]);
-            setCurrentImei('');
-        }
-    };
-
-    // Handle remove IMEI
-    const handleRemoveImei = (index) => {
-        const updated = [...imeiNumbers];
-        updated.splice(index, 1);
-        setImeiNumbers(updated);
-    };
-
-    const handleReceiveStock = async (e) => {
-        e.preventDefault();
-        const quantity = Number(receiveForm.quantityReceived);
-        const buyingPrice = Number(receiveForm.buyingPrice);
-    
-        if (!selectedVariantId) {
-            toast.error("Please select a product variant.");
-            return;
-        }
-        if (quantity <= 0 || isNaN(quantity)) {
-            toast.error("Quantity received must be a positive number.");
-            return;
-        }
-        if (buyingPrice <= 0 || isNaN(buyingPrice)) {
-            toast.error("Buying price must be a positive number.");
-            return;
-        }
-    
-        try {
-            setBusy(true);
-            const res = await axios.post(
-                `${API_BASE}/api/products/variants/${selectedVariantId}/receive-stock`,
-                { quantityReceived: quantity, buyingPrice: buyingPrice, imeis: imeiNumbers },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-    
-            // Add IMEIs if provided
-            if (imeiNumbers.length > 0) {
-                try {
-                    const imeiText = imeiNumbers.join('\n');
-                    await axios.post(
-                        `${API_BASE}/api/imei/${selectedVariantId}/bulk`,
-                        { imeiText },
-                        { headers: { Authorization: `Bearer ${token}` } }
-                    );
-                } catch (imeiErr) {
-                    console.warn('Failed to add IMEIs:', imeiErr.message);
-                }
-            }
-    
-            const productTitle = scannedProduct?.product_name || product.title;
-            onUpdated?.(res.data.product);
-            setReceiveForm({ quantityReceived: "", buyingPrice: "" });
-            setImeiNumbers([]);
-            setScannedProduct(null);
-            setBarcodeInput('');
-            setIsReceivingStock(false);
-            toast.success(`Stock received: ${quantity} units added to "${productTitle}"${imeiNumbers.length > 0 ? ` and ${imeiNumbers.length} IMEIs tracked` : ''}`);
-        } catch (err) {
-            console.error("Receive Stock Error:", err.response?.data || err);
-            toast.error(err.response?.data?.error || "Failed to receive stock");
-        } finally {
-            setBusy(false);
-        }
-    };
-
-    if (!product.variants || product.variants.length === 0) {
-        return ReactDOM.createPortal(
-            <div className="modal-overlay">
-                <div className="modal-content bg-white dark:bg-black dark:text-white border dark:border-gray-800">
-                    <h2 className="text-2xl font-bold mb-4 text-red-500">Error</h2>
-                    <p>This product has no variants and cannot receive stock.</p>
-                    <Button type="button" onClick={() => setIsReceivingStock(false)} className="mt-4">Close</Button>
+            {/* Product info */}
+            <div>
+              <p style={s.sectionHead}>Product Info</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div><label style={s.fieldLabel}>Name</label>
+                  <input name="name" value={form.name} onChange={handleChange} style={s.input} /></div>
+                <div><label style={s.fieldLabel}>Description</label>
+                  <input name="description" value={form.description} onChange={handleChange} style={s.input} /></div>
+                <div><label style={s.fieldLabel}>Category</label>
+                  <Select onValueChange={v => setForm(p => ({...p, categoryName: v}))} value={form.categoryName || product.category_name}>
+                    <SelectTrigger style={{ ...s.input, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map(cat => (
+                        <React.Fragment key={cat.category_id}>
+                          <SelectItem value={cat.category_name}>{cat.category_name}</SelectItem>
+                          {cat.subcategories?.map(sub => <SelectItem key={sub.category_id} value={sub.category_name}>↳ {sub.category_name}</SelectItem>)}
+                        </React.Fragment>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-            </div>,
-            document.body
-        );
-    }
-
-    return ReactDOM.createPortal(
-        <div className="modal-overlay">
-            <div className="modal-content bg-white dark:bg-black dark:text-white border dark:border-gray-800 max-w-4xl">
-                <h2 className="text-2xl font-bold mb-4 text-black dark:text-white">Receive Stock</h2>
-                <form
-                    onSubmit={handleReceiveStock}
-                    className="space-y-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-800"
-                >
-                    {/* Barcode Scanning Section */}
-                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                        <div className="flex items-center justify-between mb-3">
-                            <h4 className="text-lg font-bold text-amber-700 dark:text-amber-300 flex items-center gap-2">
-                                <ScanBarcode className="w-5 h-5" />
-                                Scan IMEI to Add Unit (Optional)
-                            </h4>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    setScanMode(!scanMode);
-                                    setScannedProduct(null);
-                                    setBarcodeInput('');
-                                    setBarcodeError(null);
-                                }}
-                                className="border-amber-300 text-amber-700 hover:bg-amber-100"
-                            >
-                                {scanMode ? 'Hide' : 'Show'} Scanner
-                            </Button>
-                        </div>
-                        
-                        <p className="text-sm text-amber-600 dark:text-amber-400 mb-3">
-                            Scan an IMEI to auto-select the variant and track that specific unit. SKU is optional.
-                        </p>
-                        
-                        <div className="flex gap-2 mb-3">
-                            <Input
-                                type="text"
-                                value={barcodeInput}
-                                onChange={(e) => setBarcodeInput(e.target.value)}
-                                placeholder="Enter or scan IMEI number..."
-                                className="flex-1 bg-white dark:bg-gray-800 border-amber-300 dark:border-amber-700"
-                                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleBarcodeLookup())}
-                            />
-                            <Button
-                                type="button"
-                                onClick={handleBarcodeLookup}
-                                disabled={loadingBarcode || !barcodeInput.trim()}
-                                className="bg-amber-600 hover:bg-amber-700 text-white"
-                            >
-                                {loadingBarcode ? 'Searching...' : 'Search'}
-                            </Button>
-                        </div>
-                        
-                        {barcodeError && (
-                            <div className="p-2 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded text-red-600 dark:text-red-400 text-sm">
-                                {barcodeError}
-                            </div>
-                        )}
-                        
-                        {scannedProduct && (
-                            <div className="p-3 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded-lg">
-                                <p className="font-bold text-green-700 dark:text-green-300">
-                                    ✓ Found: {scannedProduct.product_name}
-                                </p>
-                                <p className="text-sm text-green-600 dark:text-green-400">
-                                    Variant: {scannedProduct.color} | Current Stock: {scannedProduct.stock || 0}
-                                </p>
-                            </div>
-                        )}
-                    </div>
-
-                    <h4 className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                        Select Variant to Receive Stock
-                    </h4>
-                    
-                    <div className="space-y-2">
-                        <Label className="text-black dark:text-white font-semibold">
-                            Available Variants:
-                        </Label>
-                        <div className="grid gap-2 max-h-60 overflow-y-auto p-1">
-                            {product.variants.map((variant) => {
-                                const variantStock = Number(variant.stock || 0);
-                                const isVariantBackordered = variantStock < 0;
-                                const isSelected = selectedVariantId === variant.variant_id;
-                                
-                                return (
-                                    <div
-                                        key={variant.variant_id}
-                                        onClick={() => setSelectedVariantId(variant.variant_id)}
-                                        className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                                            isSelected 
-                                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/20' 
-                                                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750'
-                                        }`}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-3 h-3 rounded-full border-2 ${
-                                                    isSelected 
-                                                        ? 'bg-blue-500 border-blue-500' 
-                                                        : 'bg-transparent border-gray-400'
-                                                }`} />
-                                                <div>
-                                                    <div className="font-medium text-black dark:text-white">
-                                                        {getVariantDisplay(product, variant)}
-                                                    </div>
-                                                    <div className={`text-sm font-semibold ${
-                                                        isVariantBackordered 
-                                                            ? 'text-red-500' 
-                                                            : 'text-green-500'
-                                                    }`}>
-                                                        {isVariantBackordered 
-                                                            ? `BACKORDERED: ${variantStock.toFixed(0)}` 
-                                                            : `Stock: ${variantStock.toFixed(0)}`
-                                                        }
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {variant.image && (
-                                                <img 
-                                                    src={variant.image} 
-                                                    alt={variant.color}
-                                                    className="w-10 h-10 rounded border border-gray-200 dark:border-gray-700 object-cover"
-                                                />
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {selectedVariant && (
-                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                            <h5 className="font-bold text-blue-700 dark:text-blue-300 mb-2">
-                                Selected Variant:
-                            </h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">Variant Name</p>
-                                    <p className="font-semibold text-black dark:text-white">
-                                        {getVariantDisplay(product, selectedVariant)}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">Current Stock</p>
-                                    <p className={`font-semibold ${isBackordered ? 'text-red-500' : 'text-green-500'}`}>
-                                        {isBackordered 
-                                            ? `BACKORDERED: ${stockValue.toFixed(0)}` 
-                                            : `${stockValue.toFixed(0)} units`
-                                        }
-                                    </p>
-                                </div>
-                            </div>
-                            {isBackordered && (
-                                <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
-                                    <p className="text-sm text-red-600 dark:text-red-400 font-semibold">
-                                        ⚠️ You have {-stockValue.toFixed(0)} pending backorders to fulfill.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Batch Information Section */}
-                    {selectedVariantId && batches.length > 0 && (
-                        <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-                            <h5 className="font-bold text-purple-700 dark:text-purple-300 mb-2 flex items-center gap-2">
-                                <Package className="w-4 h-4" />
-                                Current Batches (FIFO):
-                            </h5>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                                Average Cost: <span className="font-bold text-purple-600 dark:text-purple-400">Kshs {avgCost.toFixed(2)}</span>
-                            </p>
-                            <div className="max-h-40 overflow-y-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="text-xs text-gray-500 dark:text-gray-400">
-                                        <tr>
-                                            <th className="text-left py-1">Batch</th>
-                                            <th className="text-right py-1">Qty</th>
-                                            <th className="text-right py-1">Cost</th>
-                                            <th className="text-right py-1">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="text-gray-700 dark:text-gray-300">
-                                        {batches.map((batch, idx) => (
-                                            <tr key={batch.batch_id || idx} className="border-t border-purple-200 dark:border-purple-700">
-                                                <td className="py-1">#{idx + 1}</td>
-                                                <td className="text-right py-1">{batch.remaining_quantity}</td>
-                                                <td className="text-right py-1">Kshs {Number(batch.buying_price).toFixed(2)}</td>
-                                                <td className="text-right py-1 font-medium">Kshs {(batch.remaining_quantity * batch.buying_price).toFixed(2)}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <p className="text-xs text-purple-600 dark:text-purple-400 mt-2 italic">
-                                ✓ Oldest batches are sold first (FIFO)
-                            </p>
-                        </div>
-                    )}
-
-                    {selectedVariantId && loadingBatches && (
-                        <div className="p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
-                            <p className="text-sm text-gray-500">Loading batch information...</p>
-                        </div>
-                    )}
-
-                    <div className="space-y-2">
-                        <Label htmlFor="quantityReceived" className="text-black dark:text-white font-semibold">
-                            Quantity to Receive
-                        </Label>
-                        <Input
-                            id="quantityReceived"
-                            name="quantityReceived"
-                            type="number"
-                            value={receiveForm.quantityReceived}
-                            onChange={handleReceiveFormChange}
-                            required
-                            min="1"
-                            className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white text-lg font-medium"
-                            disabled={!selectedVariantId}
-                            placeholder="Enter quantity to add to stock"
-                        />
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Enter the number of units you're adding to inventory
-                        </p>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="buyingPrice" className="text-black dark:text-white font-semibold">
-                            Buying Price per Unit
-                        </Label>
-                        <Input
-                            id="buyingPrice"
-                            name="buyingPrice"
-                            type="number"
-                            value={receiveForm.buyingPrice}
-                            onChange={handleReceiveFormChange}
-                            required
-                            min="0.01"
-                            step="0.01"
-                            className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-black dark:text-white text-lg font-medium"
-                            disabled={!selectedVariantId}
-                            placeholder="Enter buying price per unit"
-                        />
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Cost per unit for this batch
-                        </p>
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
-                        <Button
-                            type="submit"
-                            disabled={busy || !selectedVariantId}
-                            className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white flex-1"
-                        >
-                            {busy ? "Receiving Stock..." : "Receive Stock"}
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                                setIsReceivingStock(false);
-                                setReceiveForm({ quantityReceived: "", buyingPrice: "" });
-                            }}
-                            className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                        >
-                            Cancel
-                        </Button>
-                    </div>
-                </form>
+                <div><label style={s.fieldLabel}>Replace Image</label>
+                  <input name="image" type="file" onChange={handleChange} style={{ ...s.input, padding: '5px 8px' }} /></div>
+              </div>
             </div>
-        </div>,
-        document.body
-    );
+
+            {/* Variant selector */}
+            <div>
+              <p style={s.sectionHead}>Select Variant</p>
+              <div style={{ maxHeight: 250, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {product.variants.map(v => {
+                  const vStock = Number(v.stock || 0);
+                  const isSel = selectedVariantId === v.variant_id;
+                  return (
+                    <div key={v.variant_id} onClick={() => setSelectedVariantId(v.variant_id)} style={s.variantPill(isSel)}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: isSel ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.18)', flexShrink: 0 }} />
+                        <div>
+                          <div style={{ fontSize: 12, fontFamily: sans, color: 'rgba(255,255,255,0.88)', fontWeight: 500 }}>{getVariantDisplay(product, v)}</div>
+                          <div style={{ fontSize: 10, fontFamily: mono, color: 'rgba(255,255,255,0.42)', marginTop: 1 }}>
+                            {vStock < 0 ? `BO: ${vStock}` : `${vStock} in stock`}
+                          </div>
+                        </div>
+                      </div>
+                      {v.image && <img src={v.image} alt="" style={{ width: 28, height: 28, borderRadius: 4, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.07)' }} />}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* ── variant editing ── */}
+          {user?.role === 'admin' && selectedVariant && (
+            <>
+              <div style={s.divider} />
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <p style={{ ...s.sectionHead, margin: 0 }}>Editing Variant</p>
+                <span style={{ fontSize: 10, fontFamily: mono, color: 'rgba(255,255,255,0.28)' }}>Stock: {currentStock}</span>
+              </div>
+
+              {/* stock update */}
+              <div style={{ ...s.panel, marginBottom: 16 }}>
+                <p style={{ ...s.sectionHead, marginBottom: 8 }}>Update Stock</p>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input type="number" value={newStock} onChange={e => setNewStock(e.target.value)}
+                    placeholder="New quantity" style={{ ...s.input, flex: 1 }} />
+                  <button type="button" onClick={handleUpdateStock} disabled={updatingStock || newStock === ''} style={s.btnSmall}>
+                    {updatingStock ? '…' : 'Update'}
+                  </button>
+                </div>
+                {newStock !== '' && !isNaN(Number(newStock)) && (
+                  <p style={{ fontSize: 10, fontFamily: mono, color: 'rgba(255,255,255,0.25)', marginTop: 6 }}>
+                    {currentStock} → {Number(newStock)} ({Number(newStock) - currentStock > 0 ? '+' : ''}{Number(newStock) - currentStock})
+                  </p>
+                )}
+              </div>
+
+              {/* pricing */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+                {[
+                  { label: 'Buying Price', name: 'buying_price' },
+                  { label: 'Profit Margin', name: 'profit_margin' },
+                  { label: 'Discount', name: 'discount' },
+                  { label: 'Final Price', name: 'final_price' },
+                ].map(({ label, name }) => (
+                  <div key={name}>
+                    <label style={{ ...s.fieldLabel, color: name === 'final_price' ? 'rgba(255,255,255,0.38)' : 'rgba(255,255,255,0.22)' }}>{label}</label>
+                    <input name={name} type="number" value={variantForm[name]} onChange={handleChange}
+                      style={{ ...s.input, fontFamily: mono, borderColor: name === 'final_price' ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.08)' }} />
+                  </div>
+                ))}
+              </div>
+
+              {/* batches */}
+              {loadingBatches && <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.22)', fontFamily: sans, marginBottom: 12 }}>Loading batches…</p>}
+              {batches.length > 0 && (
+                <div style={{ ...s.panel, marginBottom: 16 }}>
+                  <p style={{ ...s.sectionHead, display: 'flex', alignItems: 'center', gap: 5, marginBottom: 10 }}>
+                    <Package size={10} style={{ opacity: 0.5 }} /> Batches (FIFO)
+                  </p>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead><tr>
+                      {['#','Rcvd','Rem.','Cost','Value'].map((h, i) => (
+                        <th key={h} style={{ ...s.th, textAlign: i >= 1 ? 'right' : 'left' }}>{h}</th>
+                      ))}
+                    </tr></thead>
+                    <tbody>
+                      {batches.map((b, i) => (
+                        <tr key={b.batch_id || i}>
+                          <td style={s.tdMono}>{i+1}</td>
+                          <td style={s.tdRight}>{b.quantity_received}</td>
+                          <td style={s.tdRight}>{b.remaining_quantity}</td>
+                          <td style={s.tdRight}>Kshs {Number(b.buying_price).toFixed(0)}</td>
+                          <td style={{ ...s.tdRight, color: 'rgba(255,255,255,0.55)' }}>Kshs {(b.remaining_quantity * b.buying_price).toFixed(0)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* image + color */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div><label style={s.fieldLabel}>Replace Variant Image</label>
+                  <input name="variant_image" type="file" onChange={handleChange} style={{ ...s.input, padding: '5px 8px' }} /></div>
+                <div><label style={s.fieldLabel}>Variant Color</label>
+                  <input name="color" type="color" value={variantForm.color} onChange={handleChange}
+                    style={{ ...s.input, height: 34, padding: '2px 4px', cursor: 'pointer' }} /></div>
+              </div>
+            </>
+          )}
+
+          <div style={s.divider} />
+          <AdminImageGallery product={product} />
+          <div style={{ ...s.divider }} />
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="submit" disabled={busy} style={s.btnPrimary}>{busy ? 'Saving…' : 'Save Changes'}</button>
+            <button type="button" onClick={() => setIsEditing(false)} style={s.btnSecondary}>Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
+  );
 };
 
+/* ─────────────────────────────────────────────
+   ReceiveStockModal
+───────────────────────────────────────────── */
+const ReceiveStockModal = ({ product, onUpdated, setIsReceivingStock, token }) => {
+  const [selectedVariantId, setSelectedVariantId] = useState(product.variants?.[0]?.variant_id || '');
+  const [qty, setQty]           = useState('');
+  const [bp, setBp]             = useState('');
+  const [busy, setBusy]         = useState(false);
+  const [batches, setBatches]   = useState([]);
+  const [avgCost, setAvgCost]   = useState(0);
+  const [loadingBatches, setLoadingBatches] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [scannedProduct, setScannedProduct] = useState(null);
+  const [imeiNumbers, setImeiNumbers] = useState([]);
+  const [loadingBarcode, setLoadingBarcode] = useState(false);
+  const [barcodeError, setBarcodeError] = useState(null);
+
+  const selectedVariant = product.variants?.find(v => v.variant_id.toString() === selectedVariantId.toString());
+  const stockValue = Number(selectedVariant?.stock || 0);
+
+  useEffect(() => {
+    if (!selectedVariantId) return;
+    setLoadingBatches(true);
+    Promise.all([
+      axios.get(`${API_BASE}/api/products/variants/${selectedVariantId}/batches`, { headers: { Authorization: `Bearer ${token}` } }),
+      axios.get(`${API_BASE}/api/products/variants/${selectedVariantId}/average-cost`, { headers: { Authorization: `Bearer ${token}` } }),
+    ]).then(([bR, aR]) => { setBatches(bR.data || []); setAvgCost(aR.data.averageCost || 0); })
+      .catch(() => { setBatches([]); setAvgCost(0); })
+      .finally(() => setLoadingBatches(false));
+  }, [selectedVariantId, token]);
+
+  const handleBarcodeLookup = async () => {
+    if (!barcodeInput.trim()) return;
+    setLoadingBarcode(true); setBarcodeError(null);
+    try {
+      const result = await lookupByBarcode(barcodeInput.trim(), token);
+      if (result.found) {
+        const v = result.type === 'product_code' ? result.variant : result.imei;
+        setScannedProduct(v); setSelectedVariantId(v.variant_id); setBp(v.buying_price || '');
+      } else { setBarcodeError('Not found.'); }
+    } catch { setBarcodeError('Lookup failed.'); } finally { setLoadingBarcode(false); }
+  };
+
+  const handleReceive = async e => {
+    e.preventDefault();
+    const qtyN = Number(qty), bpN = Number(bp);
+    if (!selectedVariantId) { toast.error('Select a variant'); return; }
+    if (qtyN <= 0 || isNaN(qtyN)) { toast.error('Invalid quantity'); return; }
+    if (bpN <= 0 || isNaN(bpN)) { toast.error('Invalid price'); return; }
+    try {
+      setBusy(true);
+      const r = await axios.post(`${API_BASE}/api/products/variants/${selectedVariantId}/receive-stock`,
+        { quantityReceived: qtyN, buyingPrice: bpN, imeis: imeiNumbers }, { headers: { Authorization: `Bearer ${token}` } });
+      if (imeiNumbers.length > 0) {
+        await axios.post(`${API_BASE}/api/imei/${selectedVariantId}/bulk`, { imeiText: imeiNumbers.join('\n') }, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+      }
+      onUpdated?.(r.data.product); setIsReceivingStock(false);
+      toast.success(`${qtyN} units received`);
+    } catch (err) { toast.error(err.response?.data?.error || 'Failed'); } finally { setBusy(false); }
+  };
+
+  if (!product.variants?.length) return ReactDOM.createPortal(
+    <div className="modal-overlay">
+      <div style={{ ...s.modal, maxWidth: 400 }}>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontFamily: sans }}>No variants available.</p>
+        <button onClick={() => setIsReceivingStock(false)} style={{ ...s.btnSecondary, marginTop: 12 }}>Close</button>
+      </div>
+    </div>, document.body
+  );
+
+  return ReactDOM.createPortal(
+    <div className="modal-overlay">
+      <div style={{ ...s.modal, maxWidth: 560 }}>
+        <button onClick={() => setIsReceivingStock(false)} style={s.modalClose}><X size={13} /></button>
+        <p style={s.modalTitle}>Receive Stock</p>
+
+        <form onSubmit={handleReceive} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* barcode */}
+          <div style={s.panel}>
+            <p style={{ ...s.sectionHead, display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+              <ScanBarcode size={10} style={{ opacity: 0.45 }} /> Scan IMEI (optional)
+            </p>
+            <div style={{ display: 'flex', gap: 7 }}>
+              <input value={barcodeInput} onChange={e => setBarcodeInput(e.target.value)} placeholder="Enter or scan IMEI…"
+                style={{ ...s.input, flex: 1 }} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleBarcodeLookup())} />
+              <button type="button" onClick={handleBarcodeLookup} disabled={loadingBarcode || !barcodeInput.trim()} style={s.btnSmall}>
+                {loadingBarcode ? '…' : 'Search'}
+              </button>
+            </div>
+            {barcodeError && <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 5, fontFamily: sans }}>{barcodeError}</p>}
+            {scannedProduct && <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.48)', marginTop: 5, fontFamily: sans }}>✓ {scannedProduct.product_name}</p>}
+          </div>
+
+          {/* variant list */}
+          <div>
+            <p style={s.sectionHead}>Select Variant</p>
+            <div style={{ maxHeight: 190, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {product.variants.map(v => {
+                const vStock = Number(v.stock || 0);
+                const isSel = selectedVariantId === v.variant_id;
+                return (
+                  <div key={v.variant_id} onClick={() => setSelectedVariantId(v.variant_id)} style={s.variantPill(isSel)}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: isSel ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.18)', flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontSize: 12, fontFamily: sans, color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>{getVariantDisplay(product, v)}</div>
+                        <div style={{ fontSize: 10, fontFamily: mono, color: 'rgba(255,255,255,0.40)', marginTop: 1 }}>
+                          {vStock < 0 ? `BO: ${vStock}` : `${vStock} in stock`}
+                        </div>
+                      </div>
+                    </div>
+                    {v.image && <img src={v.image} alt="" style={{ width: 26, height: 26, borderRadius: 4, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.07)' }} />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* batches */}
+          {loadingBatches && <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.22)', fontFamily: sans }}>Loading…</p>}
+          {batches.length > 0 && (
+            <div style={s.panel}>
+              <p style={{ ...s.sectionHead, marginBottom: 8 }}>Existing Batches — Avg: Kshs {avgCost.toFixed(0)}</p>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead><tr>
+                  {['#','Rem.','Cost','Total'].map((h, i) => (
+                    <th key={h} style={{ ...s.th, textAlign: i >= 1 ? 'right' : 'left' }}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>{batches.map((b, i) => (
+                  <tr key={b.batch_id || i}>
+                    <td style={s.tdMono}>{i+1}</td>
+                    <td style={s.tdRight}>{b.remaining_quantity}</td>
+                    <td style={s.tdRight}>Kshs {Number(b.buying_price).toFixed(0)}</td>
+                    <td style={{ ...s.tdRight, color: 'rgba(255,255,255,0.52)' }}>Kshs {(b.remaining_quantity * b.buying_price).toFixed(0)}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          )}
+
+          {/* qty + price */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div><label style={s.fieldLabel}>Quantity</label>
+              <input type="number" value={qty} onChange={e => setQty(e.target.value)} required min="1"
+                disabled={!selectedVariantId} placeholder="Units to add" style={{ ...s.input, fontFamily: mono }} /></div>
+            <div><label style={s.fieldLabel}>Buying Price / Unit</label>
+              <input type="number" value={bp} onChange={e => setBp(e.target.value)} required min="0.01" step="0.01"
+                disabled={!selectedVariantId} placeholder="Cost per unit" style={{ ...s.input, fontFamily: mono }} /></div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="submit" disabled={busy || !selectedVariantId} style={{ ...s.btnPrimary, flex: 1 }}>
+              {busy ? 'Receiving…' : 'Receive Stock'}
+            </button>
+            <button type="button" onClick={() => setIsReceivingStock(false)} style={s.btnSecondary}>Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+/* ─────────────────────────────────────────────
+   ProductCard
+───────────────────────────────────────────── */
 const ProductCard = ({ product, onDeleted, onUpdated }) => {
-    const { user, token } = useUser();
-    const [isEditing, setIsEditing] = useState(false);
-    const [isReceivingStock, setIsReceivingStock] = useState(false);
-    const [showMobileMenu, setShowMobileMenu] = useState(false);
-    const [busy, setBusy] = useState(false);
-    const [isVisible, setIsVisible] = useState(product.is_visible);
-    const [isFeatured, setIsFeatured] = useState(product.is_featured || false);
+  const { user, token } = useUser();
+  const [isEditing, setIsEditing]             = useState(false);
+  const [isReceivingStock, setIsReceivingStock] = useState(false);
+  const [showMobileMenu, setShowMobileMenu]   = useState(false);
+  const [busy, setBusy]                       = useState(false);
+  const [isVisible, setIsVisible]             = useState(product.is_visible);
+  const [isFeatured, setIsFeatured]           = useState(product.is_featured || false);
 
-    const handleToggleVisibility = async () => {
-        try {
-            const newVisibility = !isVisible;
-            setIsVisible(newVisibility);
-            await axios.put(
-                `${API_BASE}/api/products/${product.product_id}/toggle-visibility`,
-                { is_visible: newVisibility },
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                }
-            );
-            onUpdated?.({ ...product, is_visible: newVisibility });
-        } catch (err) {
-            console.error("Error toggling product visibility:", err);
-            setIsVisible(!isVisible);
-            alert("Failed to update product visibility");
-        }
-    };
+  const handleToggleVisibility = async () => {
+    const next = !isVisible; setIsVisible(next);
+    try { await axios.put(`${API_BASE}/api/products/${product.product_id}/toggle-visibility`, { is_visible: next }, { headers: { Authorization: `Bearer ${token}` } }); onUpdated?.({ ...product, is_visible: next }); }
+    catch { setIsVisible(!next); toast.error('Failed'); }
+  };
+  const handleToggleFeatured = async () => {
+    const next = !isFeatured; setIsFeatured(next);
+    try { await axios.put(`${API_BASE}/api/products/${product.product_id}/toggle-featured`, { is_featured: next }, { headers: { Authorization: `Bearer ${token}` } }); onUpdated?.({ ...product, is_featured: next }); }
+    catch { setIsFeatured(!next); toast.error('Failed'); }
+  };
+  const handleDelete = async () => {
+    if (!window.confirm(`Delete "${product.title}"?`)) return;
+    try { setBusy(true); await axios.delete(`${API_BASE}/api/products/${product.product_id}`, { headers: { Authorization: `Bearer ${token}` } }); onDeleted?.(product.product_id); toast.success('Deleted'); }
+    catch (err) { toast.error(err.response?.data?.error || 'Failed'); } finally { setBusy(false); }
+  };
 
-    const handleToggleFeatured = async () => {
-        try {
-            const newFeatured = !isFeatured;
-            setIsFeatured(newFeatured);
-            await axios.put(
-                `${API_BASE}/api/products/${product.product_id}/toggle-featured`,
-                { is_featured: newFeatured },
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                }
-            );
-            onUpdated?.({ ...product, is_featured: newFeatured });
-        } catch (err) {
-            console.error("Error toggling product featured status:", err);
-            setIsFeatured(!isFeatured);
-            alert("Failed to update product featured status");
-        }
-    };
+  const totalStock    = product.variants?.reduce((s, v) => s + (Number(v.stock) || 0), 0) || 0;
+  const displayVariant = product.variants?.[0];
 
-    
-    // Calculate total stock from all variants
-    const totalStock = product.variants?.reduce((sum, v) => sum + (Number(v.stock) || 0), 0) || 0;
-    
-    const displayVariant = product.variants?.[0];
+  if (!displayVariant) return (
+    <tr><td colSpan="6" style={{ padding: '8px 12px', fontSize: 11, color: 'rgba(255,255,255,0.20)', fontFamily: sans, fontStyle: 'italic' }}>No variants</td></tr>
+  );
 
-    if (!displayVariant) {
-        return (
-            <tr className="bg-red-50 dark:bg-red-900/20">
-                <td colSpan="4" className="p-4 text-sm text-red-600 dark:text-red-400">
-                    Product has no variants and cannot be managed.
-                </td>
-            </tr>
-        );
-    }
+  const originalPrice   = calculateSellingPrice(displayVariant.buying_price, displayVariant.profit_margin, 0);
+  const discountedPrice = Number(displayVariant.price) || 0;
+  const hasDiscount     = Number(displayVariant.discount) > 0;
+  const stockNum        = Number(totalStock);
+  const isBackordered   = stockNum < 0;
 
-    const handleDelete = async () => {
-        const confirmMessage = `⚠️ ARE YOU SURE YOU WANT TO DELETE THIS PRODUCT?\n\nProduct: ${product.title}\n\nThis action cannot be undone. All product details, variants, and stock information will be permanently removed from your inventory.`;
-        
-        if (!window.confirm(confirmMessage)) return;
-        
-        try {
-            setBusy(true);
-            await axios.delete(`${API_BASE}/api/products/${product.product_id}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            onDeleted?.(product.product_id);
-            toast.success(`"${product.title}" has been deleted successfully`);
-        } catch (err) {
-            toast.error(err.response?.data?.error || "Failed to delete product");
-        } finally {
-            setBusy(false);
-        }
-    };
+  /* stock badge — monochrome pill */
+  const stockBadge = (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      height: 20, minWidth: 24, padding: '0 6px', borderRadius: 4,
+      fontFamily: mono, fontSize: 10, fontWeight: 500,
+      background: isBackordered ? 'rgba(255,255,255,0.04)' : stockNum <= 5 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.09)',
+      color: isBackordered ? 'rgba(255,255,255,0.45)' : stockNum <= 5 ? 'rgba(255,255,255,0.60)' : 'rgba(255,255,255,0.82)',
+      border: '1px solid rgba(255,255,255,0.12)',
+      textDecoration: isBackordered ? 'line-through' : 'none',
+      textDecorationColor: 'rgba(255,255,255,0.30)',
+    }}>
+      {isBackordered ? `BO:${stockNum}` : stockNum}
+    </span>
+  );
 
-    const originalPrice = calculateSellingPrice(
-        displayVariant.buying_price, 
-        displayVariant.profit_margin, 
-        0
-    );
-    
-    const discountedPrice = Number(displayVariant.price) || 0;
-    const hasDiscount = Number(displayVariant.discount) > 0;
-    
-    const stockValue = Number(totalStock || 0);
-    const stockColor = stockValue < 0 ? "bg-red-600" : stockValue <= 5 ? "bg-yellow-600" : "bg-green-600";
-    const isBackordered = stockValue < 0;
-
-    return (
-        <>
-            <tr className="lg:hidden product-card-mobile bg-white dark:bg-transparent hover:bg-gray-50 dark:hover:bg-gray-900">
-                <td colSpan="4" className="p-0 border-none">
-                    <div className="p-2"> 
-                        <div className="flex gap-2">
-                            <div className="flex-shrink-0">
-                                <img 
-                                    className="h-16 w-16 rounded-lg object-cover border border-gray-200 dark:border-gray-800" 
-                                    src={displayVariant.image || product.image}
-                                    alt={product.title} 
-                                />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-start">
-                                    <div className="flex-1">
-                                        <h3 className="text-base font-semibold text-black dark:text-white truncate">
-                                            {product.title}
-                                        </h3>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                            #{product.product_id}
-                                        </p>
-                                    </div>
-
-                                    <button
-                                        onClick={() => setShowMobileMenu(!showMobileMenu)}
-                                        className="ml-2 p-2 rounded-lg bg-white hover:bg-gray-100 dark:bg-black dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 transition-colors"
-                                    >
-                                        <MoreVertical className="h-4 w-4 text-black dark:text-white" />
-                                    </button>
-                                </div>
-
-                                <div className="mt-2">
-                                    {hasDiscount ? (
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
-                                                Kshs {Number(originalPrice).toFixed(2)}
-                                            </span>
-                                            <span className="text-lg font-bold text-red-600 dark:text-red-400">
-                                                Kshs {Number(discountedPrice).toFixed(2)}
-                                            </span>
-                                        </div>
-                                    ) : (
-                                        <span className="text-lg font-bold text-black dark:text-white">
-                                            Kshs {Number(discountedPrice).toFixed(2)}
-                                        </span>
-                                    )}
-                                </div>
-
-                                <div className="mt-2">
-                                    <span
-                                        className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${stockColor} text-white`}
-                                    >
-                                        {isBackordered
-                                            ? `BACKORDERED: ${stockValue.toFixed(0)}`
-                                            : `${stockValue.toFixed(0)} in stock`}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {showMobileMenu && (
-                            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800 space-y-2">
-                                <Button 
-                                    title="Edit product details"
-                                    className="cursor-pointer w-full bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white justify-start"
-                                    onClick={() => {
-                                        setIsEditing(true);
-                                        setShowMobileMenu(false);
-                                    }}
-                                >
-                                    <SquarePen className="w-4 h-4 mr-2" />
-                                    Update Details
-                                </Button>
-                                <Button
-                                    title="Receive stock for this product"
-                                    className="cursor-pointer w-full bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white justify-start"
-                                    onClick={() => {
-                                        setIsReceivingStock(true);
-                                        setShowMobileMenu(false);
-                                    }}
-                                >
-                                    <CookingPot className="w-4 h-4 mr-2" />
-                                    Receive Stock
-                                </Button>
-                                <Button 
-                                    title="Delete this product"
-                                    className="cursor-pointer w-full bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white justify-start"
-                                    onClick={handleDelete} 
-                                    disabled={busy} 
-                                >
-                                    <Delete className="w-4 h-4 mr-2" />
-                                    {busy ? "Deleting..." : "Delete"}
-                                </Button>
-                                <div className="flex items-center space-x-2">
-                                    <Switch
-                                        id={`visibility-toggle-mobile-${product.product_id}`}
-                                        checked={isVisible}
-                                        onCheckedChange={handleToggleVisibility}
-                                    />
-                                    <Label htmlFor={`visibility-toggle-mobile-${product.product_id}`}>
-                                        {isVisible ? "Visible" : "Hidden"}
-                                    </Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <Switch
-                                        id={`featured-toggle-mobile-${product.product_id}`}
-                                        checked={isFeatured}
-                                        onCheckedChange={handleToggleFeatured}
-                                    />
-                                    <Label htmlFor={`featured-toggle-mobile-${product.product_id}`}>
-                                        {isFeatured ? "Featured" : "Not Featured"}
-                                    </Label>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </td>
-            </tr>
-
-            <tr className="hidden lg:table-row product-card bg-white dark:bg-black hover:bg-gray-50 dark:hover:bg-gray-900">
-                <td className="px-2 py-2 whitespace-nowrap">
-                    <div className="flex items-center">
-                        <div className="flex-shrink-0 h-8 w-8">
-                            <img className="h-8 w-8 rounded-full object-cover" src={displayVariant.image || product.image} alt={product.title} />
-                        </div>
-                        <div className="ml-2">
-                            <div className="text-xs font-medium text-black dark:text-white">{product.title}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">#{product.product_id}</div>
-                        </div>
-                    </div>
-                </td>
-                <td className="px-2 py-2 whitespace-nowrap text-black dark:text-white text-xs">
-                    {hasDiscount ? (
-                        <div className="flex flex-col">
-                            <span className="text-muted-foreground line-through text-gray-500 dark:text-gray-400">
-                                Kshs {Number(originalPrice).toFixed(0)}
-                            </span>
-                            <span className="text-red-600 dark:text-red-400 font-semibold">
-                                Kshs {Number(discountedPrice).toFixed(0)}
-                            </span>
-                        </div>
-                    ) : (
-                        <span>Kshs {Number(discountedPrice).toFixed(0)}</span>
-                    )}
-                </td>
-                <td className="px-2 py-2 whitespace-nowrap">
-                    <span
-                        className={`px-1.5 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-full ${stockColor} text-white`}
-                    >
-                        {isBackordered
-                            ? `BO: ${stockValue.toFixed(0)}`
-                            : `${stockValue.toFixed(0)}`}
+  return (
+    <>
+      {/* ── MOBILE ── */}
+      <tr className="lg:hidden product-card-mobile">
+        <td colSpan="6" style={{ padding: '3px 4px', border: 'none' }}>
+          <div style={{ padding: '10px 12px', borderRadius: 7, border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.015)', margin: '2px 0' }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <img src={displayVariant.image || product.image} alt={product.title}
+                style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 500, color: 'rgba(255,255,255,0.88)', fontFamily: sans, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.title}</div>
+                    <div style={{ fontSize: 10, fontFamily: mono, color: 'rgba(255,255,255,0.38)', marginTop: 1 }}>#{product.product_id}</div>
+                  </div>
+                  <button onClick={() => setShowMobileMenu(!showMobileMenu)} style={s.iconBtn}><MoreVertical size={13} /></button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                  {hasDiscount ? (
+                    <span>
+                      <span style={{ fontSize: 10, fontFamily: mono, color: 'rgba(255,255,255,0.38)', textDecoration: 'line-through' }}>Kshs {Number(originalPrice).toFixed(0)}</span>
+                      <span style={{ fontSize: 12, fontFamily: mono, color: 'rgba(255,255,255,0.75)', marginLeft: 5 }}>Kshs {Number(discountedPrice).toFixed(0)}</span>
                     </span>
-                </td>
-                <td className="px-2 py-2 whitespace-nowrap text-black dark:text-white text-xs">
-                    Kshs {displayVariant.wac ? Number(displayVariant.wac).toFixed(0) : '0'}
-                </td>
-                <td className="px-2 py-2 whitespace-nowrap text-black dark:text-white text-xs">
-                    {/* Total stock value from all variants */}
-                    Kshs {product.variants?.reduce((sum, v) => sum + (Number(v.stock_value) || 0), 0).toFixed(0) || '0'}
-                </td>
-                <td className="px-2 py-2 whitespace-nowrap text-right text-xs font-medium">
-                    <div className="flex flex-col gap-1">
-                        <div className="flex gap-1  justify-end">
-                            <Button 
-                                size="sm"
-                                title="Edit product details"
-                                className="cursor-pointer bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white px-2 py-1 h-7"
-                                onClick={() => setIsEditing(true)}
-                            >
-                                <SquarePen className="w-3 h-3" />
-                            </Button>
-                            <Button
-                                size="sm"
-                                title="Receive stock"
-                                className="cursor-pointer bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white px-2 py-1 h-7"
-                                onClick={() => setIsReceivingStock(true)}
-                            >
-                                <CookingPot className="w-3 h-3" />
-                            </Button>
-                            <Button 
-                                size="sm"
-                                title="Delete product"
-                                className="cursor-pointer bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white px-2 py-1 h-7"
-                                onClick={handleDelete} 
-                                disabled={busy}
-                            >
-                                <Delete className="w-3 h-3" />
-                            </Button>
-                        </div>
-                        <div className="flex items-center justify-end gap-1">
-                            <Switch
-                                id={`visibility-toggle-${product.product_id}`}
-                                checked={isVisible}
-                                onCheckedChange={handleToggleVisibility}
-                                className="scale-75"
-                            />
-                            <Label htmlFor={`visibility-toggle-${product.product_id}`} className="text-xs cursor-pointer">
-                                {isVisible ? "Visible" : "Hidden"}
-                            </Label>
-                        </div>
-                        <div className="flex items-center justify-end gap-1">
-                            <Switch
-                                id={`featured-toggle-${product.product_id}`}
-                                checked={isFeatured}
-                                onCheckedChange={handleToggleFeatured}
-                                className="scale-75"
-                            />
-                            <Label htmlFor={`featured-toggle-${product.product_id}`} className="text-xs cursor-pointer">
-                                {isFeatured ? "Featured" : "Not Featured"}
-                            </Label>
-                        </div>
-                    </div>
-                </td>
-            </tr>
+                  ) : <span style={{ fontSize: 12, fontFamily: mono, color: 'rgba(255,255,255,0.88)' }}>Kshs {Number(discountedPrice).toFixed(0)}</span>}
+                  {stockBadge}
+                </div>
+              </div>
+            </div>
 
-            {isEditing && <EditProductModal product={product} onUpdated={onUpdated} setIsEditing={setIsEditing} user={user} token={token} />}
-            {isReceivingStock && <ReceiveStockModal product={product} onUpdated={onUpdated} setIsReceivingStock={setIsReceivingStock} token={token} />}
-        </>
-    );
+            {showMobileMenu && (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {[
+                  { icon: <SquarePen size={13} />, label: 'Update Details', action: () => { setIsEditing(true); setShowMobileMenu(false); } },
+                  { icon: <CookingPot size={13} />, label: 'Receive Stock', action: () => { setIsReceivingStock(true); setShowMobileMenu(false); } },
+                  { icon: <Trash2 size={13} />, label: busy ? '…' : 'Delete', action: handleDelete },
+                ].map(({ icon, label, action }) => (
+                  <button key={label} onClick={action} disabled={busy && label === 'Delete'}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 5, border: '1px solid rgba(255,255,255,0.06)', background: 'transparent', color: 'rgba(255,255,255,0.48)', fontSize: 12, fontFamily: sans, cursor: 'pointer', textAlign: 'left' }}>
+                    <span style={{ opacity: 0.5 }}>{icon}</span>{label}
+                  </button>
+                ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingTop: 4 }}>
+                  <div style={s.toggleRow}>
+                    <Switch id={`vis-mob-${product.product_id}`} checked={isVisible} onCheckedChange={handleToggleVisibility} />
+                    <label htmlFor={`vis-mob-${product.product_id}`} style={s.toggleLabel}>{isVisible ? 'Visible' : 'Hidden'}</label>
+                  </div>
+                  <div style={s.toggleRow}>
+                    <Switch id={`feat-mob-${product.product_id}`} checked={isFeatured} onCheckedChange={handleToggleFeatured} />
+                    <label htmlFor={`feat-mob-${product.product_id}`} style={s.toggleLabel}>{isFeatured ? 'Featured' : 'Normal'}</label>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </td>
+      </tr>
+
+      {/* ── DESKTOP ── */}
+      <tr className="hidden lg:table-row product-card">
+        {/* Product */}
+        <td style={{ padding: '9px 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <img src={displayVariant.image || product.image} alt={product.title}
+              style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }} />
+            <div>
+              <div style={{ fontSize: 12.5, fontWeight: 500, color: 'rgba(255,255,255,0.92)', fontFamily: sans, letterSpacing: '-0.01em' }}>{product.title}</div>
+              <div style={{ fontSize: 10, fontFamily: mono, color: 'rgba(255,255,255,0.40)', marginTop: 1 }}>#{product.product_id}</div>
+            </div>
+          </div>
+        </td>
+
+        {/* Price */}
+        <td style={{ padding: '9px 12px' }}>
+          {hasDiscount ? (
+            <div>
+              <div style={{ fontSize: 10, fontFamily: mono, color: 'rgba(255,255,255,0.40)', textDecoration: 'line-through' }}>Kshs {Number(originalPrice).toFixed(0)}</div>
+              <div style={{ fontSize: 12, fontFamily: mono, color: 'rgba(255,255,255,0.75)', fontWeight: 500 }}>Kshs {Number(discountedPrice).toFixed(0)}</div>
+            </div>
+          ) : <span style={{ fontSize: 12, fontFamily: mono, color: 'rgba(255,255,255,0.88)', fontWeight: 500 }}>Kshs {Number(discountedPrice).toFixed(0)}</span>}
+        </td>
+
+        {/* Stock */}
+        <td style={{ padding: '9px 12px' }}>{stockBadge}</td>
+
+        {/* WAC */}
+        <td style={{ padding: '9px 12px' }}>
+          <span style={{ fontSize: 11, fontFamily: mono, color: 'rgba(255,255,255,0.62)' }}>Kshs {displayVariant.wac ? Number(displayVariant.wac).toFixed(0) : '0'}</span>
+        </td>
+
+        {/* Stock Value */}
+        <td style={{ padding: '9px 12px' }}>
+          <span style={{ fontSize: 11, fontFamily: mono, color: 'rgba(255,255,255,0.62)' }}>
+            Kshs {product.variants?.reduce((sum, v) => sum + (Number(v.stock_value)||0), 0).toFixed(0) || '0'}
+          </span>
+        </td>
+
+        {/* Actions */}
+        <td style={{ padding: '9px 12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
+            {/* icon row */}
+            <div style={{ display: 'flex', gap: 3 }}>
+              {[
+                { icon: <SquarePen size={12} />, action: () => setIsEditing(true),        title: 'Edit' },
+                { icon: <CookingPot size={12} />, action: () => setIsReceivingStock(true), title: 'Receive' },
+                { icon: <Trash2 size={12} />,    action: handleDelete,                    title: 'Delete', disabled: busy },
+              ].map(({ icon, action, title, disabled }) => (
+                <button key={title} onClick={action} disabled={disabled} title={title}
+                  style={s.iconBtn}
+                  onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.92)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.50)'}>
+                  {icon}
+                </button>
+              ))}
+            </div>
+            {/* toggles */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-end' }}>
+              <div style={s.toggleRow}>
+                <Switch id={`vis-${product.product_id}`} checked={isVisible} onCheckedChange={handleToggleVisibility} />
+                <label htmlFor={`vis-${product.product_id}`} style={s.toggleLabel}>{isVisible ? 'Visible' : 'Hidden'}</label>
+              </div>
+              <div style={s.toggleRow}>
+                <Switch id={`feat-${product.product_id}`} checked={isFeatured} onCheckedChange={handleToggleFeatured} />
+                <label htmlFor={`feat-${product.product_id}`} style={s.toggleLabel}>{isFeatured ? 'Featured' : 'Normal'}</label>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      {isEditing && <EditProductModal product={product} onUpdated={onUpdated} setIsEditing={setIsEditing} user={user} token={token} />}
+      {isReceivingStock && <ReceiveStockModal product={product} onUpdated={onUpdated} setIsReceivingStock={setIsReceivingStock} token={token} />}
+    </>
+  );
 };
 
 export default ProductCard;

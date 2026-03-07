@@ -1,209 +1,102 @@
-.Update-button{
-    color: cadetblue;
-    background-color: #f5f5f5;
-    border: none;
-    border-radius: 4px;
-    padding: 8px 16px;
-    font-size: 14px;
-    cursor: pointer;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ── Row hover (can't do inline on tr) ── */
+tr.product-card {
+  border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+  transition: background 0.10s;
+}
+tr.product-card:hover {
+  background: rgba(255,255,255,0.04) !important;
+}
+tr.product-card td {
+  vertical-align: middle;
+}
+tr.product-card-mobile {
+  border-bottom: 1px solid rgba(255,255,255,0.07) !important;
 }
 
-.dark .Update-button {
-    background-color: #1f2937;
-    color: #ffffff;
-}
-
-.Delete-button{
-    color: rgb(235, 101, 77);
-    background-color: #f5f5f5;
-}
-
-.dark .Delete-button {
-    background-color: #1f2937;
-    color: rgb(239, 68, 68);
-}
-
-.Delete-button:hover{
-    color: rgb(235, 101, 77);
-    background-color: #dbd8d8;
-}
-
-.dark .Delete-button:hover {
-    background-color: #374151;
-}
-
+/* ── Modal overlay ── */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(0,0,0,0.75);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 16px;
 }
 
-.modal-content {
-  background-color: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  padding: 2rem;
-  border-radius: 1rem;
-  max-width: 900px;
-  width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  position: relative;
-}
-
-.dark .modal-content {
-  background-color: rgba(0, 0, 0, 0.85);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Switch Toggle Styles for Light and Dark Mode */
-
-/* Switch root/track styling */
+/* ── Switch — monochrome only ── */
 button[role="switch"] {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  width: 2.75rem;
-  height: 1.5rem;
-  border-radius: 9999px;
-  transition: background-color 0.2s ease;
-  cursor: pointer;
-  border: none;
-  outline: none;
-  flex-shrink: 0;
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  width: 28px !important;
+  height: 15px !important;
+  min-width: 28px !important;
+  border-radius: 100px !important;
+  cursor: pointer !important;
+  outline: none !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+  transition: background 0.15s !important;
 }
-
-/* Light mode - unchecked (off/Hidden) state */
 button[role="switch"][data-state="unchecked"] {
-  background-color: #dc2626; /* red-600 */
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
 }
-
 button[role="switch"][data-state="unchecked"]:hover {
-  background-color: #b91c1c; /* red-700 */
+  background: rgba(255,255,255,0.12) !important;
 }
-
-/* Light mode - checked (on/Visible) state */
 button[role="switch"][data-state="checked"] {
-  background-color: #16a34a; /* green-600 */
+  background: rgba(255,255,255,0.28) !important;
+  border: 1px solid rgba(255,255,255,0.32) !important;
 }
-
 button[role="switch"][data-state="checked"]:hover {
-  background-color: #15803d; /* green-700 */
+  background: rgba(255,255,255,0.34) !important;
 }
-
-/* Dark mode - unchecked (off/Hidden) state */
-.dark button[role="switch"][data-state="unchecked"] {
-  background-color: #ef4444; /* red-500 */
-}
-
-.dark button[role="switch"][data-state="unchecked"]:hover {
-  background-color: #dc2626; /* red-600 */
-}
-
-/* Dark mode - checked (on/Visible) state */
-.dark button[role="switch"][data-state="checked"] {
-  background-color: #22c55e; /* green-500 */
-}
-
-.dark button[role="switch"][data-state="checked"]:hover {
-  background-color: #16a34a; /* green-600 */
-}
-
-/* Switch thumb (the sliding circle) */
 button[role="switch"] span {
-  pointer-events: none;
-  display: block;
-  width: 1.125rem;
-  height: 1.125rem;
-  background-color: white;
-  border-radius: 9999px;
-  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s ease;
-  transform: translateX(0.125rem);
+  pointer-events: none !important;
+  display: block !important;
+  width: 9px !important;
+  height: 9px !important;
+  border-radius: 100px !important;
+  background: rgba(255,255,255,0.45) !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
+  transition: transform 0.15s cubic-bezier(0.34,1.2,0.64,1), background 0.15s !important;
+  transform: translateX(2px) !important;
+  position: absolute !important;
+  left: 0 !important;
 }
-
-/* Thumb position when checked */
 button[role="switch"][data-state="checked"] span {
-  transform: translateX(1.5rem);
+  transform: translateX(15px) !important;
+  background: rgba(255,255,255,0.92) !important;
 }
-
-/* Focus styles for accessibility */
 button[role="switch"]:focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
+  outline: 1px solid rgba(255,255,255,0.30) !important;
+  outline-offset: 2px !important;
 }
-
-.dark button[role="switch"]:focus-visible {
-  outline-color: #60a5fa;
-}
-
-/* Disabled state */
 button[role="switch"]:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  opacity: 0.25 !important;
+  cursor: not-allowed !important;
 }
 
-/* Label styling - hide the text, make it accessible only */
-label[for*="visibility-toggle"] {
-  font-size: 0;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  position: absolute;
+/* ── Kill old label-hiding hack ── */
+label[for*="visibility-toggle"],
+label[for*="featured-toggle"] {
+  font-size: 9px !important;
+  width: auto !important;
+  height: auto !important;
+  overflow: visible !important;
+  position: static !important;
 }
-
-/* Container for switch - inline with buttons */
-.flex.items-center.space-x-2 {
-  display: inline-flex !important;
-  align-items: center;
-  gap: 0;
-  margin-top: 0;
-  margin-left: 0.5rem;
-  vertical-align: middle;
-}
-
-/* Ensure switch container is inline in the action column */
+.flex.items-center.space-x-2,
 td .flex.items-center.space-x-2 {
-  display: inline-flex !important;
-  margin-left: 0.5rem;
-}
-
-/* Close button styles */
-.modal-close-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(156, 163, 175, 0.2);
-  color: #6b7280;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.modal-close-btn:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-}
-
-.dark .modal-close-btn {
-  background: rgba(75, 85, 99, 0.4);
-  color: #9ca3af;
-}
-
-.dark .modal-close-btn:hover {
-  background: rgba(239, 68, 68, 0.25);
-  color: #f87171;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  margin: 0 !important;
 }

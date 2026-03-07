@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   PackageSearch,
   BookmarkPlus,
@@ -75,11 +75,8 @@ export default function AdminPage() {
   // Handle product found from scanner
   const handleScannerProductFound = (result) => {
     if (result) {
-      // Navigate to products and show that product
       setActiveCategory("Products & Inventory");
       setActiveTab("products");
-      // The products page would need to handle scrolling to the product
-      // For now just close scanner and go to products
       setScannerOpen(false);
     }
   };
@@ -100,14 +97,13 @@ export default function AdminPage() {
         return [{ value: "home", label: "Dashboard", icon: <Home size={16} /> }];
       case "Products & Inventory":
         return [
-          { value: "products",      label: "All Products",   icon: <PackageSearch size={16} /> },
-          { value: "add",           label: "Add Product",    icon: <BookmarkPlus size={16} /> },
-          { value: "delete",        label: "Categories",     icon: <Delete size={16} /> },
-          { value: "uncategorized", label: "Uncategorized",  icon: <HeartCrack size={16} /> },
-          { value: "imei",          label: "IMEI Tracking",  icon: <Barcode size={16} /> },
-          { value: "sku-management", label: "SKU Management", icon: <Barcode size={16} /> },
+          { value: "products",        label: "All Products",    icon: <PackageSearch size={16} /> },
+          { value: "add",             label: "Add Product",     icon: <BookmarkPlus size={16} /> },
+          { value: "delete",          label: "Categories",      icon: <Delete size={16} /> },
+          { value: "uncategorized",   label: "Uncategorized",   icon: <HeartCrack size={16} /> },
+          { value: "imei",            label: "IMEI Tracking",   icon: <Barcode size={16} /> },
+          { value: "sku-management",  label: "SKU Management",  icon: <Barcode size={16} /> },
           { value: "batch-inventory", label: "Batch Inventory", icon: <Package size={16} /> },
-          // Scan SKU is now in All Products page - removed from sidebar
         ];
       case "Orders & Sales":
         return [
@@ -125,7 +121,7 @@ export default function AdminPage() {
           { value: "export-orders",    label: "Export Orders",    icon: <FileDown size={16} /> },
           { value: "export-products",  label: "Export Products",  icon: <FileDown size={16} /> },
           { value: "export-inventory", label: "Export Inventory", icon: <FileDown size={16} /> },
-          { value: "export-batches",  label: "Export Batches",  icon: <FileDown size={16} /> },
+          { value: "export-batches",   label: "Export Batches",   icon: <FileDown size={16} /> },
           { value: "export-users",     label: "Export Users",     icon: <FileDown size={16} /> },
           { value: "import-data",      label: "Import Data",      icon: <Upload size={16} /> },
         ];
@@ -143,12 +139,6 @@ export default function AdminPage() {
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
 
-  /**
-   * Clicking a top-nav category:
-   * • sets the active category
-   * • opens the sidebar (on mobile this slides it in)
-   * • auto-selects the first tab of that category
-   */
   const handleCategoryClick = (category) => {
     setActiveCategory(category);
     setSidebarOpen(true);
@@ -158,9 +148,8 @@ export default function AdminPage() {
 
   const handleTabClick = (tab) => {
     setActiveTab(tab);
-    // On mobile close sidebar after picking a tab so content is visible
     if (window.innerWidth <= 768) setSidebarOpen(false);
-    if (tab === "orders")   resetNewOrdersCount();
+    if (tab === "orders")    resetNewOrdersCount();
     if (tab === "preorders") resetNewPreordersCount();
   };
 
@@ -181,7 +170,6 @@ export default function AdminPage() {
 
   // ─── Effects ────────────────────────────────────────────────────────────────
 
-  // Force dark mode for admin
   useEffect(() => {
     const root = document.documentElement;
     root.classList.add("dark");
@@ -196,7 +184,6 @@ export default function AdminPage() {
     return () => obs.disconnect();
   }, []);
 
-  // Load user + wallpaper
   useEffect(() => {
     const stored = localStorage.getItem("user");
     if (stored) { try { setUser(JSON.parse(stored)); } catch (_) {} }
@@ -257,7 +244,6 @@ export default function AdminPage() {
 
         {/* ── Top Navigation Bar ── */}
         <header className="admin-topbar">
-          {/* Hamburger — visible only on mobile */}
           <button
             className="menu-toggle"
             onClick={() => setSidebarOpen((prev) => !prev)}
@@ -299,11 +285,6 @@ export default function AdminPage() {
 
         <div className="admin-body">
 
-          {/* ── Sidebar ──
-              Always rendered — visibility controlled by the "open" CSS class.
-              On desktop (>768 px) it is always visible when sidebarOpen=true.
-              On mobile  (≤768 px) it slides in/out via translateX.
-          ── */}
           <aside className={`admin-sidebar ${sidebarOpen ? "open" : ""}`}>
             <div className="sidebar-header">
               <span>{activeCategory}</span>
@@ -345,11 +326,11 @@ export default function AdminPage() {
               </div>
 
               <div className="sidebar-user-actions">
+                {/* ← removed inline backgroundColor:#10b981 green */}
                 <button
-                  className="sidebar-action-btn"
+                  className="sidebar-action-btn sidebar-pos-btn"
                   onClick={() => navigate("/pos")}
                   title="Open POS"
-                  style={{ backgroundColor: "#10b981", color: "white" }}
                 >
                   <Package size={18} />
                 </button>
@@ -371,7 +352,6 @@ export default function AdminPage() {
             </div>
           </aside>
 
-          {/* Mobile overlay — tapping outside closes sidebar */}
           {sidebarOpen && (
             <div
               className="sidebar-backdrop"
@@ -590,10 +570,9 @@ export default function AdminPage() {
           </main>
         </div>
       </div>
-      
-      {/* Barcode Scanner Popup */}
+
       {scannerOpen && (
-        <StandaloneBarcodeScanner 
+        <StandaloneBarcodeScanner
           onClose={() => setScannerOpen(false)}
           onProductFound={handleScannerProductFound}
         />
