@@ -1,131 +1,1051 @@
-/* AdminPreorders.css */
+/* ═══════════════════════════════════════════════════════════
+   AdminPreorders.css  —  matches AddProductModal design language
+═══════════════════════════════════════════════════════════ */
 
-/* ── Buttons ── */
-.admin-preorders-container button {
-  background-color: #000000;
-  color: #ffffff;
-  border: 1px solid #000000;
+/* ── Root container ── */
+.admin-preorders-container {
+  padding: 1.5rem;
+  color: var(--text-primary, #fff);
 }
 
-.admin-preorders-container button:hover {
-  background-color: #1f1f1f;
-  color: #ffffff;
+/* ── Page header ── */
+.admin-preorders-page-header {
+  margin-bottom: 1.75rem;
 }
 
-.admin-preorders-container button[class*="destructive"] {
-  background-color: #7f1d1d;
-  border-color: #7f1d1d;
-  color: #fef2f2;
+.admin-preorders-page-header h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  letter-spacing: -0.01em;
 }
 
-.admin-preorders-container button[class*="destructive"]:hover {
-  background-color: #991b1b;
-}
-
-.admin-preorders-container button[class*="outline"] {
-  background-color: transparent;
-  color: rgba(255,255,255,0.8);
-  border: 1px solid rgba(255,255,255,0.25);
-}
-
-.admin-preorders-container button[class*="outline"]:hover {
-  background-color: rgba(255,255,255,0.08);
-  color: #ffffff;
-}
-
-/* ── Status select trigger ── */
-.status-select-trigger {
-  background: rgba(255,255,255,0.08);
-  color: #ffffff;
-  border: 1px solid rgba(255,255,255,0.2);
+.admin-preorders-page-header p {
+  font-size: 0.875rem;
+  opacity: 0.55;
+  margin: 0;
 }
 
 /* ══════════════════════════════════════
-   MOBILE ≤ 768px
+   TAB BAR  (mirrors .add-product-modal-tabs)
+══════════════════════════════════════ */
+.admin-preorders-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0;
+}
+
+.admin-preorders-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px 8px 0 0;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+  position: relative;
+  bottom: -1px;
+}
+
+.admin-preorders-tab-btn:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-preorders-tab-btn.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid transparent;
+}
+
+/* ══════════════════════════════════════
+   TOOLBAR  (search + filter + action)
+══════════════════════════════════════ */
+.admin-preorders-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.admin-preorders-toolbar-left {
+  display: flex;
+  flex: 1;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* Search input wrapper */
+.apre-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+  max-width: 360px;
+}
+
+.apre-search-wrap svg.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.4;
+  pointer-events: none;
+  width: 15px;
+  height: 15px;
+}
+
+.apre-search-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 2.2rem 0 2.2rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border 0.2s, background 0.2s;
+}
+
+.apre-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.apre-search-input:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.apre-search-clear {
+  position: absolute;
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.4);
+  display: flex;
+  padding: 2px;
+  transition: color 0.2s;
+}
+
+.apre-search-clear:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: transparent;
+}
+
+/* Filter select */
+.apre-filter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.apre-filter-wrap svg {
+  opacity: 0.4;
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+}
+
+.apre-filter-select {
+  height: 38px;
+  padding: 0 0.8rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 0.875rem;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  padding-right: 2rem;
+}
+
+.apre-filter-select option {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+/* Primary action button */
+.apre-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 38px;
+  padding: 0 1.1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.apre-btn-primary:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+/* ══════════════════════════════════════
+   CARDS GRID
+══════════════════════════════════════ */
+.apre-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+/* ── Individual card  (glassmorphic) ── */
+.apre-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  padding: 1.1rem 1.2rem;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.apre-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+}
+
+/* Card top row */
+.apre-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.apre-card-title-block {
+  flex: 1;
+  min-width: 0;
+}
+
+.apre-card-name {
+  font-size: 0.97rem;
+  font-weight: 600;
+  margin: 0 0 0.3rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.apre-card-name svg {
+  opacity: 0.5;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+
+.apre-card-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.apre-card-contact-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+}
+
+.apre-card-contact-row svg {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+
+.apre-card-contact-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Card action buttons */
+.apre-card-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.apre-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  padding: 0;
+}
+
+.apre-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.apre-icon-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.apre-icon-btn.vis-on {
+  color: #4ade80;
+}
+
+.apre-icon-btn.vis-off {
+  color: #f87171;
+}
+
+/* Status + date row */
+.apre-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+/* Status badge */
+.apre-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.apre-badge-pending   { background: rgba(234,179,8,0.18);  color: #fbbf24; border: 1px solid rgba(234,179,8,0.3); }
+.apre-badge-contacted { background: rgba(59,130,246,0.18); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+.apre-badge-processing{ background: rgba(168,85,247,0.18); color: #c084fc; border: 1px solid rgba(168,85,247,0.3); }
+.apre-badge-fulfilled { background: rgba(34,197,94,0.18);  color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+.apre-badge-cancelled { background: rgba(239,68,68,0.18);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+.apre-badge-default   { background: rgba(148,163,184,0.15); color: #94a3b8; border: 1px solid rgba(148,163,184,0.2); }
+.apre-badge-variant   { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.1); font-size: 0.7rem; font-weight: 500; text-transform: none; letter-spacing: 0; }
+
+.apre-card-date {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* Info blocks inside card */
+.apre-info-block {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+}
+
+.apre-info-block-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.4;
+  margin-bottom: 0.3rem;
+}
+
+.apre-info-block p {
+  font-size: 0.83rem;
+  margin: 0;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.apre-info-block.total p {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #4ade80;
+}
+
+.apre-info-block.notes {
+  border-left: 2px solid rgba(96, 165, 250, 0.4);
+}
+
+/* Notes editor inside card */
+.apre-notes-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.apre-notes-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.apre-notes-editor-header span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.5;
+}
+
+.apre-notes-editor-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.apre-notes-textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 0.83rem;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.apre-notes-textarea:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.apre-notes-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+/* Status select inside card */
+.apre-status-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding-top: 0.75rem;
+}
+
+.apre-status-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.4;
+  margin-bottom: 0.4rem;
+  display: block;
+}
+
+.apre-status-select {
+  width: 100%;
+  height: 36px;
+  padding: 0 2rem 0 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 0.83rem;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+}
+
+.apre-status-select option {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+/* ══════════════════════════════════════
+   EMPTY STATE
+══════════════════════════════════════ */
+.apre-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem 1rem;
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  text-align: center;
+  gap: 0.6rem;
+}
+
+.apre-empty svg {
+  opacity: 0.25;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 0.5rem;
+}
+
+.apre-empty h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.apre-empty p {
+  font-size: 0.85rem;
+  opacity: 0.45;
+  margin: 0;
+}
+
+/* ══════════════════════════════════════
+   LOADING SPINNER
+══════════════════════════════════════ */
+.apre-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 220px;
+}
+
+.apre-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.08);
+  border-top-color: rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  animation: apre-spin 0.75s linear infinite;
+}
+
+@keyframes apre-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ══════════════════════════════════════
+   PRODUCT CARDS  (Tab 2)
+══════════════════════════════════════ */
+.apre-product-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  padding: 1.1rem 1.2rem;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.apre-product-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+}
+
+.apre-product-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.apre-product-card-title {
+  font-size: 1rem;
+  font-weight: 650;
+  margin: 0 0 0.4rem;
+}
+
+.apre-product-desc {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.apre-variant-row {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.apre-variant-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.83rem;
+  margin-bottom: 0.25rem;
+}
+
+.apre-variant-main span:first-child {
+  font-weight: 600;
+}
+
+.apre-variant-main span:last-child {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.apre-variant-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.apre-variant-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.apre-variant-meta-item.preorder-price {
+  color: #4ade80;
+}
+
+/* ── Color dot swatch ── */
+.apre-color-dot {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.apre-variant-color-name {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+}
+
+.apre-variant-list-item-name {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.apre-more-variants {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+}
+
+/* ══════════════════════════════════════
+   MODAL OVERLAY  (matches AddProductModal)
+══════════════════════════════════════ */
+.apre-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 1.5rem 1rem;
+}
+
+/* sits behind the card, covers the full overlay — click it to dismiss */
+.apre-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+.apre-modal-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  border-radius: 18px;
+  background: rgba(18, 18, 30, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  padding: 2rem;
+}
+
+/* scrollbar inside modal */
+.apre-modal-content::-webkit-scrollbar {
+  width: 5px;
+}
+.apre-modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.apre-modal-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.apre-modal-close {
+  position: absolute;
+  top: 1.1rem;
+  right: 1.1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+  padding: 0;
+}
+
+.apre-modal-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.apre-modal-header {
+  margin-bottom: 1.5rem;
+  padding-right: 2rem;
+}
+
+.apre-modal-header h3 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+}
+
+.apre-modal-header p {
+  font-size: 0.83rem;
+  opacity: 0.45;
+  margin: 0;
+}
+
+/* ── Form inside modal ── */
+.apre-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.apre-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.apre-form-section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.45;
+  margin-bottom: 0.1rem;
+}
+
+.apre-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.apre-form-row.full {
+  grid-template-columns: 1fr;
+}
+
+.apre-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.apre-form-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.6;
+}
+
+.apre-form-label .required {
+  color: #f87171;
+  margin-left: 2px;
+}
+
+.apre-form-input,
+.apre-form-textarea {
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.apre-form-input:focus,
+.apre-form-textarea:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.apre-form-input::placeholder,
+.apre-form-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.apre-form-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* Variant builder box */
+.apre-variant-builder {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+/* Color preview + picker row */
+.apre-color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.apre-color-swatch {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+.apre-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 36px;
+  padding: 0 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.83rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.apre-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.apre-color-selected-text {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 0.15rem;
+}
+
+/* Add variant button */
+.apre-add-variant-btn {
+  width: 100%;
+  height: 38px;
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.apre-add-variant-btn:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Variant list items */
+.apre-variant-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.apre-variant-list-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.apre-variant-list-item-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.apre-variant-list-item-specs {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.apre-variant-list-item-specs .green {
+  color: #4ade80;
+}
+
+.apre-variant-list-item-specs .blue {
+  color: #60a5fa;
+}
+
+/* Form footer */
+.apre-form-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.apre-btn-cancel {
+  height: 38px;
+  padding: 0 1.1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.apre-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.apre-btn-submit {
+  height: 38px;
+  padding: 0 1.4rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.apre-btn-submit:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.apre-btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════
+   MOBILE
 ══════════════════════════════════════ */
 @media (max-width: 768px) {
-
-  /* Container padding */
   .admin-preorders-container {
     padding: 0.75rem 0.5rem;
   }
 
-  /* Single column */
-  .preorders-grid {
+  .admin-preorders-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+    padding-bottom: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-preorders-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-preorders-toolbar-left {
+    flex-direction: column;
+  }
+
+  .apre-search-wrap {
+    max-width: 100%;
+  }
+
+  .apre-filter-wrap {
+    width: 100%;
+  }
+
+  .apre-filter-select {
+    flex: 1;
+    width: 100%;
+  }
+
+  .apre-btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .apre-grid {
     grid-template-columns: 1fr;
-    gap: 0.75rem;
   }
 
-  /* Search section stacks vertically */
-  .search-section {
-    flex-direction: column !important;
-    gap: 0.5rem !important;
+  .apre-form-row {
+    grid-template-columns: 1fr;
   }
 
-  /* Search input full width */
-  .search-section > div.relative {
-    max-width: 100% !important;
-    width: 100%;
-  }
-
-  /* Filter row full width */
-  .search-section > div.flex {
-    width: 100%;
-  }
-
-  /* Status filter select full width */
-  .search-section > div.flex [class*="SelectTrigger"] {
-    width: 100% !important;
-    height: 44px !important;
-    font-size: 0.95rem !important;
-  }
-
-  /* Card: contact info wraps cleanly */
-  .preorder-card .flex-wrap {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 0.25rem !important;
-  }
-
-  /* Status + date row wraps on small screens */
-  .preorder-card .flex.justify-between.items-center {
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  /* Update Status row: label on top, select below */
-  .preorder-card .flex-col.sm\:flex-row {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 0.4rem !important;
-  }
-
-  /* Status select: normal compact height, full width */
-  .preorder-card .w-full.sm\:w-\[180px\],
-  .preorder-card [class*="SelectTrigger"] {
-    width: 100% !important;
-    height: 38px !important;
-    min-height: 38px !important;
-    font-size: 0.875rem !important;
-  }
-
-  /* Edit/Delete buttons: comfortable tap target */
-  .preorder-card .flex.gap-2.flex-shrink-0 button {
-    width: 38px !important;
-    height: 38px !important;
-    padding: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-  }
-
-  /* ScrollArea: don't clip content */
-  .preorders-scroll-area {
-    height: auto !important;
-  }
-
-  .preorders-scroll-area > [data-radix-scroll-area-viewport] {
-    height: auto !important;
-    overflow: visible !important;
+  .apre-modal-content {
+    padding: 1.25rem;
   }
 }
