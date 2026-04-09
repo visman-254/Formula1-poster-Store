@@ -1049,3 +1049,106 @@
     padding: 1.25rem;
   }
 }
+/* Selected items with variant images */
+.apre-selected-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.apre-selected-item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.apre-selected-item:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Variant image preview */
+.apre-variant-preview {
+    flex-shrink: 0;
+    width: 60px;
+    text-align: center;
+}
+
+.apre-variant-preview-image {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.apre-variant-preview-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.apre-variant-preview-placeholder {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.apre-variant-preview-name {
+    font-size: 0.7rem;
+    margin-top: 0.35rem;
+    color: rgba(255, 255, 255, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Selected item details */
+.apre-selected-item-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.apre-selected-item-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.apre-selected-item-specs {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.apre-selected-item-price {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #4ade80;
+}
+
+.apre-no-products {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-align: center;
+    padding: 0.5rem;
+}

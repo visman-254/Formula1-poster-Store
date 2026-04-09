@@ -5,7 +5,6 @@ export const createPreorderWithProducts = async (preorderData, items) => {
     try {
         await connection.beginTransaction();
 
-        // Insert main preorder record
         const [preorderResult] = await connection.execute(
             `INSERT INTO preorders 
             (name, email, phone, user_id, address, city, zipcode, notes, status, total_amount, is_backorder) 
@@ -26,7 +25,6 @@ export const createPreorderWithProducts = async (preorderData, items) => {
 
         const preorderId = preorderResult.insertId;
 
-        // Insert each preordered product
         for (const item of items) {
             await connection.execute(
                 `INSERT INTO preorder_products 
@@ -51,13 +49,9 @@ export const createPreorderWithProducts = async (preorderData, items) => {
 export const getPreorderById = async (preorderId) => {
     try {
         const [preorderRows] = await db.execute(
-            `SELECT p.*, 
-                    GROUP_CONCAT(DISTINCT pp.variant_id) as variant_ids,
-                    GROUP_CONCAT(DISTINCT pp.quantity) as quantities
+            `SELECT p.* 
              FROM preorders p
-             LEFT JOIN preorder_products pp ON p.preorder_id = pp.preorder_id
-             WHERE p.preorder_id = ?
-             GROUP BY p.preorder_id`,
+             WHERE p.preorder_id = ?`,
             [preorderId]
         );
 
@@ -65,9 +59,20 @@ export const getPreorderById = async (preorderId) => {
 
         const preorder = preorderRows[0];
         
-        // Get products for this preorder
         const [productRows] = await db.execute(
-            `SELECT pp.*, pv.color, pv.price, pv.storage, pv.ram, pv.image, pr.title as product_name
+            `SELECT 
+                pp.*, 
+                pv.color, 
+                pv.color_hex,
+                pv.price, 
+                pv.storage, 
+                pv.ram, 
+                pv.image as variant_image,
+                pv.preorder_price,
+                pv.preorder_eta_days,
+                pr.title as product_name,
+                pr.product_id,
+                pr.description
              FROM preorder_products pp
              JOIN product_variants pv ON pp.variant_id = pv.variant_id
              JOIN products pr ON pv.product_id = pr.product_id
@@ -100,9 +105,19 @@ export const getAllPreordersWithProducts = async () => {
                 p.zipcode,
                 p.notes,
                 GROUP_CONCAT(
-                    CONCAT(pr.title, ' (', pv.color, '): ', pp.quantity, 'x @ ', pp.price_at_preorder)
-                    SEPARATOR ' | '
-                ) as product_summary
+                    JSON_OBJECT(
+                        'title', pr.title,
+                        'color', pv.color,
+                        'color_hex', pv.color_hex,
+                        'image', pv.image,
+                        'quantity', pp.quantity,
+                        'price', pp.price_at_preorder,
+                        'storage', pv.storage,
+                        'ram', pv.ram,
+                        'variant_id', pv.variant_id
+                    )
+                    SEPARATOR '||'
+                ) as products_json
             FROM preorders p
             LEFT JOIN preorder_products pp ON p.preorder_id = pp.preorder_id
             LEFT JOIN product_variants pv ON pp.variant_id = pv.variant_id
@@ -111,7 +126,27 @@ export const getAllPreordersWithProducts = async () => {
             ORDER BY p.created_at DESC
         `);
         
-        return rows;
+        // Parse JSON products
+        const parsedRows = rows.map(row => {
+            if (row.products_json) {
+                try {
+                    const products = row.products_json.split('||').map(item => {
+                        // Parse JSON string safely
+                        const cleaned = item.replace(/(\w+):/g, '"$1":');
+                        return JSON.parse(cleaned);
+                    });
+                    row.products = products;
+                } catch (e) {
+                    row.products = [];
+                }
+                delete row.products_json;
+            } else {
+                row.products = [];
+            }
+            return row;
+        });
+        
+        return parsedRows;
     } catch (err) {
         console.error("Error fetching preorders with products:", err);
         return [];
@@ -174,7 +209,6 @@ export const searchPreorders = async (query) => {
     }
 };
 
-// Get all preorder-eligible products (for customer frontend)
 export const getPreorderEligibleProducts = async () => {
     try {
         const [rows] = await db.execute(`
@@ -195,7 +229,6 @@ export const getPreorderEligibleProducts = async () => {
             ORDER BY p.product_id, pv.color
         `);
         
-        // Group by product
         const productMap = new Map();
         for (const row of rows) {
             if (!productMap.has(row.product_id)) {
@@ -231,13 +264,11 @@ export const getPreorderEligibleProducts = async () => {
     }
 };
 
-// Admin function to create preorder products
 export const createPreorderProduct = async (productData) => {
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
-        // Insert product with preorder eligibility
         const [productResult] = await connection.execute(
             `INSERT INTO products 
             (title, description, category_id, is_preorder_eligible, is_visible, is_deleted) 
@@ -246,15 +277,14 @@ export const createPreorderProduct = async (productData) => {
                 productData.title,
                 productData.description || null,
                 productData.category_id || 127,
-                1, // is_preorder_eligible = true
-                1, // is_visible = true
-                0  // is_deleted = false
+                1,
+                1,
+                0
             ]
         );
         
         const productId = productResult.insertId;
 
-        // Insert additional images if provided
         if (productData.additional_images && productData.additional_images.length > 0) {
             for (const imageUrl of productData.additional_images) {
                 await connection.execute(
@@ -264,7 +294,6 @@ export const createPreorderProduct = async (productData) => {
             }
         }
 
-        // Create preorder variants
         for (const variant of productData.variants) {
             await connection.execute(
                 `INSERT INTO product_variants 
@@ -278,14 +307,14 @@ export const createPreorderProduct = async (productData) => {
                     variant.storage || null,
                     variant.ram || null,
                     parseFloat(variant.price) || 0,
-                    0, // buying_price (0 for preorder items)
-                    0, // profit_margin
-                    0, // discount
-                    0, // stock (0 for preorder items)
+                    0,
+                    0,
+                    0,
+                    0,
                     variant.image || null,
                     variant.product_code || null,
                     parseFloat(variant.preorder_price) || parseFloat(variant.price) || 0,
-                    1, // preorder_available = true
+                    1,
                     parseInt(variant.preorder_eta_days) || 14
                 ]
             );
@@ -293,7 +322,6 @@ export const createPreorderProduct = async (productData) => {
 
         await connection.commit();
         
-        // Return the created product
         return {
             product_id: productId,
             title: productData.title,
@@ -310,13 +338,11 @@ export const createPreorderProduct = async (productData) => {
     }
 };
 
-// Admin function to update preorder product
 export const updatePreorderProduct = async (productId, productData) => {
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
-        // Update product
         await connection.execute(
             `UPDATE products 
              SET title = ?, description = ?, category_id = ?
@@ -329,13 +355,11 @@ export const updatePreorderProduct = async (productId, productData) => {
             ]
         );
 
-        // Delete existing images
         await connection.execute(
             `DELETE FROM product_images WHERE product_id = ?`,
             [productId]
         );
 
-        // Insert new images
         if (productData.additional_images && productData.additional_images.length > 0) {
             for (const imageUrl of productData.additional_images) {
                 await connection.execute(
@@ -345,13 +369,11 @@ export const updatePreorderProduct = async (productId, productData) => {
             }
         }
 
-        // Delete existing variants
         await connection.execute(
             `DELETE FROM product_variants WHERE product_id = ?`,
             [productId]
         );
 
-        // Insert updated variants
         for (const variant of productData.variants) {
             await connection.execute(
                 `INSERT INTO product_variants 

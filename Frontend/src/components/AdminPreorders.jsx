@@ -1,5 +1,3 @@
-
-// components/AdminPreorders.jsx
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import { useUser } from "../context/UserContext";
@@ -36,6 +34,45 @@ const STATUS_META = {
 const statusMeta = (s) => STATUS_META[s] || { label: s || "Pending", cls: "apre-badge-default" };
 
 /* ─────────────────────────────────────
+   Variant Image Preview Component
+───────────────────────────────────── */
+const VariantImagePreview = ({ imagePath, variantName, colorHex }) => {
+    const [imageError, setImageError] = useState(false);
+    
+    const imageUrl = imagePath && !imageError 
+        ? (imagePath.startsWith('http') ? imagePath : `${API_BASE}/${imagePath}`)
+        : null;
+    
+    return (
+        <div className="apre-variant-preview">
+            {imageUrl ? (
+                <div className="apre-variant-preview-image">
+                    <img 
+                        src={imageUrl} 
+                        alt={variantName}
+                        onError={() => setImageError(true)}
+                    />
+                </div>
+            ) : (
+                <div 
+                    className="apre-variant-preview-placeholder"
+                    style={{ backgroundColor: colorHex || '#333' }}
+                >
+                    <Package size={24} />
+                </div>
+            )}
+            <div className="apre-variant-preview-name">
+                <span 
+                    className="apre-color-dot" 
+                    style={{ backgroundColor: colorHex || '#888' }}
+                />
+                {variantName}
+            </div>
+        </div>
+    );
+};
+
+/* ─────────────────────────────────────
    Create / Edit Product Modal with Image Upload
 ───────────────────────────────────── */
 const ProductModal = ({
@@ -65,7 +102,6 @@ const ProductModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [variantImagePreview, setVariantImagePreview] = useState(null);
 
-  // Populate form when editing
   useEffect(() => {
     if (editingProduct) {
       setFormData({
@@ -89,7 +125,6 @@ const ProductModal = ({
     }
   }, [editingProduct, isOpen]);
 
-  // Body lock
   useEffect(() => {
     if (isOpen) {
       const scrollY = window.scrollY;
@@ -116,17 +151,6 @@ const ProductModal = ({
     if (e.target === overlayRef.current) onClose();
   };
 
-  const getBorderColor = (color) => {
-    if (!color) return 'rgba(255,255,255,0.2)';
-    const hex = color.replace('#', '');
-    if (hex.length < 6) return 'rgba(255,255,255,0.2)';
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    return brightness > 128 ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.6)';
-  };
-
   const handleColorSelect = (colors) => {
     if (colors?.length) {
       const last = colors[colors.length - 1];
@@ -136,7 +160,6 @@ const ProductModal = ({
     setShowColorPicker(false);
   };
 
-  // Handle variant image upload using existing /upload/images endpoint
   const handleVariantImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -167,7 +190,6 @@ const ProductModal = ({
     }
   };
 
-  // Handle product gallery images upload using existing /upload/images endpoint
   const handleGalleryImagesUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -285,7 +307,6 @@ const ProductModal = ({
         </div>
 
         <form className="apre-form" onSubmit={handleSubmit}>
-          {/* Basic Info */}
           <div className="apre-form-section">
             <div className="apre-form-section-title">Basic Info</div>
 
@@ -317,7 +338,6 @@ const ProductModal = ({
               </div>
             </div>
 
-            {/* Product Gallery Images Upload */}
             <div className="apre-form-row full">
               <div className="apre-form-field">
                 <label className="apre-form-label">Product Gallery Images</label>
@@ -364,12 +384,10 @@ const ProductModal = ({
             </div>
           </div>
 
-          {/* Variants builder */}
           <div className="apre-form-section">
             <div className="apre-form-section-title">Product Variants</div>
 
             <div className="apre-variant-builder">
-              {/* Color picker row */}
               <div className="apre-form-field">
                 <label className="apre-form-label">
                   Color <span className="required">*</span>
@@ -426,7 +444,6 @@ const ProductModal = ({
                 </div>
               </div>
 
-              {/* Variant Image Upload */}
               <div className="apre-form-field">
                 <label className="apre-form-label">Variant Image (Optional)</label>
                 <div className="apre-variant-image-upload">
@@ -474,7 +491,6 @@ const ProductModal = ({
               </button>
             </div>
 
-            {/* Added variants */}
             {formData.variants.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {formData.variants.map((v) => (
@@ -534,7 +550,6 @@ const AdminPreorders = () => {
   const { user, token } = useUser();
   const [activeTab, setActiveTab] = useState("preorders");
 
-  // Preorders
   const [preorders, setPreorders] = useState([]);
   const [preordersLoading, setPreordersLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -542,7 +557,6 @@ const AdminPreorders = () => {
   const [editingNotes, setEditingNotes] = useState(null);
   const [notesText, setNotesText] = useState("");
 
-  // Products
   const [preorderProducts, setPreorderProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -709,7 +723,6 @@ const AdminPreorders = () => {
         </button>
       </div>
 
-      {/* TAB 1 — Customer Preorders */}
       {activeTab === "preorders" && (
         <>
           <div className="admin-preorders-toolbar">
@@ -806,9 +819,35 @@ const AdminPreorders = () => {
                       </span>
                     </div>
 
+                    {/* Selected Items with Images */}
                     <div className="apre-info-block">
-                      <div className="apre-info-block-label">Products</div>
-                      <p>{preorder.product_summary || "No products"}</p>
+                      <div className="apre-info-block-label">Selected Items</div>
+                      <div className="apre-selected-items">
+                        {preorder.products && preorder.products.length > 0 ? (
+                          preorder.products.map((product, idx) => (
+                            <div key={idx} className="apre-selected-item">
+                              <VariantImagePreview 
+                                imagePath={product.variant_image || product.image}
+                                variantName={`${product.product_name} - ${product.color}`}
+                                colorHex={product.color_hex}
+                              />
+                              <div className="apre-selected-item-details">
+                                <div className="apre-selected-item-title">{product.product_name}</div>
+                                <div className="apre-selected-item-specs">
+                                  {product.color && <span>Color: {product.color}</span>}
+                                  {product.storage && <span>Storage: {product.storage}</span>}
+                                  {product.ram && <span>RAM: {product.ram}</span>}
+                                </div>
+                                <div className="apre-selected-item-price">
+                                  Qty: {product.quantity} × {formatCurrency(product.price_at_preorder)}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="apre-no-products">{preorder.product_summary || "No products"}</p>
+                        )}
+                      </div>
                     </div>
 
                     {preorder.total_amount && (
@@ -877,7 +916,6 @@ const AdminPreorders = () => {
         </>
       )}
 
-      {/* TAB 2 — Preorder Products */}
       {activeTab === "products" && (
         <>
           <div className="admin-preorders-toolbar">
@@ -960,7 +998,6 @@ const AdminPreorders = () => {
                     <p className="apre-product-desc">{product.description}</p>
                   )}
 
-                  {/* Show product gallery thumbnails */}
                   {product.additional_images && product.additional_images.length > 0 && (
                     <div className="apre-product-gallery-thumbs">
                       {product.additional_images.slice(0, 3).map((img, idx) => (
