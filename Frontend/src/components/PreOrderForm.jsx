@@ -5,6 +5,18 @@ import './PreOrderForm.css';
 import { toast } from "sonner";
 import { useUser } from '../context/UserContext';
 
+// Helper to get full image URL (mimics formatProductImage from backend)
+const getFullImageUrl = (imagePath) => {
+  if (!imagePath) return null;
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  // Remove leading slash if present
+  const cleanPath = imagePath.replace(/^\/+/, '');
+  return `${API_BASE}/${cleanPath}`;
+};
+
 /* ── Returns true if a CSS color string is perceptually dark ── */
 const isDarkColor = (color) => {
   if (!color) return false;
@@ -46,7 +58,7 @@ const resolveColor = (colorName, colorHex) => {
   return colorMap[colorName?.toLowerCase().trim()] || '#888888';
 };
 
-/* ── Swatch ring style (mirrors ProductDetail logic) ── */
+/* ── Swatch ring style ── */
 const getSwatchStyle = (colorHex, isSelected) => {
   const dark = isDarkColor(colorHex);
   const base = { background: colorHex || '#ccc' };
@@ -63,7 +75,7 @@ const createRipple = (e, container) => {
   const rect = container.getBoundingClientRect();
   const size = Math.max(rect.width, rect.height) * 2.2;
   const x = e.clientX - rect.left - size / 2;
-  const y = e.clientY - rect.top  - size / 2;
+  const y = e.clientY - rect.top - size / 2;
   const ripple = document.createElement('span');
   ripple.className = 'po-ripple';
   ripple.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px`;
@@ -72,25 +84,112 @@ const createRipple = (e, container) => {
 };
 
 /* ════════════════════════════════════════════════════════════
-   PRODUCT CARD  — mirrors ProductDetail gallery + details
+   PRODUCT CARD — Fixed image handling (matching ProductDetail)
 ════════════════════════════════════════════════════════════ */
 const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) => {
-  const [selectedColor, setSelectedColor]     = useState(null);
+  const [selectedColor, setSelectedColor] = useState(null);
   const [selectedStorage, setSelectedStorage] = useState(null);
-  const [selectedRam, setSelectedRam]         = useState(null);
+  const [selectedRam, setSelectedRam] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isLightboxOpen, setIsLightboxOpen]   = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [addedToPreorder, setAddedToPreorder] = useState(false);
+  const [galleryImages, setGalleryImages] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(true);
+
+  // Fetch gallery images from API (like ProductDetail does)
+  useEffect(() => {
+    const fetchGalleryImages = async () => {
+      if (!product?.product_id) {
+        setGalleryLoading(false);
+        return;
+      }
+      
+      try {
+        setGalleryLoading(true);
+        // Try to fetch from gallery endpoint first
+        const res = await axios.get(`${API_BASE}/api/gallery/${product.product_id}/images`);
+        
+        if (res.data?.length > 0) {
+          // Build color-to-image map from gallery
+          const colorImageMap = new Map();
+          res.data.forEach(img => {
+            const color = img.color?.toLowerCase().trim();
+            if (color && !colorImageMap.has(color)) {
+              colorImageMap.set(color, getFullImageUrl(img.image_url));
+            }
+          });
+          
+          // Get unique images
+          const images = colorImageMap.size > 0
+            ? Array.from(colorImageMap.values())
+            : [...new Set(res.data.map(img => getFullImageUrl(img.image_url)))];
+          
+          setGalleryImages(images);
+        } else {
+          throw new Error("No gallery images found");
+        }
+      } catch (err) {
+        console.warn("Falling back to variant images:", err);
+        // Fallback to variant images
+        const colorImageMap = new Map();
+        if (product.variants) {
+          product.variants.forEach(variant => {
+            const color = variant.color?.toLowerCase().trim();
+            if (color && variant.image && !colorImageMap.has(color)) {
+              colorImageMap.set(color, getFullImageUrl(variant.image));
+            }
+          });
+        }
+        
+        let images = Array.from(colorImageMap.values());
+        
+        // Also add additional_images if they exist
+        if (product.additional_images && product.additional_images.length > 0) {
+          product.additional_images.forEach(img => {
+            const fullUrl = getFullImageUrl(img);
+            if (!images.includes(fullUrl)) {
+              images.push(fullUrl);
+            }
+          });
+        }
+        
+        // Add primary image if available
+        if (product.primaryImage && !images.includes(getFullImageUrl(product.primaryImage))) {
+          images.push(getFullImageUrl(product.primaryImage));
+        }
+        
+        setGalleryImages(images);
+      } finally {
+        setGalleryLoading(false);
+      }
+    };
+    
+    fetchGalleryImages();
+  }, [product?.product_id, product?.variants, product?.additional_images, product?.primaryImage]);
+
+  // Build color-to-image map from gallery (matching ProductDetail logic)
+  const colorImageMap = useMemo(() => {
+    const map = new Map();
+    if (!product?.variants || !galleryImages.length) return map;
+    
+    const uniqueColors = [...new Set(product.variants.map(v => v.color).filter(c => c))];
+    uniqueColors.forEach((color, index) => {
+      if (galleryImages[index]) {
+        map.set(color.toLowerCase().trim(), galleryImages[index]);
+      }
+    });
+    return map;
+  }, [product?.variants, galleryImages]);
 
   /* ── Seed first variant on mount ── */
   useEffect(() => {
     if (product.variants?.length > 0) {
       const first = product.variants[0];
       setSelectedVariant(first);
-      if (first.color)   setSelectedColor(first.color);
+      if (first.color) setSelectedColor(first.color);
       if (first.storage) setSelectedStorage(first.storage);
-      if (first.ram)     setSelectedRam(first.ram);
+      if (first.ram) setSelectedRam(first.ram);
     }
   }, [product]);
 
@@ -100,32 +199,12 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
       const v = product.variants?.find(v => v.variant_id === selectedVariantId);
       if (v) {
         setSelectedVariant(v);
-        if (v.color)   setSelectedColor(v.color);
+        if (v.color) setSelectedColor(v.color);
         if (v.storage) setSelectedStorage(v.storage);
-        if (v.ram)     setSelectedRam(v.ram);
+        if (v.ram) setSelectedRam(v.ram);
       }
     }
   }, [selectedVariantId]);
-
-  /* ── Build gallery from variant images ── */
-  const galleryImages = useMemo(() => {
-    const map = new Map();
-    product.variants?.forEach(v => {
-      const key = v.color?.toLowerCase().trim() || 'default';
-      if (!map.has(key) && v.image) map.set(key, v.image);
-    });
-    return map.size > 0 ? Array.from(map.values()) : [];
-  }, [product.variants]);
-
-  /* ── Color → gallery index map ── */
-  const colorImageMap = useMemo(() => {
-    const map = new Map();
-    const uniqueColors = [...new Set(product.variants?.map(v => v.color) ?? [])];
-    uniqueColors.forEach((color, i) => {
-      if (galleryImages[i]) map.set(color?.toLowerCase().trim(), galleryImages[i]);
-    });
-    return map;
-  }, [product.variants, galleryImages]);
 
   /* ── Derived option lists ── */
   const uniqueColors = useMemo(() =>
@@ -141,7 +220,7 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
   }, [product.variants, selectedColor]);
 
   const uniqueRams = useMemo(() => {
-    const byColor   = selectedColor   ? product.variants?.filter(v => v.color === selectedColor)   : product.variants ?? [];
+    const byColor = selectedColor ? product.variants?.filter(v => v.color === selectedColor) : product.variants ?? [];
     const byStorage = selectedStorage ? byColor.filter(v => v.storage === selectedStorage) : byColor;
     return [...new Set(byStorage.map(v => v.ram).filter(Boolean))]
       .sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
@@ -150,25 +229,25 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
   /* ── Update selectedVariant when filters change ── */
   const filteredVariants = useMemo(() =>
     (product.variants ?? []).filter(v => {
-      if (selectedColor   && v.color   !== selectedColor)   return false;
+      if (selectedColor && v.color !== selectedColor) return false;
       if (selectedStorage && v.storage !== selectedStorage) return false;
-      if (selectedRam     && v.ram     !== selectedRam)     return false;
+      if (selectedRam && v.ram !== selectedRam) return false;
       return true;
     }),
     [product.variants, selectedColor, selectedStorage, selectedRam]);
 
   useEffect(() => {
     if (filteredVariants.length > 0 &&
-        (!selectedVariant || !filteredVariants.find(v => v.variant_id === selectedVariant.variant_id))) {
+      (!selectedVariant || !filteredVariants.find(v => v.variant_id === selectedVariant.variant_id))) {
       setSelectedVariant(filteredVariants[0]);
     }
   }, [filteredVariants]);
 
   /* ── Lightbox helpers ── */
-  const openLightbox  = useCallback((i) => { setActiveImageIndex(i); setIsLightboxOpen(true);  }, []);
-  const closeLightbox = useCallback(()  => { setIsLightboxOpen(false); }, []);
-  const nextImage     = useCallback((e) => { e?.stopPropagation(); setActiveImageIndex(p => (p + 1) % galleryImages.length); }, [galleryImages.length]);
-  const prevImage     = useCallback((e) => { e?.stopPropagation(); setActiveImageIndex(p => (p - 1 + galleryImages.length) % galleryImages.length); }, [galleryImages.length]);
+  const openLightbox = useCallback((i) => { setActiveImageIndex(i); setIsLightboxOpen(true); }, []);
+  const closeLightbox = useCallback(() => { setIsLightboxOpen(false); }, []);
+  const nextImage = useCallback((e) => { e?.stopPropagation(); setActiveImageIndex(p => (p + 1) % galleryImages.length); }, [galleryImages.length]);
+  const prevImage = useCallback((e) => { e?.stopPropagation(); setActiveImageIndex(p => (p - 1 + galleryImages.length) % galleryImages.length); }, [galleryImages.length]);
 
   useEffect(() => {
     if (!isLightboxOpen) return;
@@ -185,12 +264,12 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
   /* ── Price helpers ── */
   const { originalPrice, hasDiscount } = useMemo(() => {
     if (!selectedVariant) return { originalPrice: 0, hasDiscount: false };
-    const price    = Number(selectedVariant.price)    || 0;
+    const price = Number(selectedVariant.price) || 0;
     const discount = Number(selectedVariant.discount) || 0;
     return { originalPrice: price + discount, hasDiscount: discount > 0 };
   }, [selectedVariant]);
 
-  /* ── Color‑change helper ── */
+  /* ── Color-change helper ── */
   const handleColorChange = (color) => {
     setSelectedColor(color);
     const withStorage = product.variants?.find(v => v.color === color && v.storage === selectedStorage);
@@ -202,7 +281,7 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
       if (first) {
         setSelectedVariant(first);
         if (first.storage) setSelectedStorage(first.storage);
-        if (first.ram)     setSelectedRam(first.ram);
+        if (first.ram) setSelectedRam(first.ram);
       }
     }
   };
@@ -215,16 +294,31 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
     setTimeout(() => setAddedToPreorder(false), 2000);
   };
 
-  const isSelected = selectedVariantId === selectedVariant?.variant_id ||
-    Object.prototype.hasOwnProperty.call({}, selectedVariantId); // will be driven by parent
-
-  /* ── Main image ── */
+  /* ── Main image (matching ProductDetail logic) ── */
   const mainImage = useMemo(() => {
-    const key = selectedColor?.toLowerCase().trim();
-    return (key && colorImageMap.has(key))
-      ? colorImageMap.get(key)
-      : selectedVariant?.image || null;
-  }, [selectedColor, colorImageMap, selectedVariant]);
+    const colorKey = selectedColor?.toLowerCase().trim();
+    if (colorKey && colorImageMap.has(colorKey)) {
+      return colorImageMap.get(colorKey);
+    }
+    // Fallback to variant image or first gallery image
+    const variantImage = selectedVariant?.image ? getFullImageUrl(selectedVariant.image) : null;
+    if (variantImage) return variantImage;
+    return galleryImages[0] || null;
+  }, [selectedColor, colorImageMap, selectedVariant, galleryImages]);
+
+  if (galleryLoading && !galleryImages.length) {
+    return (
+      <div className="po-pd-card">
+        <div className="po-pd-left">
+          <div className="po-main-image-wrap">
+            <div className="po-image-placeholder">
+              <span>Loading images...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -242,13 +336,12 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
                 loading="eager"
               />
             ) : (
-              /* ── Placeholder when no image ── */
               <div className="po-image-placeholder" onClick={() => {}}>
                 <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="64" height="64" rx="12" fill="currentColor" fillOpacity="0.06"/>
-                  <path d="M20 44l8-10 6 7 4-5 6 8H20z" fill="currentColor" fillOpacity="0.15"/>
-                  <circle cx="38" cy="26" r="4" fill="currentColor" fillOpacity="0.2"/>
-                  <rect x="12" y="12" width="40" height="40" rx="8" stroke="currentColor" strokeOpacity="0.2" strokeWidth="1.5" strokeDasharray="4 3"/>
+                  <rect width="64" height="64" rx="12" fill="currentColor" fillOpacity="0.06" />
+                  <path d="M20 44l8-10 6 7 4-5 6 8H20z" fill="currentColor" fillOpacity="0.15" />
+                  <circle cx="38" cy="26" r="4" fill="currentColor" fillOpacity="0.2" />
+                  <rect x="12" y="12" width="40" height="40" rx="8" stroke="currentColor" strokeOpacity="0.2" strokeWidth="1.5" strokeDasharray="4 3" />
                 </svg>
                 <span>No image available</span>
               </div>
@@ -259,15 +352,12 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
           {galleryImages.length > 1 && (
             <div className="po-thumb-strip">
               {galleryImages.map((url, i) => {
-                const uniqueColorsLocal = [...new Set(product.variants?.map(v => v.color) ?? [])];
-                const isActive = selectedColor &&
-                  colorImageMap.get(selectedColor.toLowerCase().trim()) === url;
+                const isActive = mainImage === url;
                 return (
                   <button
                     key={i}
                     onClick={() => {
-                      const clickedColor = uniqueColorsLocal[i];
-                      if (clickedColor) handleColorChange(clickedColor);
+                      setActiveImageIndex(i);
                       openLightbox(i);
                     }}
                     className={`po-thumb-btn${isActive ? ' po-thumb-active' : ''}`}
@@ -288,8 +378,6 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
 
         {/* ── RIGHT: Details ── */}
         <div className="po-pd-right">
-
-          {/* Title */}
           <div className="po-title-row">
             <h3 className="po-product-title">{product.title}</h3>
           </div>
@@ -300,7 +388,6 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
 
           <div className="po-section-rule" />
 
-          {/* Price */}
           {selectedVariant && (
             <div className="po-price-block">
               {hasDiscount ? (
@@ -319,21 +406,17 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
             </div>
           )}
 
-          {/* ETA */}
           {selectedVariant?.preorder_eta_days && (
             <div className="po-eta-row">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+                <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
               </svg>
               <span>Est. {selectedVariant.preorder_eta_days} days until available</span>
             </div>
           )}
 
-          {/* Variants */}
           {product.variants?.length > 0 && (
             <div className="po-variants-section">
-
-              {/* Colors */}
               {uniqueColors.length > 0 && (
                 <div className="po-variant-group">
                   <p className="po-variant-label">
@@ -354,7 +437,7 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
                         >
                           {isSel && (
                             <svg viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
                           )}
                         </button>
@@ -364,7 +447,6 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
                 </div>
               )}
 
-              {/* Storage */}
               {uniqueStorages.length > 0 && (
                 <div className="po-variant-group">
                   <p className="po-variant-label">Storage</p>
@@ -392,7 +474,6 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
                 </div>
               )}
 
-              {/* RAM */}
               {uniqueRams.length > 0 && (
                 <div className="po-variant-group">
                   <p className="po-variant-label">RAM</p>
@@ -400,7 +481,7 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
                     {uniqueRams.map((ram) => {
                       const isSel = selectedRam === ram;
                       const matchV = product.variants?.find(v =>
-                        (!selectedColor   || v.color   === selectedColor) &&
+                        (!selectedColor || v.color === selectedColor) &&
                         (!selectedStorage || v.storage === selectedStorage) &&
                         v.ram === ram);
                       return (
@@ -422,7 +503,6 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
 
           <div className="po-section-rule" />
 
-          {/* Add to Pre-order button */}
           <button
             className={`po-atc-btn${addedToPreorder ? ' po-atc-btn-success' : (selectedVariantId === selectedVariant?.variant_id ? ' po-atc-btn-selected' : '')}`}
             onClick={handleAddToPreorder}
@@ -432,30 +512,30 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
             {addedToPreorder ? (
               <>
                 <svg viewBox="0 0 20 20" fill="currentColor" className="po-atc-icon">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
                 Added to Pre-order
               </>
             ) : selectedVariantId === selectedVariant?.variant_id ? (
               <>
                 <svg viewBox="0 0 20 20" fill="currentColor" className="po-atc-icon">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
                 In Your Pre-order
               </>
             ) : (
               <>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="po-atc-icon">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
-                  <line x1="3" y1="6" x2="21" y2="6"/>
-                  <path d="M16 10a4 4 0 01-8 0"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <path d="M16 10a4 4 0 01-8 0" />
                 </svg>
                 Reserve This
               </>
             )}
           </button>
 
-          {/* Color variant mini-grid (only when 2+ colors) */}
+          {/* Color variant grid */}
           {uniqueColors.length > 1 && (
             <div className="po-color-variants-section">
               <p className="po-variant-label">Available Colors</p>
@@ -463,6 +543,7 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
                 {uniqueColors.map((color) => {
                   const variant = product.variants?.find(v => v.color === color);
                   const isSel = selectedColor === color;
+                  const colorImage = variant?.image ? getFullImageUrl(variant.image) : (colorImageMap.get(color?.toLowerCase().trim()) || null);
                   return (
                     <button
                       key={color}
@@ -471,9 +552,9 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
                       aria-label={`Select ${color}`}
                     >
                       <div className="po-color-variant-img-wrap">
-                        {variant?.image ? (
+                        {colorImage ? (
                           <img
-                            src={variant.image}
+                            src={colorImage}
                             alt={`${product.title} – ${color}`}
                             loading="lazy"
                             onError={(e) => { e.target.src = '/fallback.jpg'; e.target.onerror = null; }}
@@ -491,7 +572,7 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
                       {isSel && (
                         <div className="po-color-variant-check">
                           <svg viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         </div>
                       )}
@@ -509,19 +590,19 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
         <div className="po-lightbox" onClick={closeLightbox} role="dialog" aria-modal="true">
           <button className="po-lb-close" onClick={closeLightbox} aria-label="Close">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
           {galleryImages.length > 1 && (
             <>
               <button className="po-lb-nav po-lb-prev" onClick={prevImage} aria-label="Previous">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
               <button className="po-lb-nav po-lb-next" onClick={nextImage} aria-label="Next">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </button>
             </>
@@ -543,31 +624,30 @@ const PreorderProductCard = ({ product, selectedVariantId, onVariantSelect }) =>
 };
 
 /* ════════════════════════════════════════════════════════════
-   MAIN COMPONENT
+   MAIN COMPONENT (unchanged from your version)
 ════════════════════════════════════════════════════════════ */
 const PreOrderForm = () => {
   const { user } = useUser();
   const pageRef = useRef(null);
 
   const [formData, setFormData] = useState({
-    name:  user?.username || '',
-    email: user?.email    || '',
+    name: user?.username || '',
+    email: user?.email || '',
     phone: ''
   });
 
-  const [preorderProducts, setPreorderProducts]   = useState([]);
-  const [selectedProducts, setSelectedProducts]   = useState({});
-  const [loading, setLoading]                     = useState(false);
-  const [productsLoading, setProductsLoading]     = useState(true);
-  const [error, setError]                         = useState('');
-  const [success, setSuccess]                     = useState(false);
-  const [cartOpen, setCartOpen]                   = useState(false);
+  const [preorderProducts, setPreorderProducts] = useState([]);
+  const [selectedProducts, setSelectedProducts] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
 
-  /* ── Carousel state ── */
   const [activeIndex, setActiveIndex] = useState(0);
-  const [atStart, setAtStart]         = useState(true);
-  const [atEnd, setAtEnd]             = useState(false);
-  const trackRef                      = useRef(null);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(false);
+  const trackRef = useRef(null);
 
   useEffect(() => { fetchPreorderProducts(); }, []);
 
@@ -577,7 +657,6 @@ const PreOrderForm = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  /* ── Carousel scroll tracking ── */
   useEffect(() => {
     const track = trackRef.current;
     if (!track || preorderProducts.length === 0) return;
@@ -613,7 +692,16 @@ const PreOrderForm = () => {
   const fetchPreorderProducts = async () => {
     try {
       const { data } = await axios.get(`${API_BASE}/api/preorder-products`);
-      setPreorderProducts(data);
+      // Process images to full URLs
+      const processedData = data.map(product => ({
+        ...product,
+        additional_images: product.additional_images?.map(img => getFullImageUrl(img)) || [],
+        variants: product.variants?.map(variant => ({
+          ...variant,
+          image: variant.image ? getFullImageUrl(variant.image) : null
+        })) || []
+      }));
+      setPreorderProducts(processedData);
     } catch (err) {
       if (err.response?.status === 401) {
         setError('Authentication required. Please log in to view preorder products.');
@@ -630,7 +718,6 @@ const PreOrderForm = () => {
     }
   };
 
-  /* Toggle a variant in/out of the selection */
   const handleVariantSelect = (variantId, e) => {
     if (pageRef.current && e) createRipple(e, pageRef.current);
     setSelectedProducts(prev => ({ ...prev, [variantId]: !prev[variantId] }));
@@ -642,7 +729,7 @@ const PreOrderForm = () => {
     if (error) setError('');
   };
 
-  const cartCount    = Object.values(selectedProducts).filter(Boolean).length;
+  const cartCount = Object.values(selectedProducts).filter(Boolean).length;
   const hasSelection = cartCount > 0;
 
   const getCartItems = () =>
@@ -683,12 +770,12 @@ const PreOrderForm = () => {
 
     try {
       await axios.post(`${API_BASE}/api/preorders`, {
-        name:    formData.name,
-        email:   formData.email || '',
-        phone:   formData.phone,
+        name: formData.name,
+        email: formData.email || '',
+        phone: formData.phone,
         address: null, city: null, zipcode: null,
         user_id: user?.id || null,
-        items:   selectedItems
+        items: selectedItems
       });
 
       toast.success("Interest registered!", {
@@ -709,7 +796,6 @@ const PreOrderForm = () => {
     }
   };
 
-  /* ── Loading skeleton ── */
   if (productsLoading) {
     return (
       <div className="preorder-page-wrapper">
@@ -725,8 +811,6 @@ const PreOrderForm = () => {
   return (
     <div className="preorder-page-wrapper" ref={pageRef}>
       <div className="preorder-form-container po-wide-container">
-
-        {/* ── Page header ── */}
         <div className="po-page-header">
           <nav className="po-breadcrumb">
             <span>Home</span>
@@ -739,7 +823,6 @@ const PreOrderForm = () => {
           </p>
         </div>
 
-        {/* ── Feedback ── */}
         {success && (
           <div className="success-message" style={{ marginBottom: 32 }}>
             <div className="success-icon">✓</div>
@@ -751,20 +834,17 @@ const PreOrderForm = () => {
         )}
         {error && !cartOpen && <div className="error-message" style={{ marginBottom: 24 }}>{error}</div>}
 
-        {/* ── Product carousel ── */}
         {preorderProducts.length === 0 ? (
           <div className="preorder-card">
             <p className="no-products">No preorder products available right now. Check back soon.</p>
           </div>
         ) : (
           <>
-            {/* count label */}
             <p className="po-carousel-count">
               {activeIndex + 1} <span>of {preorderProducts.length}</span>
             </p>
 
             <div className={`po-carousel-outer${atStart ? ' po-at-start' : ''}${atEnd ? ' po-at-end' : ''}`}>
-              {/* prev button */}
               <button
                 className="po-nav-btn po-nav-btn-prev"
                 onClick={goPrev}
@@ -772,11 +852,10 @@ const PreOrderForm = () => {
                 aria-label="Previous product"
               >
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
 
-              {/* scrollable track */}
               <div className="po-products-list" ref={trackRef}>
                 {preorderProducts.map((product, idx) => {
                   const selectedVariantIdForProduct = product.variants
@@ -806,7 +885,6 @@ const PreOrderForm = () => {
                 })}
               </div>
 
-              {/* next button */}
               <button
                 className="po-nav-btn po-nav-btn-next"
                 onClick={goNext}
@@ -814,17 +892,16 @@ const PreOrderForm = () => {
                 aria-label="Next product"
               >
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </button>
             </div>
 
-            {/* ── Swipe hint + dot indicators ── */}
             <div className="po-swipe-hint">
               {!atStart && (
                 <span className="po-swipe-arrow po-arrow-left" aria-hidden="true">
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                   </svg>
                 </span>
               )}
@@ -845,7 +922,7 @@ const PreOrderForm = () => {
               {!atEnd && (
                 <span className="po-swipe-arrow" aria-hidden="true">
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </span>
               )}
@@ -859,7 +936,6 @@ const PreOrderForm = () => {
         </p>
       </div>
 
-      {/* ══ FLOATING CART BUTTON ══ */}
       {hasSelection && (
         <button
           className="cart-fab"
@@ -867,19 +943,17 @@ const PreOrderForm = () => {
           aria-label="Open pre-order cart"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <path d="M16 10a4 4 0 01-8 0"/>
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 01-8 0" />
           </svg>
           <span className="cart-badge">{cartCount}</span>
         </button>
       )}
 
-      {/* ══ CART DRAWER OVERLAY ══ */}
       {cartOpen && (
         <div className="cart-overlay" onClick={() => setCartOpen(false)}>
           <div className="cart-drawer" onClick={e => e.stopPropagation()}>
-
             <div className="cart-drawer-header">
               <div>
                 <span className="cart-drawer-label">Pre-order</span>
@@ -887,7 +961,7 @@ const PreOrderForm = () => {
               </div>
               <button className="cart-close-btn" onClick={() => setCartOpen(false)} aria-label="Close cart">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
@@ -923,24 +997,24 @@ const PreOrderForm = () => {
                 <div className="form-group">
                   <label htmlFor="d-name">Full Name <span className="required">*</span></label>
                   <input type="text" id="d-name" name="name" value={formData.name}
-                    onChange={handleChange} required disabled={loading} placeholder="Your name"/>
+                    onChange={handleChange} required disabled={loading} placeholder="Your name" />
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="d-email">Email Address</label>
                   <input type="email" id="d-email" name="email" value={formData.email}
-                    onChange={handleChange} disabled={loading} placeholder="your@email.com"/>
+                    onChange={handleChange} disabled={loading} placeholder="your@email.com" />
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="d-phone">Phone Number <span className="required">*</span></label>
                   <input type="tel" id="d-phone" name="phone" value={formData.phone}
-                    onChange={handleChange} required disabled={loading} placeholder="+254 7XX XXX XXX"/>
+                    onChange={handleChange} required disabled={loading} placeholder="+254 7XX XXX XXX" />
                 </div>
 
                 <button type="submit" className="submit-btn" disabled={loading}>
                   {loading ? (
-                    <><span className="spinner"/> Submitting...</>
+                    <><span className="spinner" /> Submitting...</>
                   ) : (
                     `Show Interest${cartCount > 1 ? ` (${cartCount} products)` : ''}`
                   )}

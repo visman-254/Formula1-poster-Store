@@ -200,7 +200,6 @@ export const searchPreorders = async (req, res) => {
     }
 };
 
-// ===== ADD THIS FUNCTION =====
 // Admin: Create a new preorder product
 export const createPreorderProduct = async (req, res) => {
     try {
@@ -209,7 +208,7 @@ export const createPreorderProduct = async (req, res) => {
             return res.status(403).json({ error: "Admin only" });
         }
 
-        const { title, description, category_id, variants } = req.body;
+        const { title, description, category_id, variants, additional_images } = req.body;
 
         if (!title) {
             return res.status(400).json({
@@ -228,7 +227,8 @@ export const createPreorderProduct = async (req, res) => {
             title,
             description,
             category_id: category_id || 127,
-            variants
+            variants,
+            additional_images: additional_images || []
         });
 
         res.status(201).json({

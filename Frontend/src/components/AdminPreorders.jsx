@@ -1,3 +1,4 @@
+
 // components/AdminPreorders.jsx
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
@@ -5,7 +6,7 @@ import { useUser } from "../context/UserContext";
 import {
   X, Calendar, Edit, Trash2,
   Search, Filter, Plus, Package, Eye, EyeOff,
-  DollarSign, Palette
+  DollarSign, Palette, Image as ImageIcon, Upload
 } from "lucide-react";
 import ColorPickerModal from "./ColorPickerModal";
 import API_BASE from "../config";
@@ -35,7 +36,7 @@ const STATUS_META = {
 const statusMeta = (s) => STATUS_META[s] || { label: s || "Pending", cls: "apre-badge-default" };
 
 /* ─────────────────────────────────────
-   Create / Edit Product Modal
+   Create / Edit Product Modal with Image Upload
 ───────────────────────────────────── */
 const ProductModal = ({
   isOpen, onClose, editingProduct,
@@ -43,6 +44,8 @@ const ProductModal = ({
   onSaved,
 }) => {
   const overlayRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const variantFileInputRef = useRef(null);
 
   const blankVariant = {
     color: "", color_hex: "", storage: "", ram: "",
@@ -53,11 +56,14 @@ const ProductModal = ({
   const [formData, setFormData] = useState({
     title: "", description: "", category_id: "", variants: [],
   });
-
+  
+  const [productImages, setProductImages] = useState([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
   const [currentVariant, setCurrentVariant] = useState(blankVariant);
   const [selectedColorHex, setSelectedColorHex] = useState("");
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [variantImagePreview, setVariantImagePreview] = useState(null);
 
   // Populate form when editing
   useEffect(() => {
@@ -73,15 +79,17 @@ const ProductModal = ({
           preorder_price: v.preorder_price?.toString() || v.price.toString(),
         })),
       });
+      setProductImages(editingProduct.additional_images || []);
       setSelectedColorHex("");
     } else {
       setFormData({ title: "", description: "", category_id: "", variants: [] });
+      setProductImages([]);
       setCurrentVariant(blankVariant);
       setSelectedColorHex("");
     }
   }, [editingProduct, isOpen]);
 
-  // Body lock (same pattern as AddProductModal)
+  // Body lock
   useEffect(() => {
     if (isOpen) {
       const scrollY = window.scrollY;
@@ -108,7 +116,6 @@ const ProductModal = ({
     if (e.target === overlayRef.current) onClose();
   };
 
-  // Helper: Determine if color is light or dark for adaptive border
   const getBorderColor = (color) => {
     if (!color) return 'rgba(255,255,255,0.2)';
     const hex = color.replace('#', '');
@@ -129,6 +136,75 @@ const ProductModal = ({
     setShowColorPicker(false);
   };
 
+  // Handle variant image upload using existing /upload/images endpoint
+  const handleVariantImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('images', file);
+    
+    try {
+      const response = await axios.post(`${API_BASE}/api/upload/images`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      if (response.data.success && response.data.files.length > 0) {
+        const uploadedFile = response.data.files[0];
+        const imageUrl = `${API_BASE}/${uploadedFile.path}`;
+        setVariantImagePreview(imageUrl);
+        setCurrentVariant((p) => ({ ...p, image: uploadedFile.path }));
+        toast.success("Variant image uploaded");
+      } else {
+        toast.error("Failed to upload variant image");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      toast.error(err.response?.data?.message || "Failed to upload variant image");
+    }
+  };
+
+  // Handle product gallery images upload using existing /upload/images endpoint
+  const handleGalleryImagesUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    setUploadingImages(true);
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('images', file);
+    });
+    
+    try {
+      const response = await axios.post(`${API_BASE}/api/upload/images`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      if (response.data.success) {
+        const uploadedUrls = response.data.files.map(file => `${API_BASE}/${file.path}`);
+        setProductImages([...productImages, ...uploadedUrls]);
+        toast.success(`${uploadedUrls.length} image(s) uploaded`);
+      } else {
+        toast.error("Failed to upload images");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      toast.error(err.response?.data?.message || "Failed to upload images");
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
+  const handleRemoveGalleryImage = (index) => {
+    setProductImages(productImages.filter((_, i) => i !== index));
+  };
+
   const handleAddVariant = () => {
     if (!currentVariant.color) { toast.error("Please select a color"); return; }
     setFormData((p) => ({
@@ -137,6 +213,7 @@ const ProductModal = ({
     }));
     setCurrentVariant(blankVariant);
     setSelectedColorHex("");
+    setVariantImagePreview(null);
   };
 
   const handleRemoveVariant = (id) =>
@@ -153,6 +230,7 @@ const ProductModal = ({
         title: formData.title,
         description: formData.description,
         category_id: formData.category_id || 127,
+        additional_images: productImages,
         variants: formData.variants.map((v) => ({
           color: v.color,
           color_hex: v.color_hex || null,
@@ -162,6 +240,7 @@ const ProductModal = ({
           preorder_price: parseFloat(v.preorder_price) || parseFloat(v.price),
           preorder_eta_days: parseInt(v.preorder_eta_days) || 14,
           product_code: v.product_code || null,
+          image: v.image || null,
         })),
       };
 
@@ -189,16 +268,9 @@ const ProductModal = ({
   if (!isOpen) return null;
 
   return (
-    <div
-      ref={overlayRef}
-      className="apre-modal-overlay"
-    >
-      {/* invisible backdrop behind the card — clicking it closes the modal */}
-      <div
-        className="apre-modal-backdrop"
-        onClick={onClose}
-      />
-      <div className="apre-modal-content">
+    <div ref={overlayRef} className="apre-modal-overlay">
+      <div className="apre-modal-backdrop" onClick={onClose} />
+      <div className="apre-modal-content apre-modal-large">
         <button className="apre-modal-close" onClick={onClose}>
           <X size={16} />
         </button>
@@ -207,13 +279,13 @@ const ProductModal = ({
           <h3>{editingProduct ? "Edit Preorder Product" : "Create Preorder Product"}</h3>
           <p>
             {editingProduct
-              ? "Update the product details and variants below."
-              : "Fill in the details and add variants to list a preorderable product."}
+              ? "Update the product details, images, and variants below."
+              : "Fill in the details, upload images, and add variants to list a preorderable product."}
           </p>
         </div>
 
         <form className="apre-form" onSubmit={handleSubmit}>
-          {/* Basic info */}
+          {/* Basic Info */}
           <div className="apre-form-section">
             <div className="apre-form-section-title">Basic Info</div>
 
@@ -242,6 +314,52 @@ const ProductModal = ({
                   placeholder="Describe the product features..."
                   rows={3}
                 />
+              </div>
+            </div>
+
+            {/* Product Gallery Images Upload */}
+            <div className="apre-form-row full">
+              <div className="apre-form-field">
+                <label className="apre-form-label">Product Gallery Images</label>
+                <div className="apre-image-upload-area">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    multiple
+                    onChange={handleGalleryImagesUpload}
+                    disabled={uploadingImages}
+                    style={{ display: 'none' }}
+                    id="gallery-image-upload"
+                  />
+                  <button
+                    type="button"
+                    className="apre-upload-btn"
+                    onClick={() => document.getElementById('gallery-image-upload').click()}
+                    disabled={uploadingImages}
+                  >
+                    <Upload size={16} />
+                    {uploadingImages ? 'Uploading...' : 'Upload Gallery Images'}
+                  </button>
+                  <small className="apre-form-hint">Upload multiple images for the product gallery (JPEG, PNG, WebP)</small>
+                  
+                  {productImages.length > 0 && (
+                    <div className="apre-image-preview-grid">
+                      {productImages.map((img, idx) => (
+                        <div key={idx} className="apre-image-preview">
+                          <img src={img} alt={`Product ${idx + 1}`} />
+                          <button
+                            type="button"
+                            className="apre-remove-image"
+                            onClick={() => handleRemoveGalleryImage(idx)}
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -296,31 +414,6 @@ const ProductModal = ({
                     placeholder="e.g., 12GB"
                   />
                 </div>
-                {/* Price fields hidden - preorders don't need pricing */}
-                {/*
-                <div className="apre-form-field">
-                  <label className="apre-form-label">
-                    Regular Price <span className="required">*</span>
-                  </label>
-                  <input
-                    className="apre-form-input"
-                    type="number"
-                    value={currentVariant.price}
-                    onChange={(e) => setCurrentVariant({ ...currentVariant, price: e.target.value })}
-                    placeholder="KES"
-                  />
-                </div>
-                <div className="apre-form-field">
-                  <label className="apre-form-label">Preorder Price</label>
-                  <input
-                    className="apre-form-input"
-                    type="number"
-                    value={currentVariant.preorder_price}
-                    onChange={(e) => setCurrentVariant({ ...currentVariant, preorder_price: e.target.value })}
-                    placeholder="Leave empty to use regular"
-                  />
-                </div>
-                */}
                 <div className="apre-form-field">
                   <label className="apre-form-label">ETA (Days)</label>
                   <input
@@ -331,6 +424,44 @@ const ProductModal = ({
                     placeholder="14"
                   />
                 </div>
+              </div>
+
+              {/* Variant Image Upload */}
+              <div className="apre-form-field">
+                <label className="apre-form-label">Variant Image (Optional)</label>
+                <div className="apre-variant-image-upload">
+                  <input
+                    type="file"
+                    ref={variantFileInputRef}
+                    accept="image/*"
+                    onChange={handleVariantImageUpload}
+                    style={{ display: 'none' }}
+                    id="variant-image-upload"
+                  />
+                  <button
+                    type="button"
+                    className="apre-upload-small"
+                    onClick={() => document.getElementById('variant-image-upload').click()}
+                  >
+                    <ImageIcon size={14} />
+                    Upload Variant Image
+                  </button>
+                  {variantImagePreview && (
+                    <div className="apre-variant-image-preview">
+                      <img src={variantImagePreview} alt="Variant preview" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVariantImagePreview(null);
+                          setCurrentVariant({ ...currentVariant, image: null });
+                        }}
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <small className="apre-form-hint">This image will be shown when this color is selected</small>
               </div>
 
               <button
@@ -359,13 +490,7 @@ const ProductModal = ({
                       <div className="apre-variant-list-item-specs">
                         {v.storage && <span>{v.storage}</span>}
                         {v.ram && <span>{v.ram}</span>}
-                        {/* Price hidden for preorders */}
-                        {/*
-                        <span>{formatCurrency(v.price)}</span>
-                        {v.preorder_price && v.preorder_price !== v.price && (
-                          <span className="green">Preorder: {formatCurrency(v.preorder_price)}</span>
-                        )}
-                        */}
+                        {v.image && <span className="has-image">📷 Has image</span>}
                         <span className="blue">ETA: {v.preorder_eta_days}d</span>
                       </div>
                     </div>
@@ -556,13 +681,11 @@ const AdminPreorders = () => {
 
   return (
     <div className="admin-preorders-container">
-      {/* ── Page Header ── */}
       <div className="admin-preorders-page-header">
         <h2>Preorders</h2>
         <p>Manage customer preorders and the products available to preorder</p>
       </div>
 
-      {/* ── Tab Bar ── */}
       <div className="admin-preorders-tabs">
         <button
           className={`admin-preorders-tab-btn ${activeTab === "preorders" ? "active" : ""}`}
@@ -586,14 +709,11 @@ const AdminPreorders = () => {
         </button>
       </div>
 
-      {/* ══════════════════════════════════════
-          TAB 1 — Customer Preorders
-      ══════════════════════════════════════ */}
+      {/* TAB 1 — Customer Preorders */}
       {activeTab === "preorders" && (
         <>
           <div className="admin-preorders-toolbar">
             <div className="admin-preorders-toolbar-left">
-              {/* Search */}
               <div className="apre-search-wrap">
                 <Search className="search-icon" />
                 <input
@@ -609,7 +729,6 @@ const AdminPreorders = () => {
                 )}
               </div>
 
-              {/* Filter */}
               <div className="apre-filter-wrap">
                 <Filter size={15} />
                 <select
@@ -644,7 +763,6 @@ const AdminPreorders = () => {
                 const sm = statusMeta(preorder.status);
                 return (
                   <div key={preorder.preorder_id} className="apre-card">
-                    {/* Top row */}
                     <div className="apre-card-top">
                       <div className="apre-card-title-block">
                         <div className="apre-card-name">
@@ -680,7 +798,6 @@ const AdminPreorders = () => {
                       </div>
                     </div>
 
-                    {/* Status + date */}
                     <div className="apre-card-meta">
                       <span className={`apre-badge ${sm.cls}`}>{sm.label}</span>
                       <span className="apre-card-date">
@@ -689,13 +806,11 @@ const AdminPreorders = () => {
                       </span>
                     </div>
 
-                    {/* Products */}
                     <div className="apre-info-block">
                       <div className="apre-info-block-label">Products</div>
                       <p>{preorder.product_summary || "No products"}</p>
                     </div>
 
-                    {/* Total */}
                     {preorder.total_amount && (
                       <div className="apre-info-block total">
                         <div className="apre-info-block-label">Total</div>
@@ -703,7 +818,6 @@ const AdminPreorders = () => {
                       </div>
                     )}
 
-                    {/* Notes editor / display */}
                     {editingNotes === preorder.preorder_id ? (
                       <div className="apre-notes-editor">
                         <div className="apre-notes-editor-header">
@@ -741,7 +855,6 @@ const AdminPreorders = () => {
                       )
                     )}
 
-                    {/* Status update */}
                     <div className="apre-status-section">
                       <span className="apre-status-label">Update Status</span>
                       <select
@@ -764,9 +877,7 @@ const AdminPreorders = () => {
         </>
       )}
 
-      {/* ══════════════════════════════════════
-          TAB 2 — Preorder Products
-      ══════════════════════════════════════ */}
+      {/* TAB 2 — Preorder Products */}
       {activeTab === "products" && (
         <>
           <div className="admin-preorders-toolbar">
@@ -812,6 +923,11 @@ const AdminPreorders = () => {
                         {product.variants.length}{" "}
                         {product.variants.length === 1 ? "variant" : "variants"}
                       </span>
+                      {product.additional_images && product.additional_images.length > 0 && (
+                        <span className="apre-badge apre-badge-image">
+                          📷 {product.additional_images.length} images
+                        </span>
+                      )}
                     </div>
                     <div className="apre-card-actions">
                       <button
@@ -844,6 +960,18 @@ const AdminPreorders = () => {
                     <p className="apre-product-desc">{product.description}</p>
                   )}
 
+                  {/* Show product gallery thumbnails */}
+                  {product.additional_images && product.additional_images.length > 0 && (
+                    <div className="apre-product-gallery-thumbs">
+                      {product.additional_images.slice(0, 3).map((img, idx) => (
+                        <img key={idx} src={img} alt={`${product.title} ${idx + 1}`} className="apre-gallery-thumb" />
+                      ))}
+                      {product.additional_images.length > 3 && (
+                        <span className="apre-more-images">+{product.additional_images.length - 3}</span>
+                      )}
+                    </div>
+                  )}
+
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
                     {product.variants.slice(0, 2).map((v) => (
                       <div key={v.variant_id} className="apre-variant-row">
@@ -855,28 +983,14 @@ const AdminPreorders = () => {
                             />
                             {v.color}
                           </span>
-                          {/* Price hidden for preorders */}
-                          {/* <span>{formatCurrency(v.price)}</span> */}
                         </div>
                         <div className="apre-variant-meta">
-                          {v.storage && (
-                            <span className="apre-variant-meta-item">{v.storage}</span>
-                          )}
-                          {v.ram && (
-                            <span className="apre-variant-meta-item">{v.ram} RAM</span>
-                          )}
+                          {v.storage && <span className="apre-variant-meta-item">{v.storage}</span>}
+                          {v.ram && <span className="apre-variant-meta-item">{v.ram} RAM</span>}
                           <span className="apre-variant-meta-item">
                             {v.preorder_eta_days || 14}d ETA
                           </span>
-                          {/* Preorder price hidden */}
-                          {/*
-                          {v.preorder_price && v.preorder_price !== v.price && (
-                            <span className="apre-variant-meta-item preorder-price">
-                              <DollarSign size={11} />
-                              {formatCurrency(v.preorder_price)}
-                            </span>
-                          )}
-                          */}
+                          {v.image && <span className="apre-variant-meta-item">📷 Has image</span>}
                         </div>
                       </div>
                     ))}
@@ -894,7 +1008,6 @@ const AdminPreorders = () => {
         </>
       )}
 
-      {/* ── Product Create/Edit Modal ── */}
       <ProductModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
